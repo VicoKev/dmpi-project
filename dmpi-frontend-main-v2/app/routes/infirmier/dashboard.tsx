@@ -76,7 +76,7 @@ export default function InfirmierDashboard() {
     <div className="flex flex-col gap-6 animate-fade-in-up">
       {/* Image illustrative du Dashboard Infirmier */}
       <div className="w-full mb-2 rounded-2xl overflow-hidden shadow-sm">
-        <img src="/images/dashboard_infirmier.png" alt="Dashboard Infirmier Illustration" className="w-full h-auto object-cover max-h-[300px]" />
+        <img src="/images/dashboard_infirmier.webp" alt="Dashboard Infirmier Illustration" className="w-full h-auto object-cover max-h-[300px]" />
       </div>
 
       {/* En-tête */}

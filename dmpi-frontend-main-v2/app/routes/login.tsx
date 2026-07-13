@@ -67,7 +67,7 @@ export default function Login() {
       {/* Image de fond avec overlay */}
       <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat z-0" 
-        style={{ backgroundImage: 'url("/images/login_bg.png")' }}
+        style={{ backgroundImage: 'url("/images/login_bg.webp")' }}
       >
         <div className="absolute inset-0 bg-[var(--color-primary-container)] opacity-80 mix-blend-multiply"></div>
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--color-primary)] via-transparent to-transparent opacity-90"></div>

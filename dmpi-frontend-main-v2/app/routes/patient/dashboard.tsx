@@ -110,7 +110,7 @@ export default function PatientDashboard() {
     <div className="flex flex-col gap-6 animate-fade-in-up">
       {/* Image illustrative du Dashboard Patient */}
       <div className="w-full mb-6 rounded-2xl overflow-hidden shadow-sm">
-        <img src="/images/dashboard_patient.png" alt="Dashboard Patient Illustration" className="w-full h-auto object-cover max-h-[300px]" />
+        <img src="/images/dashboard_patient.webp" alt="Dashboard Patient Illustration" className="w-full h-auto object-cover max-h-[300px]" />
       </div>
 
       {/* En-tête Patient */}

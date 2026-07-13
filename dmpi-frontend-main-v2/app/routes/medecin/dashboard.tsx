@@ -30,7 +30,7 @@ export default function MedecinDashboard() {
     <div className="flex flex-col gap-6 animate-fade-in-up">
       {/* Image illustrative du Dashboard Medecin */}
       <div className="w-full mb-2 rounded-2xl overflow-hidden shadow-sm">
-        <img src="/images/dashboard_medecin.png" alt="Dashboard Medecin Illustration" className="w-full h-auto object-cover max-h-[300px]" />
+        <img src="/images/dashboard_medecin.webp" alt="Dashboard Medecin Illustration" className="w-full h-auto object-cover max-h-[300px]" />
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
