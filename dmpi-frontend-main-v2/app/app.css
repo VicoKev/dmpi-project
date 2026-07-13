@@ -1,0 +1,317 @@
+@import "tailwindcss";
+
+/* =============================================
+   DMPI BÉNIN — Design System Tokens (Tailwind v4)
+   Palette extraite de la maquette Stitch
+   ============================================= */
+
+@theme {
+  /* --- Typographie --- */
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  /* --- Couleurs primaires (teal profond) --- */
+  --color-primary: #005354;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #006d6f;
+  --color-on-primary-container: #9aeced;
+  --color-primary-fixed: #9ef0f2;
+  --color-primary-fixed-dim: #82d4d6;
+  --color-on-primary-fixed: #002020;
+  --color-on-primary-fixed-variant: #004f51;
+  --color-inverse-primary: #82d4d6;
+
+  /* --- Couleurs secondaires --- */
+  --color-secondary: #00696b;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #6df3f5;
+  --color-on-secondary-container: #006e6f;
+  --color-secondary-fixed: #70f6f8;
+  --color-secondary-fixed-dim: #4edadb;
+  --color-on-secondary-fixed: #002020;
+  --color-on-secondary-fixed-variant: #004f50;
+
+  /* --- Couleurs tertiaires --- */
+  --color-tertiary: #3e4c4d;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #556465;
+  --color-on-tertiary-container: #d1e0e1;
+  --color-tertiary-fixed: #d6e6e6;
+  --color-tertiary-fixed-dim: #bacaca;
+  --color-on-tertiary-fixed: #101e1e;
+  --color-on-tertiary-fixed-variant: #3b494a;
+
+  /* --- Surfaces --- */
+  --color-surface: #f7f9fc;
+  --color-surface-dim: #d8dadd;
+  --color-surface-bright: #f7f9fc;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f7;
+  --color-surface-container: #eceef1;
+  --color-surface-container-high: #e6e8eb;
+  --color-surface-container-highest: #e0e3e6;
+  --color-surface-variant: #e0e3e6;
+  --color-surface-tint: #00696b;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #3e4949;
+  --color-inverse-surface: #2d3133;
+  --color-inverse-on-surface: #eff1f4;
+
+  /* --- Background --- */
+  --color-background: #f7f9fc;
+  --color-on-background: #191c1e;
+
+  /* --- Erreur --- */
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  /* --- Contours --- */
+  --color-outline: #6e7979;
+  --color-outline-variant: #bec9c8;
+
+  /* --- Alertes / États --- */
+  --color-warning: #f59e0b;
+  --color-warning-container: #fef3c7;
+  --color-on-warning-container: #92400e;
+  --color-success: #059669;
+  --color-success-container: #d1fae5;
+  --color-on-success-container: #064e3b;
+
+  /* --- Border radius --- */
+  --radius-sm: 0.5rem;
+  --radius: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+  --radius-full: 9999px;
+
+  /* --- Shadows --- */
+  --shadow-card: 0px 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-card-hover: 0px 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-sidebar: 2px 0 16px rgba(0, 0, 0, 0.06);
+
+  /* --- Spacing --- */
+  --dmpi-spacing-xs: 0.5rem;    /* 8px */
+  --dmpi-spacing-sm: 0.75rem;   /* 12px */
+  --dmpi-spacing-md: 1rem;      /* 16px */
+  --dmpi-spacing-lg: 1.5rem;    /* 24px */
+  --dmpi-spacing-xl: 2rem;      /* 32px */
+  --dmpi-spacing-2xl: 2.5rem;   /* 40px */
+
+  /* --- Sidebar --- */
+  --sidebar-width: 256px;
+  --topbar-height: 64px;
+}
+
+/* =============================================
+   Base Styles
+   ============================================= */
+html {
+  font-family: var(--font-sans);
+  color: var(--color-on-background);
+  background-color: var(--color-background);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
+/* =============================================
+   Typography Utilities
+   ============================================= */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.text-headline-lg {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  line-height: 2.5rem;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.text-headline-md {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  line-height: 2rem;
+  letter-spacing: -0.01em;
+  font-weight: 700;
+}
+
+.text-headline-sm {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  font-weight: 600;
+}
+
+.text-subheading {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.5rem;
+  font-weight: 600;
+}
+
+.text-body-md {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 400;
+}
+
+.text-label-bold {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.text-caption {
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 400;
+}
+
+/* =============================================
+   Component Utilities
+   ============================================= */
+
+/* Card */
+.card {
+  background-color: var(--color-surface-container-lowest);
+  border-radius: var(--radius-xl);
+  padding: var(--dmpi-spacing-md);
+  box-shadow: var(--shadow-card);
+}
+
+/* Glass card */
+.glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius-xl);
+}
+
+/* Scrollbar masquée pour les tabs scrollables */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* =============================================
+   Animations
+   ============================================= */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.08); }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease-out forwards;
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+.animate-slide-in-left {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+.animate-slide-down {
+  animation: slideDown 0.25s ease-out forwards;
+}
+.animate-pulse-ring {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Délais d'animation */
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+
+/* =============================================
+   Material Symbols
+   ============================================= */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  user-select: none;
+}
+.material-symbols-outlined.filled {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}
+
+/* =============================================
+   Focus visible accessible
+   ============================================= */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* =============================================
+   Scrollbar globale (desktop)
+   ============================================= */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-outline-variant);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-outline);
+}
