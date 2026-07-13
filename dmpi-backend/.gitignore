@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+# Docker Local Volumes
+pgdata/
+mongodata/
+kafkadata/
+
+# Ensure .env is ignored
+.env

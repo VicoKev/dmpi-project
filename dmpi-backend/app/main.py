@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request
+import os
 from fastapi.middleware.cors import CORSMiddleware
 from app.context import client_ip
 from app.database_mongo import database as mongo_database
@@ -24,9 +25,12 @@ app = FastAPI(
     version="1.0.0"
 )
 
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
+allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # En production, spécifier les domaines autorisés
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

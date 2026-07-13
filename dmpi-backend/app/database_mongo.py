@@ -1,6 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+import os
 
-MONGO_URL = "mongodb://localhost:27017"
+MONGO_URL = os.getenv("MONGO_URI", "mongodb://localhost:27017/dmpi_db")
 DATABASE_NAME = "dmpi"
 
 client = AsyncIOMotorClient(MONGO_URL)
