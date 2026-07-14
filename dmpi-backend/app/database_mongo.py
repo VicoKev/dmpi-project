@@ -1,8 +1,17 @@
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
+from dotenv import load_dotenv
+from urllib.parse import urlparse
+
+load_dotenv()
 
 MONGO_URL = os.getenv("MONGO_URI", "mongodb://localhost:27017/dmpi_db")
-DATABASE_NAME = "dmpi"
+
+try:
+    parsed_url = urlparse(MONGO_URL)
+    DATABASE_NAME = parsed_url.path.lstrip('/') or "dmpi_db"
+except Exception:
+    DATABASE_NAME = "dmpi_db"
 
 client = AsyncIOMotorClient(MONGO_URL)
 database = client[DATABASE_NAME]
