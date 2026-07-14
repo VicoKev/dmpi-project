@@ -31,5 +31,4 @@ async def enregistrer_log(
             await db.commit()
     except Exception as e:
         # Le logging ne doit jamais faire planter la requête principale.
-        # En production, on enverrait ceci vers un système de monitoring externe.
         print(f"Erreur lors de l'écriture du log d'audit : {e}")

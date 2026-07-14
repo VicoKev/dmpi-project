@@ -34,9 +34,7 @@ async def dashboard_etablissement(
     l'utilisation du système au sein d'un centre de santé.
     """
     debut_jour = _debut_journee()
-    
-    # Si c'est un super_admin, on lui montre tout (ou on pourrait exiger un etablissement_id en query)
-    # Pour le MVP, on filtre si etablissement_id est présent sur le current_user (ce qui est le cas pour admin_etablissement)
+
     etablissement_id = current_user.etablissement_id
     
     user_filter = True
@@ -57,7 +55,6 @@ async def dashboard_etablissement(
     if etablissement_id:
         mongo_filter = {"etablissement_id": etablissement_id}
 
-    # Pour total_dossiers, on compte les NPI distincts dans les consultations de cet etablissement
     npi_list = await consultations_collection.distinct("npi", mongo_filter)
     total_dossiers = len(npi_list)
     
@@ -66,7 +63,6 @@ async def dashboard_etablissement(
     )
     total_consultations = await consultations_collection.count_documents(mongo_filter)
 
-    # Récupérer les activités récentes
     from sqlalchemy import desc
     activites_query = (
         select(AuditLog, User)
@@ -87,7 +83,6 @@ async def dashboard_etablissement(
             "date": alog.horodatage.isoformat() + "Z"
         })
         
-    # Alertes : On prend les erreurs récentes comme alertes
     alertes_query = (
         select(AuditLog)
         .join(User, AuditLog.utilisateur_email == User.email)
@@ -184,15 +179,12 @@ async def dashboard_national(
         )
     )
     
-    # Agrégation des données pour les établissements (Consultations & Patients ce mois-ci)
     maintenant = datetime.utcnow()
     debut_mois = datetime(maintenant.year, maintenant.month, 1)
-    
-    # On récupère d'abord tous les établissements
+
     etabs_cursor = etablissements_collection.find({"statut": {"$in": ["actif", "inactif"]}})
     etablissements_db = await etabs_cursor.to_list(length=None)
-    
-    # Agrégation pour les consultations
+
     pipeline_etabs = [
         {"$match": {"created_at": {"$gte": debut_mois}}},
         {"$group": {
@@ -270,10 +262,8 @@ async def get_rapports_mensuels(
     annee_en_cours = datetime.utcnow().year
     debut_annee = datetime(annee_en_cours, 1, 1)
 
-    # 1. Consultations YTD
     consultations_ytd = await consultations_collection.count_documents({"created_at": {"$gte": debut_annee}})
 
-    # 2. Patients actifs YTD
     pipeline_patients_actifs = [
         {"$match": {"created_at": {"$gte": debut_annee}}},
         {"$group": {"_id": "$npi"}},
@@ -283,18 +273,14 @@ async def get_rapports_mensuels(
     actifs_list = await actifs_cursor.to_list(length=None)
     patients_actifs = actifs_list[0]["total"] if actifs_list else 0
 
-    # 3. Taux de couverture
     total_dossiers = await dossiers_medicaux_collection.count_documents({})
     taux_couverture = round((patients_actifs / total_dossiers * 100)) if total_dossiers > 0 else 0
 
-    # 4. Etablissements actifs
     etablissements_actifs = await etablissements_collection.count_documents({"statut": "actif"})
     etablissements_total = await etablissements_collection.count_documents({})
 
-    # 5. Ordonnances émises YTD
     ordonnances_emises = await ordonnances_collection.count_documents({"created_at": {"$gte": debut_annee}})
 
-    # 6. Alertes sécurité YTD
     alertes_securite = await db.scalar(
         select(func.count())
         .select_from(AuditLog)
@@ -304,7 +290,6 @@ async def get_rapports_mensuels(
         )
     )
 
-    # Top diagnostics CIM-10 par mois
     pipeline_cim10_mensuel = [
         {"$match": {"created_at": {"$gte": debut_annee}}},
         {

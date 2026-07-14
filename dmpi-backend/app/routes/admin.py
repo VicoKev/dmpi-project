@@ -190,7 +190,6 @@ async def modifier_utilisateur(
         )
 
     if updates.email is not None:
-        # Check if new email is already taken
         if updates.email != utilisateur.email:
             existing = await db.execute(select(User).where(User.email == updates.email))
             if existing.scalar_one_or_none():
@@ -242,8 +241,7 @@ async def consulter_journal_audit(
     national, pour veiller au respect du secret médical et le volet juridique.
     """
     from sqlalchemy.orm import aliased
-    
-    # Jointure pour récupérer les infos de l'utilisateur
+
     requete = select(AuditLog, User.nom, User.prenom, User.role).outerjoin(
         User, AuditLog.utilisateur_email == User.email
     ).order_by(desc(AuditLog.horodatage))

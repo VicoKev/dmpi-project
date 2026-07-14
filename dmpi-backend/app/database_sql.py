@@ -12,7 +12,6 @@ POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
 POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "dmpi_db")
 
-# Vérifier que le mot de passe n'est pas None avant de l'encoder
 if POSTGRES_PASSWORD:
     ENCODED_PASSWORD = quote_plus(POSTGRES_PASSWORD)
 else:
