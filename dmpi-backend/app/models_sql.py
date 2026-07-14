@@ -41,6 +41,25 @@ class User(Base):
     derniere_connexion_ip = Column(String, nullable=True)
 
 
+class DemandeAccesPatient(Base):
+    """
+    Demande d'ouverture d'un compte portail pour un patient dont le dossier
+    médical existe déjà (créé par un médecin/infirmier). Traitée par le
+    Super Admin national, seul habilité à créer des comptes de connexion.
+    """
+    __tablename__ = "demandes_acces_patient"
+
+    id = Column(Integer, primary_key=True, index=True)
+    npi = Column(String(10), nullable=False, index=True)
+    nom = Column(String, nullable=False)
+    prenom = Column(String, nullable=False)
+    telephone_contact = Column(String, nullable=False)
+    demandeur_email = Column(String, nullable=False, index=True)  # médecin/infirmier à l'origine de la demande
+    etablissement_id = Column(String, nullable=True)
+    statut = Column(String, default="en_attente", nullable=False)  # "en_attente", "traite", "rejete"
+    date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 class DelegationAcces(Base):
     """
     Délégation temporaire d'accès à un dossier patient entre professionnels.

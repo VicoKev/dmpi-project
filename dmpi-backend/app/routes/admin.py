@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
 from app.database_sql import get_sql_db
-from app.models_sql import User, AuditLog
+from app.models_sql import User, AuditLog, DemandeAccesPatient
 from app.schemas.user import UserCreate, UserOut
 from app.schemas.logs import AuditLogOut
 from app.security import hash_password, require_role
@@ -82,6 +82,16 @@ async def creer_utilisateur(
                 "updated_at": datetime.utcnow()
             }
             await dossiers_medicaux_collection.insert_one(dossier_vide)
+
+        demande_result = await db.execute(
+            select(DemandeAccesPatient).where(
+                DemandeAccesPatient.npi == nouvel_utilisateur.npi_patient,
+                DemandeAccesPatient.statut == "en_attente"
+            )
+        )
+        for demande in demande_result.scalars().all():
+            demande.statut = "traite"
+        await db.commit()
 
     await enregistrer_log(
         utilisateur_email=current_user.email,

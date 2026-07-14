@@ -17,6 +17,7 @@ from app.routes.delegation import router as delegation_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.rdv import router as rdv_router
 from app.routes.etablissement import router as etablissement_router
+from app.routes.demande_acces import router as demande_acces_router
 from app.kafka_producer import demarrer_producer, arreter_producer
 
 app = FastAPI(
@@ -70,6 +71,7 @@ app.include_router(delegation_router)
 app.include_router(dashboard_router)
 app.include_router(rdv_router)
 app.include_router(etablissement_router)
+app.include_router(demande_acces_router)
 
 @app.get("/")
 async def root():
