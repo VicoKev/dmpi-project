@@ -1,7 +1,8 @@
 from aiokafka import AIOKafkaProducer
 import json
+import os
 
-KAFKA_BOOTSTRAP_SERVERS = "localhost:9092"
+KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 
 producer: AIOKafkaProducer | None = None
 
@@ -35,4 +36,4 @@ async def publier_evenement(topic: str, evenement: dict):
         if producer:
             await producer.send_and_wait(topic, evenement)
     except Exception as e:
-        print(f"[Kafka] Evenement non publie sur '{topic}' : {e}")
+        print(f"[Kafka] Evenement non publie sur '{topic}' : {e}")
