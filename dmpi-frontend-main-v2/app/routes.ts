@@ -8,6 +8,7 @@ export default [
     // ─── Espace Médecin ───────────────────────────────────────────────
     route("medecin", "routes/medecin/dashboard.tsx"),
     route("medecin/patients", "routes/medecin/patients.tsx"),
+    route("medecin/patients/nouveau", "routes/medecin/patients.nouveau.tsx"),
     route("medecin/consultations", "routes/medecin/consultations.tsx"),
     route("medecin/ordonnances", "routes/medecin/ordonnances.tsx"),
     route("medecin/agenda", "routes/medecin/agenda.tsx"),
@@ -19,6 +20,7 @@ export default [
     // ─── Espace Infirmier ─────────────────────────────────────────────
     route("infirmier", "routes/infirmier/dashboard.tsx"),
     route("infirmier/patients", "routes/infirmier/patients.tsx"),
+    route("infirmier/patients/nouveau", "routes/infirmier/patients.nouveau.tsx"),
     route("infirmier/constantes", "routes/infirmier/constantes.tsx"),
     route("infirmier/traitements", "routes/infirmier/traitements.tsx"),
     route("infirmier/dossier/:npi", "routes/infirmier/dossier.$npi.tsx"),
@@ -39,6 +41,7 @@ export default [
     route("superadmin/audit", "routes/superadmin/audit.tsx"),
     route("superadmin/etablissements", "routes/superadmin/etablissements.tsx"),
     route("superadmin/utilisateurs", "routes/superadmin/utilisateurs.tsx"),
+    route("superadmin/demandes-acces", "routes/superadmin/demandes-acces.tsx"),
     route("superadmin/monitoring", "routes/superadmin/monitoring.tsx"),
     route("superadmin/rapports", "routes/superadmin/rapports.tsx"),
   ]),

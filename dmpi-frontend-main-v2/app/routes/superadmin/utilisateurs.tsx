@@ -1,5 +1,6 @@
 // Gestion des Utilisateurs — Espace Super Admin National
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -25,9 +26,10 @@ import { getEtablissements, type Etablissement } from "../../services/etablissem
 interface CreateUserFormProps {
   onSuccess: (user: User) => void;
   onCancel: () => void;
+  initialValues?: Partial<UserCreatePayload>;
 }
 
-function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
+function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormProps) {
   const [form, setForm] = useState<UserCreatePayload>({
     email: "",
     mot_de_passe: "",
@@ -41,6 +43,7 @@ function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
     date_naissance: null,
     sexe: "M",
     groupe_sanguin: null,
+    ...initialValues,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -525,6 +528,7 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
 // ─── Page principale ─────────────────────────────────────────────────────────
 
 export default function SuperAdminUtilisateurs() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -535,6 +539,22 @@ export default function SuperAdminUtilisateurs() {
   const [reactivatingId, setReactivatingId] = useState<number | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  // Pré-remplissage depuis une demande d'accès traitée (?npi=&nom=&prenom=)
+  const npiPrefill = searchParams.get("npi");
+  const createFormInitialValues = npiPrefill
+    ? {
+        role: "patient" as const,
+        npi_patient: npiPrefill,
+        nom: searchParams.get("nom") ?? "",
+        prenom: searchParams.get("prenom") ?? "",
+      }
+    : undefined;
+
+  useEffect(() => {
+    if (npiPrefill) setShowForm(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [npiPrefill]);
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -638,7 +658,11 @@ export default function SuperAdminUtilisateurs() {
       {showForm && (
         <CreateUserForm
           onSuccess={handleCreateSuccess}
-          onCancel={() => setShowForm(false)}
+          onCancel={() => {
+            setShowForm(false);
+            if (npiPrefill) setSearchParams({});
+          }}
+          initialValues={createFormInitialValues}
         />
       )}
 
