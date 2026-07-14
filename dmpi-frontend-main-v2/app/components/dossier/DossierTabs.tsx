@@ -4,6 +4,7 @@
 export type DossierTabKey =
   | "synthese"
   | "consultations"
+  | "constantes"
   | "ordonnances"
   | "examens"
   | "vaccinations";
@@ -17,6 +18,7 @@ interface Tab {
 const TABS: Tab[] = [
   { key: "synthese", label: "Synthèse", icon: "summarize" },
   { key: "consultations", label: "Consultations", icon: "medical_services" },
+  { key: "constantes", label: "Constantes", icon: "monitor_heart" },
   { key: "ordonnances", label: "Ordonnances", icon: "prescriptions" },
   { key: "examens", label: "Examens", icon: "lab_panel" },
   { key: "vaccinations", label: "Vaccinations", icon: "vaccines" },

@@ -10,6 +10,7 @@ import DossierHeader from "../../components/dossier/DossierHeader";
 import AntecedentsCard from "../../components/dossier/AntecedentsCard";
 import TraitementsCard from "../../components/dossier/TraitementsCard";
 import VaccinationsCard from "../../components/dossier/VaccinationsCard";
+import ConstanteRow from "../../components/dossier/ConstanteRow";
 
 import { getDossierPatient, formatDateFr } from "../../services/patientService";
 import { getRelevesByPatient, type ReleveConstantes } from "../../services/constanstesService";
@@ -26,18 +27,6 @@ const TABS: { key: InfirmierTabKey; icon: string; label: string }[] = [
   { key: "constantes", icon: "monitor_heart", label: "Constantes" },
   { key: "traitements", icon: "medication", label: "Administrations" },
 ];
-
-function ConstanteRow({ label, value, unite }: { label: string; value: number | undefined; unite: string }) {
-  if (value === undefined) return null;
-  return (
-    <div className="flex items-center justify-between py-1.5 border-b border-[var(--color-outline-variant)] last:border-0">
-      <span className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>{label}</span>
-      <span className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
-        {value} <span className="font-normal text-caption">{unite}</span>
-      </span>
-    </div>
-  );
-}
 
 export default function InfirmierDossierPage() {
   const { npi } = useParams<{ npi: string }>();

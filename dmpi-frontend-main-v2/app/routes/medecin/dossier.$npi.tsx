@@ -15,10 +15,12 @@ import ConsultationList from "../../components/dossier/ConsultationList";
 import PrescriptionList from "../../components/dossier/PrescriptionList";
 import ExamensCard from "../../components/dossier/ExamensCard";
 import VaccinationsCard from "../../components/dossier/VaccinationsCard";
+import ConstanteRow from "../../components/dossier/ConstanteRow";
 
 import { getDossierPatient } from "../../services/patientService";
 import { getConsultationsByPatient } from "../../services/consultationService";
 import { getPrescriptionsByPatient } from "../../services/prescriptionService";
+import { getRelevesByPatient, type ReleveConstantes } from "../../services/constanstesService";
 
 import type { DossierPatient } from "../../types/patient";
 import type { Consultation } from "../../types/consultation";
@@ -31,6 +33,7 @@ export default function DossierPatientPage() {
   const [dossier, setDossier] = useState<DossierPatient | null>(null);
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [releves, setReleves] = useState<ReleveConstantes[]>([]);
   const [activeTab, setActiveTab] = useState<DossierTabKey>("synthese");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
@@ -43,10 +46,11 @@ export default function DossierPatientPage() {
     setNotFound(false);
 
     async function loadAll() {
-      const [dossierData, consultationsData, prescriptionsData] = await Promise.all([
+      const [dossierData, consultationsData, prescriptionsData, relevesData] = await Promise.all([
         getDossierPatient(npi!),
         getConsultationsByPatient(npi!),
         getPrescriptionsByPatient(npi!),
+        getRelevesByPatient(npi!),
       ]);
 
       if (cancelled) return;
@@ -60,6 +64,7 @@ export default function DossierPatientPage() {
       setDossier(dossierData);
       setConsultations(consultationsData);
       setPrescriptions(prescriptionsData);
+      setReleves(relevesData);
       setLoading(false);
     }
 
@@ -171,6 +176,60 @@ export default function DossierPatientPage() {
         {activeTab === "consultations" && (
           <div className="lg:col-span-2">
             <ConsultationList consultations={consultations} />
+          </div>
+        )}
+
+        {activeTab === "constantes" && (
+          <div className="lg:col-span-2 flex flex-col gap-4">
+            {releves.length === 0 ? (
+              <Card>
+                <div className="flex flex-col items-center gap-2 py-8">
+                  <span className="material-symbols-outlined text-[48px]" style={{ color: "var(--color-outline)" }}>monitor_heart</span>
+                  <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
+                    Aucun relevé de constantes enregistré pour ce patient.
+                  </p>
+                </div>
+              </Card>
+            ) : (
+              releves.map((r) => (
+                <Card key={r.id}>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-subheading font-semibold" style={{ color: "var(--color-on-surface)" }}>
+                        {new Date(r.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                        {" à "}
+                        {new Date(r.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                      </p>
+                      <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+                        Par {r.infirmier}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-0">
+                    <ConstanteRow label="Tension systolique" value={r.constantes.tensionSystolique} unite="mmHg" />
+                    <ConstanteRow label="Tension diastolique" value={r.constantes.tensionDiastolique} unite="mmHg" />
+                    <ConstanteRow label="Pouls" value={r.constantes.pouls} unite="bpm" />
+                    <ConstanteRow label="Température" value={r.constantes.temperature} unite="°C" />
+                    <ConstanteRow label="Saturation O₂" value={r.constantes.saturationO2} unite="%" />
+                    <ConstanteRow label="Glycémie" value={r.constantes.glycemie} unite="g/L" />
+                    <ConstanteRow label="Poids" value={r.constantes.poids} unite="kg" />
+                    <ConstanteRow label="Taille" value={r.constantes.taille} unite="cm" />
+                    <ConstanteRow label="Fréquence respiratoire" value={r.constantes.frequenceRespiratoire} unite="/min" />
+                  </div>
+                  {r.notes && (
+                    <div
+                      className="mt-3 p-3 rounded-xl text-body-md"
+                      style={{
+                        backgroundColor: "var(--color-surface-container-low)",
+                        color: "var(--color-on-surface-variant)",
+                      }}
+                    >
+                      <span className="font-semibold">Notes : </span>{r.notes}
+                    </div>
+                  )}
+                </Card>
+              ))
+            )}
           </div>
         )}
 
