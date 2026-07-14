@@ -36,7 +36,7 @@ services:
       - "5433:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env}
       - POSTGRES_DB=${POSTGRES_DB:-dmpi_db}
     networks:
       - dmpi-network
@@ -50,8 +50,8 @@ services:
     ports:
       - "27017:27017"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:-admin}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:-admin123}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME:?MONGO_INITDB_ROOT_USERNAME manquant dans .env}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD:?MONGO_INITDB_ROOT_PASSWORD manquant dans .env}
     networks:
       - dmpi-network
     restart: unless-stopped
@@ -67,11 +67,11 @@ services:
       - "8000:8000"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-root}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env}
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
       - POSTGRES_DB=${POSTGRES_DB:-dmpi_db}
-      - MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:-admin}:${MONGO_INITDB_ROOT_PASSWORD:-admin123}@mongodb:27017/dmpi_db?authSource=admin
+      - MONGO_URI=mongodb://${MONGO_INITDB_ROOT_USERNAME:?MONGO_INITDB_ROOT_USERNAME manquant dans .env}:${MONGO_INITDB_ROOT_PASSWORD:?MONGO_INITDB_ROOT_PASSWORD manquant dans .env}@mongodb:27017/dmpi_db?authSource=admin
       - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD}
