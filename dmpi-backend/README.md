@@ -1,7 +1,5 @@
 # DMPI — Dossier Médical Partagé Interopérable du Bénin
 
-**Projet NoSQL — Groupe 4**
-
 Une architecture polyglotte (SQL + NoSQL/FHIR) pour connecter les hôpitaux du Bénin et sauver des vies grâce à l'information médicale partagée.
 
 \---
@@ -12,13 +10,11 @@ Une architecture polyglotte (SQL + NoSQL/FHIR) pour connecter les hôpitaux du B
 * [Architecture](#architecture)
 * [Stack technique](#stack-technique)
 * [Fonctionnalités](#fonctionnalités)
-* [Installation](#installation)
-* [Configuration](#configuration)
-* [Lancement](#lancement)
+* [Installation & Lancement (Docker)](#installation--lancement-docker--recommandé)
+* [Accès aux bases de données](#accès-aux-bases-de-données-depuis-lhôte)
 * [Utilisation de l'API](#utilisation-de-lapi)
 * [Structure du projet](#structure-du-projet)
 * [Sécurité](#sécurité)
-* [Équipe](#équipe)
 
 \---
 
@@ -94,109 +90,82 @@ Toutes les fonctionnalités listées ci-dessous ont été testées manuellement 
 |`admin\_etablissement`|Dashboard d'établissement|
 |`patient`|Lecture seule de son propre dossier, export FHIR|
 
-## Installation
+## Installation & Lancement (Docker — recommandé)
+
+Toute la stack (PostgreSQL, MongoDB, Kafka, Zookeeper, API FastAPI) tourne via Docker Compose. C'est la méthode officielle du projet — pas d'installation locale de Postgres/Mongo/Kafka nécessaire.
 
 ### Prérequis
 
-* Python 3.12 (⚠️ éviter les versions expérimentales comme 3.14, non compatibles avec `asyncpg` sur Windows)
-* PostgreSQL 18
-* MongoDB Community Server
-* Java 17+ (requis par Kafka)
-* Apache Kafka (mode KRaft, sans Zookeeper)
+* Docker + Docker Compose
 
-### Cloner le dépôt
+### Cloner le dépôt et configurer l'environnement
 
 ```bash
 git clone https://github.com/VicoKev/dmpi-backend.git
 cd dmpi-backend
+cp .env.example .env
 ```
 
-### Créer l'environnement virtuel
+Éditez `.env` et changez au minimum `JWT_SECRET_KEY` et `ADMIN_INITIAL_PASSWORD` :
 
 ```bash
-python -m venv venv
-venv\\Scripts\\activate        # Windows
-source venv/bin/activate      # macOS/Linux
+python3 -c "import secrets; print(secrets.token_hex(32))"   # pour JWT_SECRET_KEY
 ```
 
-### Installer les dépendances
+> `.env` est exclu du dépôt par `.gitignore` — vérifiez toujours avec `git status` avant un commit qu'aucun secret n'apparaît. `.env.example` sert de modèle versionné, sans secret réel.
+
+### Démarrer la stack
 
 ```bash
-pip install -r requirements.txt
+docker compose up -d --build
 ```
 
-## Configuration
+Ceci démarre 5 conteneurs : `dmpi-postgres`, `dmpi-mongodb`, `dmpi-zookeeper`, `dmpi-kafka`, `dmpi-fastapi`. Les tables PostgreSQL (`users`, `audit_logs`, `delegations_acces`) sont créées automatiquement au démarrage de l'API.
 
-Créer un fichier `.env` à la racine du projet (**ne jamais le committer**) :
+L'API est accessible sur `http://localhost:8000` (Swagger : `http://localhost:8000/docs`).
 
-```env
-POSTGRES\_USER=postgres
-POSTGRES\_PASSWORD=votre\_mot\_de\_passe
-POSTGRES\_HOST=127.0.0.1
-POSTGRES\_PORT=5432
-POSTGRES\_DB=dmpi\_sql
-
-JWT\_SECRET\_KEY=une\_cle\_aleatoire\_longue\_generee\_par\_vos\_soins
-ADMIN\_INITIAL\_PASSWORD=un\_mot\_de\_passe\_fort\_pour\_le\_premier\_compte\_admin
-```
-
-> Le `.gitignore` exclut déjà `.env` et `venv/` — vérifiez toujours avec `git status` avant un commit qu'aucun secret n'apparaît.
-
-Pour générer une clé JWT sûre :
+### Peupler la base avec des données de démonstration
 
 ```bash
-python -c "import secrets; print(secrets.token\_hex(32))"
+docker compose exec backend python seed_complet.py
 ```
 
-### Créer la base PostgreSQL
+Ce script vide puis recrée un jeu de données complet et cohérent : établissements (MongoDB), comptes utilisateurs de tous les rôles (PostgreSQL), dossiers médicaux, consultations, ordonnances, constantes vitales et rendez-vous (MongoDB). Tous les emails sont sur le domaine `@dmpi.bj`. Les comptes créés sont affichés à la fin de l'exécution du script (super admin, médecin, infirmier, patient, etc.).
 
-```sql
-CREATE DATABASE dmpi\_sql;
-```
+Alternative minimaliste : `docker compose exec backend python create_admin.py` ne crée que le premier compte Super Admin (mot de passe lu depuis `ADMIN_INITIAL_PASSWORD`), sans jeu de données de démonstration.
 
-Les tables (`users`, `audit\_logs`, `delegations\_acces`) sont créées automatiquement au démarrage de l'application.
-
-### Créer le premier compte Super Admin
+### Arrêter / réinitialiser la stack
 
 ```bash
-python create\_admin.py
+docker compose down          # arrête les conteneurs, conserve les données (volumes)
+docker compose down -v       # arrête et supprime aussi les volumes (reset complet)
 ```
 
-Le mot de passe est lu depuis `ADMIN\_INITIAL\_PASSWORD` (jamais écrit en dur dans le script).
+## Accès aux bases de données depuis l'hôte
 
-## Lancement
+Les ports des bases sont exposés sur `localhost` pour pouvoir les inspecter avec des outils graphiques.
 
-Trois services doivent tourner en parallèle, chacun dans son propre terminal.
+### PostgreSQL (pgAdmin4, DBeaver, psql...)
 
-### 1\. MongoDB
+| Champ | Valeur |
+|-|-|
+| Host | `localhost` |
+| Port | **`5433`** ⚠️ (PostgreSQL écoute sur `5432` *dans* le conteneur, mais Docker le mappe sur `5433` côté hôte pour ne pas entrer en conflit avec un éventuel PostgreSQL déjà installé sur la machine — voir `docker-compose.yml`) |
+| Database | `dmpi_db` |
+| User | valeur de `POSTGRES_USER` dans `.env` (`postgres` par défaut) |
+| Password | valeur de `POSTGRES_PASSWORD` dans `.env` |
 
-Démarrer le service MongoDB (ou via MongoDB Compass).
+### MongoDB (MongoDB Compass, mongosh...)
 
-### 2\. Kafka (mode KRaft)
+Chaîne de connexion (adapter user/password si modifiés dans `.env`) :
 
-Premier lancement uniquement :
-
-```bash
-cd chemin/vers/kafka
-.\\bin\\windows\\kafka-storage.bat random-uuid
-.\\bin\\windows\\kafka-storage.bat format -t <UUID\_GÉNÉRÉ> -c .\\config\\server.properties --standalone
+```
+mongodb://admin:admin123@localhost:27017/?authSource=admin
 ```
 
-À chaque démarrage (le contournement `KAFKA\_HEAP\_OPTS` évite un bug `wmic` sur certaines versions récentes de Windows) :
+Base à ouvrir : `dmpi_db`.
 
-```bash
-$env:KAFKA\_HEAP\_OPTS = "-Xmx1G -Xms1G"
-.\\bin\\windows\\kafka-server-start.bat .\\config\\server.properties
-```
-
-### 3\. API FastAPI
-
-```bash
-venv\\Scripts\\activate
-python -m uvicorn app.main:app --reload
-```
-
-L'API est accessible sur `http://127.0.0.1:8000`.
+> Si vous connectez un outil graphique et voyez une base `dmpi_db` vide ou avec des données inattendues, vérifiez d'abord qu'aucun PostgreSQL/MongoDB natif ne tourne déjà sur votre machine avec les mêmes ports par défaut (5432 pour Postgres, 27017 pour Mongo) — c'est la source d'erreur la plus fréquente en local.
 
 ## Utilisation de l'API
 
@@ -222,32 +191,7 @@ Pour un appel direct :
 Authorization: Bearer <token>
 ```
 
-### Endpoints principaux
-
-|Méthode|Route|Description|Accès|
-|-|-|-|-|
-|`POST`|`/auth/login`|Connexion|Public|
-|`POST`|`/admin/users`|Créer un compte|Super Admin|
-|`GET`|`/admin/users`|Lister les comptes|Super Admin|
-|`PATCH`|`/admin/users/{id}/desactiver`|Désactiver un compte|Super Admin|
-|`GET`|`/admin/logs`|Console d'audit (filtrable)|Super Admin|
-|`POST`|`/dossiers/`|Créer un dossier médical|Authentifié|
-|`GET`|`/dossiers/{npi}`|Rechercher un dossier par NPI|Authentifié|
-|`PUT`|`/dossiers/{npi}`|Mettre à jour un dossier|Authentifié|
-|`POST`|`/consultations/`|Enregistrer une consultation + ordonnance|Authentifié|
-|`GET`|`/consultations/patient/{npi}`|Historique des consultations|Authentifié|
-|`GET`|`/urgence/{npi}`|Accès urgence (Break the Glass)|Authentifié|
-|`POST`|`/soins/constantes`|Saisir des constantes vitales|Infirmier, Médecin|
-|`GET`|`/soins/constantes/patient/{npi}`|Historique des constantes|Authentifié|
-|`POST`|`/soins/administrations`|Valider l'administration d'un traitement|Infirmier, Médecin|
-|`GET`|`/patients/me`|Consulter son propre dossier|Patient|
-|`GET`|`/patients/me/export`|Exporter son dossier (FHIR/JSON)|Patient|
-|`GET`|`/dashboard/etablissement`|KPIs locaux|Admin établissement, Super Admin|
-|`GET`|`/dashboard/national`|Supervision et épidémiologie|Super Admin|
-|`POST`|`/delegations/`|Déléguer temporairement un accès|Médecin, Infirmier|
-|`GET`|`/delegations/donnees`|Délégations accordées|Authentifié|
-|`GET`|`/delegations/recues`|Délégations reçues|Authentifié|
-|`PATCH`|`/delegations/{id}/revoquer`|Révoquer une délégation|Délégant, Super Admin|
+La liste complète des routes (méthode, paramètres, schémas de requête/réponse, rôle requis) est générée automatiquement et disponible dans Swagger — chaque route y est de toute façon protégée par le même contrôle d'accès JWT/rôle qu'en production, elle n'a donc pas besoin d'être dupliquée ici.
 
 ## Structure du projet
 
@@ -257,34 +201,43 @@ dmpi-backend/
 │   ├── main.py                  # Point d'entrée FastAPI
 │   ├── security.py              # Hashage, JWT (HTTP Bearer), contrôle des rôles
 │   ├── audit.py                 # Journalisation Append-Only
-│   ├── kafka\_producer.py        # Publication d'événements Kafka
-│   ├── database\_sql.py          # Connexion PostgreSQL (SQLAlchemy async)
-│   ├── database\_mongo.py        # Connexion MongoDB (Motor)
-│   ├── models\_sql.py            # Modèles PostgreSQL (User, AuditLog, DelegationAcces)
+│   ├── context.py                # ContextVar pour l'IP client (audit)
+│   ├── kafka_producer.py        # Publication d'événements Kafka
+│   ├── database_sql.py          # Connexion PostgreSQL (SQLAlchemy async)
+│   ├── database_mongo.py        # Connexion MongoDB (Motor)
+│   ├── models_sql.py            # Modèles PostgreSQL (User, AuditLog, DelegationAcces)
 │   ├── schemas/                 # Schémas Pydantic
 │   │   ├── user.py
-│   │   ├── dossier\_medical.py
+│   │   ├── etablissement.py
+│   │   ├── dossier_medical.py
 │   │   ├── consultation.py
+│   │   ├── ordonnance.py
 │   │   ├── soins.py
+│   │   ├── patient.py
 │   │   ├── delegation.py
 │   │   └── logs.py
 │   └── routes/                  # Endpoints de l'API
 │       ├── auth.py
 │       ├── admin.py
-│       ├── dossier\_medical.py
+│       ├── etablissement.py
+│       ├── dossier_medical.py
 │       ├── consultation.py
+│       ├── ordonnance.py
 │       ├── urgence.py
 │       ├── soins.py
 │       ├── patient.py
+│       ├── rdv.py
 │       ├── dashboard.py
 │       └── delegation.py
-├── create\_admin.py               # Script de création du premier compte (mot de passe via .env)
+├── create_admin.py              # Crée le premier compte Super Admin (mot de passe via .env)
+├── seed_complet.py              # Jeu de données de démo complet (établissements, comptes, dossiers...)
+├── Dockerfile
+├── docker-compose.yml
 ├── requirements.txt
-├── .env                           # Non versionné
+├── .env.example                 # Modèle de configuration, à copier vers .env
+├── .env                          # Non versionné
 └── .gitignore
 ```
-
-> Un fichier `app/kafka\_consumer\_test.py` peut exister localement pour la validation manuelle des événements Kafka — c'est un script de test, volontairement non versionné.
 
 ## Sécurité
 
@@ -294,18 +247,6 @@ dmpi-backend/
 * Chaque action sensible (recherche NPI, création, accès urgence, délégation) est tracée dans `audit\_logs`, une table Append-Only : aucune suppression ni modification possible
 * Différenciation stricte des permissions par rôle (`require\_role`)
 * Isolation des données patient : un compte `patient` ne peut consulter que son propre dossier (rattaché via `npi\_patient`)
-
-## Équipe
-
-* BANGANA C. K. Landry
-* BIAOU Fred
-* LOKOSSOU Mélissa
-* MEVO Divine I. H.
-* OGA Baba-Tunde K. 0. Précieux
-* PATINVOH Mavic
-* HOUNGBEDJI Carlos
-* VIOU Merveil Nathanael
-* ZANNOU Freddy
 
 \---
 

@@ -1,7 +1,7 @@
 # DMPI Bénin - Dossier Médical Partagé Informatisé (Frontend)
 
-Ce dépôt contient le prototype interactif (Frontend) du **Dossier Médical Partagé Informatisé (DMPI)** pour le Bénin. 
-Il s'agit d'une application moderne, responsive, et conçue pour être utilisée par différents acteurs du système de santé (Médecins, Infirmiers, Patients, Administrateurs).
+Ce dépôt contient l'interface (Frontend) du **Dossier Médical Partagé Informatisé (DMPI)** pour le Bénin.
+Il s'agit d'une application moderne, responsive, connectée à l'API réelle du [backend DMPI](../dmpi-backend) (FastAPI + PostgreSQL + MongoDB), et conçue pour être utilisée par différents acteurs du système de santé (Médecins, Infirmiers, Patients, Admins établissement, Super Admin).
 
 ## 🚀 Fonctionnalités implémentées
 
@@ -39,60 +39,80 @@ L'application gère une navigation dynamique basée sur les rôles. 5 espaces di
 - **Framework :** [React Router v7](https://reactrouter.com/) (ex-Remix) - SSR (Server-Side Rendering) activé.
 - **Style :** [Tailwind CSS v4](https://tailwindcss.com/) avec un design system personnalisé (`@theme`).
 - **Typage :** TypeScript strict.
+- **Gestionnaire de paquets :** pnpm (le seul supporté — ne pas utiliser `npm install`, cela régénère un `package-lock.json` en plus de `pnpm-lock.yaml` et désynchronise les dépendances de l'équipe).
 - **Architecture :**
-  - `app/routes/` : Routes basées sur les fichiers (regroupées par rôle).
+  - `app/routes/` : Routes basées sur les fichiers (regroupées par rôle), déclarées dans `app/routes.ts`.
   - `app/components/ui/` : Composants de base (Design System DMPI).
   - `app/components/layout/` : AppShell (Responsive Sidebar / BottomNav mobile).
-  - `app/services/` : Couche de services "mockée" (simulant les appels API avec des délais artificiels).
+  - `app/services/` : Couche d'accès à l'API backend (`apiFetch` dans `services/api.ts`, un service par domaine métier). Seul `cim10Service.ts` est une base de données locale statique (référentiel de codes CIM-10), volontairement non servi par l'API.
 
-## 💻 Installation & Lancement (Local)
-
-L'application est configurée pour fonctionner sans backend externe (les données sont simulées côté frontend).
+## 💻 Installation & Lancement
 
 ### 1. Prérequis
 - Node.js (v18 ou supérieur)
-- npm
+- pnpm (`corepack enable` si non installé, ou `npm install -g pnpm`)
+- Le [backend DMPI](../dmpi-backend) démarré (voir son README — `docker compose up -d --build` puis `docker compose exec backend python seed_complet.py` pour avoir des comptes de démo)
 
-### 2. Installation
-```bash
-npm install
+### 2. Configuration
+
+Créer un fichier `.env` à la racine si l'API ne tourne pas sur `http://localhost:8000` :
+
+```env
+VITE_API_URL=http://localhost:8000
 ```
 
-### 3. Lancement en mode développement
+Sans ce fichier, l'application pointe vers `http://localhost:8000` par défaut (voir `app/services/api.ts`).
+
+### 3. Installation
+
 ```bash
-npm run dev
+pnpm install
 ```
 
-L'application sera disponible sur `http://localhost:3000`.
+### 4. Lancement en mode développement
+
+```bash
+pnpm dev
+```
+
+L'application sera disponible sur `http://localhost:5173` (port par défaut de Vite en mode dev ; `http://localhost:3000` en production via `pnpm start`, voir plus bas — les deux sont déjà autorisés par le CORS du backend).
 
 > **⚠️ Note sur le "Cold Start" (CSS Tailwind v4)**
-> Lors du tout premier lancement (`npm run dev`), la page peut parfois s'afficher sans style pendant quelques secondes. C'est un comportement du compilateur Tailwind v4 JIT couplé au SSR en dev. Attendez quelques secondes ou **rafraîchissez la page (F5)**. Ce comportement n'existe pas en production.
+> Lors du tout premier lancement (`pnpm dev`), la page peut parfois s'afficher sans style pendant quelques secondes. C'est un comportement du compilateur Tailwind v4 JIT couplé au SSR en dev. Attendez quelques secondes ou **rafraîchissez la page (F5)**. Ce comportement n'existe pas en production.
 
-## 🔑 Se connecter (Mode Démo)
+## 🔑 Se connecter
 
-Une fois sur la page de connexion (`/login`), **5 boutons "Dev Only - Remplissage rapide"** sont disponibles en bas de l'écran.
-Ils permettent de remplir automatiquement les identifiants pour tester les différents profils :
+L'authentification passe par l'API réelle (`POST /auth/login`, token JWT stocké en `localStorage`). Il faut donc que le backend soit démarré et peuplé (`docker compose exec backend python seed_complet.py` — voir le README backend).
 
-- **Médecin** : `dr.kouassi@cnhu-cotonou.bj`
-- **Infirmier** : `inf.mensah@cnhu-cotonou.bj`
-- **Patient** : `patient@dmpi.bj`
-- **Admin** : `admin@hopital-parakou.bj`
-- **Superadmin** : `superadmin@dmpi-benin.gov.bj`
+Sur la page de connexion (`/login`), des boutons **"Dev Only - Remplissage rapide"** pré-remplissent les identifiants des comptes de démonstration créés par `seed_complet.py` (domaine `@dmpi.bj`) :
 
-Cliquez sur un profil puis sur "Se connecter" pour accéder à l'espace correspondant.
+- **Médecin** : `dr.kouassi@dmpi.bj` / `••••••••`
+- **Infirmier** : `inf.mensah@dmpi.bj` / `••••••••`
+- **Patient** : `patient.dossou@dmpi.bj` / `••••••••`
+- **Admin établissement** : `admin.cnhu@dmpi.bj` / `••••••••`
+- **Super Admin** : `superadmin@dmpi.bj` / `••••••••`
+
+> Les mots de passe ne sont volontairement pas versionnés ici. Demandez-les à la personne qui a lancé `seed_complet.py` sur votre environnement (canal d'équipe privé), ou relisez la sortie console du script — elle les affiche en clair à l'exécution.
+
+Ces boutons ne fonctionnent que si le backend a été peuplé avec `seed_complet.py` ; sinon utilisez un compte que vous avez créé vous-même via `/admin/users` ou `create_admin.py`.
 
 ## 📦 Build pour la Production
 
-Pour vérifier le typage et générer les assets statiques minifiés de production :
-
 ```bash
-npm run build
-npm run start
+pnpm build
+pnpm start
 ```
 
-## 🏗️ Structure des données mockées
+## 🗂️ Structure des services (appels API)
 
-Aucune base de données réelle n'est connectée. Les données se trouvent dans :
-- `app/services/patientService.ts` : Données des patients (NPI, constantes, examens).
-- `app/services/consultationService.ts` & `prescriptionService.ts` : Actes médicaux.
-- `app/services/authService.ts` : Logique d'authentification et JWT simulé.
+Toute la donnée provient de l'API FastAPI (`app/services/api.ts` → `apiFetch`), à l'exception du référentiel CIM-10 :
+
+- `app/services/authService.ts` : login, stockage du token JWT.
+- `app/services/userService.ts` : gestion des comptes (Super Admin).
+- `app/services/patientService.ts` : dossier médical.
+- `app/services/consultationService.ts`, `prescriptionService.ts` : consultations et ordonnances.
+- `app/services/constanstesService.ts`, `administrationService.ts` : soins infirmiers.
+- `app/services/etablissementService.ts` : établissements de santé.
+- `app/services/rdvService.ts` : rendez-vous.
+- `app/services/dashboardService.ts` : KPIs et statistiques.
+- `app/services/cim10Service.ts` : recherche de codes CIM-10 — base statique locale, pas d'appel réseau.
