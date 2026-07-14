@@ -45,7 +45,7 @@ services:
       - pgdata:/var/lib/postgresql/data
 
   mongodb:
-    image: mongo:6.0
+    image: mongo:7
     container_name: dmpi-mongodb
     ports:
       - "27017:27017"
