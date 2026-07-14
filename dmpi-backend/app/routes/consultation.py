@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.database_mongo import consultations_collection
 from app.schemas.consultation import ConsultationMongo
-from app.security import get_current_user
+from app.security import get_current_user, require_role
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
@@ -15,7 +15,7 @@ router = APIRouter(
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def enregistrer_consultation(
     consultation: ConsultationMongo,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role("medecin"))
 ):
     """
     Endpoint du MVP : Saisie d'une nouvelle consultation médicale.
