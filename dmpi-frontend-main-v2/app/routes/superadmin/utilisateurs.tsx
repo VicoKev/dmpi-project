@@ -12,6 +12,8 @@ import {
   ROLE_CONFIG,
   ROLE_LABELS,
   ROLES_SELECTABLE,
+  DOMAINE_EMAIL_AUTORISE,
+  estEmailDomaineValide,
   type User,
   type UserCreatePayload,
   type UserUpdatePayload,
@@ -54,6 +56,11 @@ function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!estEmailDomaineValide(form.email)) {
+      setError(`L'adresse email doit appartenir au domaine @${DOMAINE_EMAIL_AUTORISE}.`);
+      return;
+    }
 
     if (form.role === "patient" && (!form.npi_patient || form.npi_patient.length !== 10)) {
       setError("Le NPI du patient doit comporter exactement 10 chiffres.");
@@ -172,6 +179,7 @@ function CreateUserForm({ onSuccess, onCancel }: CreateUserFormProps) {
             value={form.email}
             onChange={(e) => update("email", e.target.value)}
             leadingIcon="mail"
+            placeholder={`prenom.nom@${DOMAINE_EMAIL_AUTORISE}`}
             required
           />
 
@@ -399,6 +407,11 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
     e.preventDefault();
     setError(null);
 
+    if (form.email && !estEmailDomaineValide(form.email)) {
+      setError(`L'adresse email doit appartenir au domaine @${DOMAINE_EMAIL_AUTORISE}.`);
+      return;
+    }
+
     if (form.role === "patient" && (!form.npi_patient || form.npi_patient.length !== 10)) {
       setError("Le NPI du patient doit comporter exactement 10 chiffres.");
       return;
@@ -460,7 +473,14 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Email" value={form.email ?? ""} onChange={(e) => update("email", e.target.value)} type="email" required />
+          <Input
+            label="Email"
+            value={form.email ?? ""}
+            onChange={(e) => update("email", e.target.value)}
+            type="email"
+            placeholder={`prenom.nom@${DOMAINE_EMAIL_AUTORISE}`}
+            required
+          />
           
           <div className="grid grid-cols-2 gap-3">
             <Input label="Prenom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} required />

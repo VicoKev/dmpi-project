@@ -1,5 +1,14 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime, date
+
+DOMAINE_EMAIL_AUTORISE = "dmpi.bj"
+
+
+def _valider_domaine_dmpi(email: str) -> str:
+    if not email.lower().endswith(f"@{DOMAINE_EMAIL_AUTORISE}"):
+        raise ValueError(f"L'adresse email doit appartenir au domaine @{DOMAINE_EMAIL_AUTORISE}.")
+    return email
+
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -20,6 +29,11 @@ class UserCreate(BaseModel):
     sexe: str | None = None
     groupe_sanguin: str | None = None
 
+    @field_validator("email")
+    @classmethod
+    def email_domaine_dmpi(cls, v: str) -> str:
+        return _valider_domaine_dmpi(v)
+
 class UserUpdate(BaseModel):
     """Schéma pour la modification d'un compte (champs optionnels)."""
     email: EmailStr | None = None
@@ -30,6 +44,11 @@ class UserUpdate(BaseModel):
     service: str | None = None
     npi_patient: str | None = None
     etablissement_id: str | None = None
+
+    @field_validator("email")
+    @classmethod
+    def email_domaine_dmpi(cls, v: str | None) -> str | None:
+        return _valider_domaine_dmpi(v) if v is not None else v
 
 class UserOut(BaseModel):
     id: int

@@ -1,5 +1,11 @@
 import { apiFetch } from "./api";
 
+export const DOMAINE_EMAIL_AUTORISE = "dmpi.bj";
+
+export function estEmailDomaineValide(email: string): boolean {
+  return email.toLowerCase().endsWith(`@${DOMAINE_EMAIL_AUTORISE}`);
+}
+
 export interface User {
   id: number;
   email: string;
