@@ -40,24 +40,24 @@ export default function Login() {
   const fillCredentials = (role: string) => {
     switch (role) {
       case "medecin":
-        setEmail("dr.kouassi@cnhu-cotonou.bj");
-        setPassword("password123");
+        setEmail("dr.kouassi@dmpi.bj");
+        setPassword("Medecin2025!");
         break;
       case "infirmier":
-        setEmail("inf.mensah@cnhu-cotonou.bj");
-        setPassword("password123");
+        setEmail("inf.mensah@dmpi.bj");
+        setPassword("Infirmier2025!");
         break;
       case "patient":
-        setEmail("patient@dmpi.bj");
-        setPassword("password123");
+        setEmail("patient.dossou@dmpi.bj");
+        setPassword("Patient2025!");
         break;
       case "admin":
-        setEmail("admin@hopital-parakou.bj");
-        setPassword("password123");
+        setEmail("admin.cnhu@dmpi.bj");
+        setPassword("Admin2025!");
         break;
       case "superadmin":
-        setEmail("superadmin@dmpi-benin.gov.bj");
-        setPassword("admin2025");
+        setEmail("superadmin@dmpi.bj");
+        setPassword("Admin2025!");
         break;
     }
   };
