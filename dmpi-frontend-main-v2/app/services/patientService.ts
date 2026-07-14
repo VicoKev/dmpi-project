@@ -156,6 +156,24 @@ export async function updateDossierPatient(npi: string, payload: UpdateDossierPa
   }
 }
 
+export interface CreateDossierPayload {
+  npi: string;
+  nom: string;
+  prenom: string;
+  date_naissance?: string | null;
+  sexe?: string | null;
+  groupe_sanguin?: string | null;
+  tuteur?: { nom: string; telephone: string; lien_parente: string } | null;
+}
+
+export async function createDossierPatient(payload: CreateDossierPayload): Promise<void> {
+  await apiFetch("/dossiers/", {
+    method: "POST",
+    // updated_at est recalculé côté serveur, mais le champ est requis par le schéma d'entrée.
+    body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() }),
+  });
+}
+
 export function calculerAge(dateNaissance: string): number | "-" {
   if (!dateNaissance) return "-";
   const naissance = new Date(dateNaissance);
