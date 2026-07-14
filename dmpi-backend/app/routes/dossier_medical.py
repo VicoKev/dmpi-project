@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.database_mongo import dossiers_medicaux_collection
-from app.schemas.dossier_medical import DossierMedicalMongo, DossierMedicalUpdate 
-from app.security import get_current_user
+from app.schemas.dossier_medical import DossierMedicalMongo, DossierMedicalUpdate
+from app.security import get_current_user, require_role
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
@@ -15,7 +15,7 @@ router = APIRouter(
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def creer_dossier_medical(
     dossier: DossierMedicalMongo,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role("medecin", "infirmier"))
 ):
     dossier_existant = await dossiers_medicaux_collection.find_one({"npi": dossier.npi})
     if dossier_existant:

@@ -16,6 +16,13 @@ class TraitementEnCours(BaseModel):
     indication: str | None = None
 
 
+class Tuteur(BaseModel):
+    """Contact d'un parent/tuteur légal — utilisé pour les mineurs et nouveau-nés sans moyen de contact propre."""
+    nom: str
+    telephone: str
+    lien_parente: str
+
+
 class DossierMedicalMongo(BaseModel):
     npi: str = Field(..., min_length=10, max_length=10)
     nom: str | None = None
@@ -26,6 +33,7 @@ class DossierMedicalMongo(BaseModel):
     allergies: list[Allergie] = []
     antecedents: list[str] = []
     traitements_en_cours: list[TraitementEnCours] = []
+    tuteur: Tuteur | None = None
     updated_at: datetime
 
 class FicheUrgence(BaseModel):
@@ -51,3 +59,4 @@ class DossierMedicalUpdate(BaseModel):
     allergies: list[Allergie] = []
     antecedents: list[str] = []
     traitements_en_cours: list[TraitementEnCours] = []
+    tuteur: Tuteur | None = None
