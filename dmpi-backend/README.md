@@ -11,6 +11,7 @@ Une architecture polyglotte (SQL + NoSQL/FHIR) pour connecter les hôpitaux du B
 * [Stack technique](#stack-technique)
 * [Fonctionnalités](#fonctionnalités)
 * [Installation & Lancement (Docker)](#installation--lancement-docker--recommandé)
+* [Migrations PostgreSQL (Alembic)](#migrations-postgresql-alembic)
 * [Accès aux bases de données](#accès-aux-bases-de-données-depuis-lhôte)
 * [Utilisation de l'API](#utilisation-de-lapi)
 * [Structure du projet](#structure-du-projet)
@@ -120,7 +121,7 @@ python3 -c "import secrets; print(secrets.token_hex(32))"   # pour JWT_SECRET_KE
 docker compose up -d --build
 ```
 
-Ceci démarre 5 conteneurs : `dmpi-postgres`, `dmpi-mongodb`, `dmpi-zookeeper`, `dmpi-kafka`, `dmpi-fastapi`. Les tables PostgreSQL (`users`, `audit_logs`, `delegations_acces`) sont créées automatiquement au démarrage de l'API.
+Ceci démarre 5 conteneurs : `dmpi-postgres`, `dmpi-mongodb`, `dmpi-zookeeper`, `dmpi-kafka`, `dmpi-fastapi`. Le schéma PostgreSQL est créé/mis à jour automatiquement au démarrage de l'API via Alembic (`alembic upgrade head`, voir [Migrations PostgreSQL (Alembic)](#migrations-postgresql-alembic)) — aucune étape manuelle nécessaire, y compris sur une base vierge.
 
 L'API est accessible sur `http://localhost:8000` (Swagger : `http://localhost:8000/docs`).
 
@@ -139,6 +140,45 @@ Alternative minimaliste : `docker compose exec backend python create_admin.py` n
 ```bash
 docker compose down          # arrête les conteneurs, conserve les données (volumes)
 docker compose down -v       # arrête et supprime aussi les volumes (reset complet)
+```
+
+## Migrations PostgreSQL (Alembic)
+
+Le schéma PostgreSQL est géré par [Alembic](https://alembic.sqlalchemy.org/), pas par `Base.metadata.create_all` (qui ne peut de toute façon jamais modifier une table déjà existante). À chaque démarrage du conteneur `backend`, `entrypoint.sh` exécute `alembic upgrade head` avant de lancer `uvicorn` — sur une base vierge, cela crée tout le schéma d'un coup ; sur une base déjà à jour, c'est un no-op.
+
+### Ajouter/modifier une colonne
+
+Le code n'est pas monté en volume dans le conteneur (`docker-compose.yml` ne fait pas de bind mount sur `backend`), donc le flux est :
+
+```bash
+# 1. Modifier le modèle dans app/models_sql.py (localement)
+
+# 2. Reconstruire l'image pour que le conteneur voie le nouveau modèle
+docker compose build backend
+docker compose up -d backend
+
+# 3. Générer la migration par autogénération (diff modèle ↔ base réelle)
+docker compose exec backend alembic revision --autogenerate -m "description du changement"
+
+# 4. Rapatrier le fichier généré dans le dépôt (à committer)
+docker cp dmpi-fastapi:/app/alembic/versions/<fichier_généré>.py alembic/versions/
+
+# 5. Relire le fichier généré avant de l'appliquer — l'autogénération détecte
+#    bien les colonnes/tables/index, mais ne détecte pas tout (renommages de
+#    colonne, changements de type ambigus) : à ajuster manuellement si besoin.
+
+# 6. Appliquer la migration
+docker compose exec backend alembic upgrade head
+```
+
+Les prochains redémarrages du conteneur (`docker compose up -d backend`, ou un déploiement sur un nouvel environnement) appliqueront automatiquement cette migration via `entrypoint.sh` — plus besoin de `ALTER TABLE` manuel.
+
+### Autres commandes utiles
+
+```bash
+docker compose exec backend alembic current      # révision actuelle de la base
+docker compose exec backend alembic history       # historique des migrations
+docker compose exec backend alembic downgrade -1  # annuler la dernière migration
 ```
 
 ## Accès aux bases de données depuis l'hôte
@@ -205,7 +245,7 @@ dmpi-backend/
 │   ├── kafka_producer.py        # Publication d'événements Kafka
 │   ├── database_sql.py          # Connexion PostgreSQL (SQLAlchemy async)
 │   ├── database_mongo.py        # Connexion MongoDB (Motor)
-│   ├── models_sql.py            # Modèles PostgreSQL (User, AuditLog, DelegationAcces)
+│   ├── models_sql.py            # Modèles PostgreSQL (User, AuditLog, DelegationAcces, territoire...)
 │   ├── schemas/                 # Schémas Pydantic
 │   │   ├── user.py
 │   │   ├── etablissement.py
@@ -229,8 +269,14 @@ dmpi-backend/
 │       ├── rdv.py
 │       ├── dashboard.py
 │       └── delegation.py
+├── alembic/                      # Migrations PostgreSQL (voir section dédiée)
+│   ├── env.py
+│   └── versions/
+├── alembic.ini
+├── entrypoint.sh                 # Lance `alembic upgrade head` puis uvicorn
 ├── create_admin.py              # Crée le premier compte Super Admin (mot de passe via .env)
 ├── seed_complet.py              # Jeu de données de démo complet (établissements, comptes, dossiers...)
+├── load_territoire.py           # Charge le découpage territorial du Bénin en base
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt

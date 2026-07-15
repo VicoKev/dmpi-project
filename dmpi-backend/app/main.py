@@ -3,8 +3,6 @@ import os
 from fastapi.middleware.cors import CORSMiddleware
 from app.context import client_ip
 from app.database_mongo import database as mongo_database
-from app.database_sql import engine, Base
-from app import models_sql
 from app.routes.dossier_medical import router as dossier_router
 from app.routes.consultation import router as consultation_router
 from app.routes.ordonnance import router as ordonnance_router
@@ -19,6 +17,7 @@ from app.routes.rdv import router as rdv_router
 from app.routes.etablissement import router as etablissement_router
 from app.routes.demande_acces import router as demande_acces_router
 from app.routes.file_attente import router as file_attente_router
+from app.routes.territoire import router as territoire_router
 from app.kafka_producer import demarrer_producer, arreter_producer
 
 app = FastAPI(
@@ -52,8 +51,10 @@ async def capture_client_ip(request: Request, call_next):
 
 @app.on_event("startup")
 async def startup_event():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Le schéma PostgreSQL est géré par Alembic (voir alembic/ et le CMD du
+    # Dockerfile qui lance `alembic upgrade head` avant uvicorn) — plus de
+    # create_all ici, qui ne pouvait de toute façon jamais modifier une table
+    # déjà existante.
     await demarrer_producer()
 
 @app.on_event("shutdown")
@@ -74,6 +75,7 @@ app.include_router(rdv_router)
 app.include_router(etablissement_router)
 app.include_router(demande_acces_router)
 app.include_router(file_attente_router)
+app.include_router(territoire_router)
 
 @app.get("/")
 async def root():
