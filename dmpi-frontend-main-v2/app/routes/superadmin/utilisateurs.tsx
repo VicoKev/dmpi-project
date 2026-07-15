@@ -20,6 +20,7 @@ import {
   type UserUpdatePayload,
 } from "../../services/userService";
 import { getEtablissements, type Etablissement } from "../../services/etablissementService";
+import { getDossierPatient } from "../../services/patientService";
 
 // ─── Formulaire de création ──────────────────────────────────────────────────
 
@@ -290,15 +291,19 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                   onChange={(e) => update("date_naissance", e.target.value)}
                   required
                 />
-                <div className="flex flex-col gap-1.5">
-                  <label className="text-body-sm font-semibold" style={{ color: "var(--color-on-success-container)" }}>
-                    Sexe *
+                <div className="flex flex-col gap-1">
+                  <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
+                    Sexe <span style={{ color: "var(--color-error)" }}>*</span>
                   </label>
                   <select
                     value={form.sexe ?? "M"}
                     onChange={(e) => update("sexe", e.target.value)}
-                    className="w-full p-2.5 rounded-xl border focus:outline-none focus:ring-2"
-                    style={{ borderColor: "var(--color-success)", backgroundColor: "var(--color-surface)" }}
+                    className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
+                    style={{
+                      borderColor: "var(--color-outline-variant)",
+                      backgroundColor: "var(--color-surface-container-lowest)",
+                      color: "var(--color-on-surface)",
+                    }}
                     required
                   >
                     <option value="M">Masculin</option>
@@ -307,15 +312,19 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                   </select>
                 </div>
               </div>
-              <div className="mt-3 flex flex-col gap-1.5">
-                <label className="text-body-sm font-semibold" style={{ color: "var(--color-on-success-container)" }}>
-                  Groupe Sanguin
+              <div className="mt-3 flex flex-col gap-1">
+                <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
+                  Groupe sanguin
                 </label>
                 <select
                   value={form.groupe_sanguin ?? ""}
                   onChange={(e) => update("groupe_sanguin", e.target.value)}
-                  className="w-full p-2.5 rounded-xl border focus:outline-none focus:ring-2"
-                  style={{ borderColor: "var(--color-success)", backgroundColor: "var(--color-surface)" }}
+                  className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
+                  style={{
+                    borderColor: "var(--color-outline-variant)",
+                    backgroundColor: "var(--color-surface-container-lowest)",
+                    color: "var(--color-on-surface)",
+                  }}
                 >
                   <option value="">Non renseigné</option>
                   <option value="A+">A+</option>
@@ -542,17 +551,55 @@ export default function SuperAdminUtilisateurs() {
 
   // Pré-remplissage depuis une demande d'accès traitée (?npi=&nom=&prenom=)
   const npiPrefill = searchParams.get("npi");
+  const [prefillDossier, setPrefillDossier] = useState<{
+    dateNaissance: string | null;
+    sexe: string;
+    groupeSanguin: string | null;
+  } | null>(null);
+
   const createFormInitialValues = npiPrefill
     ? {
         role: "patient" as const,
         npi_patient: npiPrefill,
         nom: searchParams.get("nom") ?? "",
         prenom: searchParams.get("prenom") ?? "",
+        date_naissance: prefillDossier?.dateNaissance ?? null,
+        sexe: prefillDossier?.sexe ?? "M",
+        groupe_sanguin: prefillDossier?.groupeSanguin ?? null,
       }
     : undefined;
 
   useEffect(() => {
-    if (npiPrefill) setShowForm(true);
+    if (!npiPrefill) return;
+    let cancelled = false;
+
+    // Repart de zéro à chaque nouvelle demande traitée : une donnée d'un NPI
+    // précédent ne doit jamais fuiter sur le formulaire du suivant.
+    setPrefillDossier(null);
+
+    getDossierPatient(npiPrefill)
+      .then((dossier) => {
+        if (cancelled) return;
+        if (dossier) {
+          setPrefillDossier({
+            dateNaissance: dossier.patient.dateNaissance ? dossier.patient.dateNaissance.split("T")[0] : null,
+            sexe: dossier.patient.sexe || "M",
+            groupeSanguin: dossier.patient.groupeSanguin ?? null,
+          });
+        }
+      })
+      .catch(() => {
+        // Le dossier n'a pas pu être préchargé : on ouvre quand même le formulaire
+        // (npi/nom/prénom restent pré-remplis depuis l'URL) plutôt que de rester bloqué.
+        if (!cancelled) {
+          showToast("Impossible de précharger les données du dossier. Complétez-les manuellement.", "error");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setShowForm(true);
+      });
+
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [npiPrefill]);
 
@@ -581,6 +628,10 @@ export default function SuperAdminUtilisateurs() {
   const handleCreateSuccess = (newUser: User) => {
     setUsers((prev) => [newUser, ...prev]);
     setShowForm(false);
+    if (npiPrefill) {
+      setPrefillDossier(null);
+      setSearchParams({});
+    }
     showToast(`Compte cree avec succes pour ${newUser.prenom} ${newUser.nom}.`);
   };
 
@@ -660,7 +711,10 @@ export default function SuperAdminUtilisateurs() {
           onSuccess={handleCreateSuccess}
           onCancel={() => {
             setShowForm(false);
-            if (npiPrefill) setSearchParams({});
+            if (npiPrefill) {
+              setPrefillDossier(null);
+              setSearchParams({});
+            }
           }}
           initialValues={createFormInitialValues}
         />
