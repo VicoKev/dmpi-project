@@ -15,6 +15,8 @@ interface NouveauPatientFormProps {
 
 const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"];
 
+const LIENS_PARENTE = ["Mère", "Père", "Tuteur légal", "Frère/Sœur", "Grand-parent", "Conjoint(e)", "Autre"];
+
 export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }: NouveauPatientFormProps) {
   const navigate = useNavigate();
 
@@ -63,7 +65,7 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
         sexe,
         groupe_sanguin: groupeSanguin || null,
         tuteur: tuteurNom.trim()
-          ? { nom: tuteurNom.trim(), telephone: telephoneContact.trim(), lien_parente: lienParente.trim() || "Tuteur" }
+          ? { nom: tuteurNom.trim(), telephone: telephoneContact.trim(), lien_parente: lienParente || "Autre" }
           : null,
       });
 
@@ -159,7 +161,20 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
         </p>
         <div className="grid grid-cols-2 gap-3">
           <Input label="Nom du tuteur" value={tuteurNom} onChange={(e) => setTuteurNom(e.target.value)} placeholder="Ex: Mariam Kouassi" />
-          <Input label="Lien de parenté" value={lienParente} onChange={(e) => setLienParente(e.target.value)} placeholder="Ex: Mère" />
+          <div className="flex flex-col gap-1">
+            <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Lien de parenté</label>
+            <select
+              value={lienParente}
+              onChange={(e) => setLienParente(e.target.value)}
+              className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
+              style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)" }}
+            >
+              <option value="">Sélectionner...</option>
+              {LIENS_PARENTE.map((l) => (
+                <option key={l} value={l}>{l}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
