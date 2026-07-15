@@ -15,6 +15,8 @@ export default function SuperAdminDemandesAcces() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<number | null>(null);
+  const [rejectingDemande, setRejectingDemande] = useState<DemandeAcces | null>(null);
+  const [motifRejet, setMotifRejet] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -41,12 +43,18 @@ export default function SuperAdminDemandesAcces() {
     navigate(`/superadmin/utilisateurs?${params.toString()}`);
   };
 
-  const handleRejeter = async (demande: DemandeAcces) => {
-    if (!confirm(`Rejeter la demande d'accès de ${demande.prenom} ${demande.nom} ?`)) return;
-    setRejectingId(demande.id);
+  const ouvrirRejet = (demande: DemandeAcces) => {
+    setRejectingDemande(demande);
+    setMotifRejet("");
+  };
+
+  const confirmerRejet = async () => {
+    if (!rejectingDemande) return;
+    setRejectingId(rejectingDemande.id);
     try {
-      await rejeterDemandeAcces(demande.id);
-      setDemandes((prev) => prev.filter((d) => d.id !== demande.id));
+      await rejeterDemandeAcces(rejectingDemande.id, motifRejet);
+      setDemandes((prev) => prev.filter((d) => d.id !== rejectingDemande.id));
+      setRejectingDemande(null);
     } catch (err) {
       alert((err as Error).message || "Erreur lors du rejet.");
     } finally {
@@ -112,7 +120,7 @@ export default function SuperAdminDemandesAcces() {
                     icon="block"
                     variant="outline"
                     size="sm"
-                    onClick={() => handleRejeter(d)}
+                    onClick={() => ouvrirRejet(d)}
                     loading={rejectingId === d.id}
                   >
                     Rejeter
@@ -126,6 +134,67 @@ export default function SuperAdminDemandesAcces() {
           </ul>
         )}
       </Card>
+
+      {/* Modale de rejet */}
+      {rejectingDemande && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+        >
+          <div
+            className="w-full max-w-md rounded-3xl p-6 shadow-2xl animate-slide-down"
+            style={{ backgroundColor: "var(--color-surface)" }}
+          >
+            <h2 className="text-headline-sm font-bold mb-1" style={{ color: "var(--color-on-surface)" }}>
+              Rejeter la demande
+            </h2>
+            <p className="text-body-md mb-4" style={{ color: "var(--color-on-surface-variant)" }}>
+              {rejectingDemande.prenom} {rejectingDemande.nom} — NPI {rejectingDemande.npi}
+            </p>
+
+            <div className="flex flex-col gap-1 mb-1">
+              <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
+                Motif du rejet (optionnel)
+              </label>
+              <textarea
+                value={motifRejet}
+                onChange={(e) => setMotifRejet(e.target.value)}
+                rows={3}
+                placeholder="Ex : numéro de téléphone invalide, à vérifier avec le patient..."
+                className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
+                style={{
+                  borderColor: "var(--color-outline-variant)",
+                  backgroundColor: "var(--color-surface-container-lowest)",
+                  color: "var(--color-on-surface)",
+                }}
+              />
+              <p className="text-caption mb-4" style={{ color: "var(--color-on-surface-variant)" }}>
+                Visible par le médecin/infirmier à l'origine de la demande.
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                fullWidth
+                type="button"
+                onClick={() => setRejectingDemande(null)}
+                disabled={rejectingId !== null}
+              >
+                Annuler
+              </Button>
+              <Button
+                fullWidth
+                icon="block"
+                onClick={confirmerRejet}
+                loading={rejectingId === rejectingDemande.id}
+              >
+                Rejeter la demande
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

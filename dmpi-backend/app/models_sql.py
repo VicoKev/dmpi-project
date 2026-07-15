@@ -56,7 +56,8 @@ class DemandeAccesPatient(Base):
     telephone_contact = Column(String, nullable=False)
     demandeur_email = Column(String, nullable=False, index=True)  # médecin/infirmier à l'origine de la demande
     etablissement_id = Column(String, nullable=True)
-    statut = Column(String, default="en_attente", nullable=False)  # "en_attente", "traite", "rejete"
+    statut = Column(String, default="en_attente", nullable=False)  # "en_attente", "traite", "rejete", "annulee"
+    motif_rejet = Column(String, nullable=True)  # renseigné uniquement si statut == "rejete"
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 

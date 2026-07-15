@@ -20,12 +20,14 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { to: "/medecin/consultations", icon: "medical_services", label: "Consultations" },
     { to: "/medecin/ordonnances", icon: "prescriptions", label: "Ordonnances" },
     { to: "/medecin/agenda", icon: "calendar_month", label: "Agenda" },
+    { to: "/medecin/demandes-acces", icon: "how_to_reg", label: "Demandes d'accès" },
   ],
   infirmier: [
     { to: "/infirmier", icon: "home_health", label: "Tableau de bord" },
     { to: "/infirmier/patients", icon: "groups", label: "Patients" },
     { to: "/infirmier/constantes", icon: "monitor_heart", label: "Constantes" },
     { to: "/infirmier/traitements", icon: "medication", label: "Traitements" },
+    { to: "/infirmier/demandes-acces", icon: "how_to_reg", label: "Demandes d'accès" },
   ],
   patient: [
     { to: "/patient", icon: "home_health", label: "Mon dossier" },

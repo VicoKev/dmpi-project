@@ -402,11 +402,13 @@ async def reset_et_seed():
     print("\n[1/6] Vidage de PostgreSQL...")
     async with AsyncSessionLocal() as db:
         await db.execute(text("DELETE FROM delegations_acces"))
+        await db.execute(text("DELETE FROM demandes_acces_patient"))
         await db.execute(text("DELETE FROM audit_logs"))
         await db.execute(text("DELETE FROM users"))
         await db.commit()
     async with engine.begin() as conn:
         await conn.execute(text("ALTER SEQUENCE users_id_seq RESTART WITH 1"))
+        await conn.execute(text("ALTER SEQUENCE demandes_acces_patient_id_seq RESTART WITH 1"))
         await conn.execute(text("ALTER SEQUENCE audit_logs_id_seq RESTART WITH 1"))
         await conn.execute(text("ALTER SEQUENCE delegations_acces_id_seq RESTART WITH 1"))
     print("    ✓ Tables PostgreSQL vidées et séquences réinitialisées.")

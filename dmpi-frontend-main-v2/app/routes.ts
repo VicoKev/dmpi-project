@@ -16,6 +16,7 @@ export default [
     route("medecin/dossier/:npi/modifier", "routes/medecin/dossier.$npi.modifier.tsx"),
     route("medecin/dossier/:npi/consultation/nouvelle", "routes/medecin/nouvelle-consultation.$npi.tsx"),
     route("medecin/dossier/:npi/ordonnance/nouvelle", "routes/medecin/nouvelle-ordonnance.$npi.tsx"),
+    route("medecin/demandes-acces", "routes/medecin/demandes-acces.tsx"),
 
     // ─── Espace Infirmier ─────────────────────────────────────────────
     route("infirmier", "routes/infirmier/dashboard.tsx"),
@@ -24,6 +25,7 @@ export default [
     route("infirmier/constantes", "routes/infirmier/constantes.tsx"),
     route("infirmier/traitements", "routes/infirmier/traitements.tsx"),
     route("infirmier/dossier/:npi", "routes/infirmier/dossier.$npi.tsx"),
+    route("infirmier/demandes-acces", "routes/infirmier/demandes-acces.tsx"),
 
     // ─── Espace Patient ───────────────────────────────────────────────
     route("patient", "routes/patient/dashboard.tsx"),

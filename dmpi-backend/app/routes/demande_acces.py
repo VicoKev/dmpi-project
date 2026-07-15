@@ -4,7 +4,7 @@ from sqlalchemy import select, desc
 from app.database_sql import get_sql_db
 from app.database_mongo import dossiers_medicaux_collection
 from app.models_sql import User, DemandeAccesPatient
-from app.schemas.demande_acces import DemandeAccesCreate, DemandeAccesOut
+from app.schemas.demande_acces import DemandeAccesCreate, DemandeAccesOut, RejeterDemandeRequest
 from app.security import require_role
 from app.audit import enregistrer_log
 
@@ -81,9 +81,24 @@ async def lister_demandes_acces(
     return result.scalars().all()
 
 
+@router.get("/mes-demandes", response_model=list[DemandeAccesOut])
+async def lister_mes_demandes_acces(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("medecin", "infirmier"))
+):
+    """Demandes d'accès que le professionnel connecté a lui-même soumises, tous statuts confondus."""
+    result = await db.execute(
+        select(DemandeAccesPatient)
+        .where(DemandeAccesPatient.demandeur_email == current_user.email)
+        .order_by(desc(DemandeAccesPatient.date_creation))
+    )
+    return result.scalars().all()
+
+
 @router.patch("/{demande_id}/rejeter", response_model=DemandeAccesOut)
 async def rejeter_demande_acces(
     demande_id: int,
+    payload: RejeterDemandeRequest | None = None,
     db: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(require_role("super_admin"))
 ):
@@ -94,12 +109,46 @@ async def rejeter_demande_acces(
         raise HTTPException(status_code=404, detail="Demande introuvable.")
 
     demande.statut = "rejete"
+    demande.motif_rejet = payload.motif.strip() if payload and payload.motif and payload.motif.strip() else None
     await db.commit()
     await db.refresh(demande)
 
     await enregistrer_log(
         utilisateur_email=current_user.email,
         action="REJET_DEMANDE_ACCES_PATIENT",
+        statut_action="SUCCES",
+        npi_concerne=demande.npi
+    )
+
+    return demande
+
+
+@router.patch("/{demande_id}/annuler", response_model=DemandeAccesOut)
+async def annuler_demande_acces(
+    demande_id: int,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("medecin", "infirmier"))
+):
+    """Le professionnel à l'origine d'une demande peut l'annuler tant qu'elle est en attente."""
+    result = await db.execute(select(DemandeAccesPatient).where(DemandeAccesPatient.id == demande_id))
+    demande = result.scalar_one_or_none()
+
+    if not demande:
+        raise HTTPException(status_code=404, detail="Demande introuvable.")
+
+    if demande.demandeur_email != current_user.email:
+        raise HTTPException(status_code=403, detail="Seul l'auteur de la demande peut l'annuler.")
+
+    if demande.statut != "en_attente":
+        raise HTTPException(status_code=400, detail="Seule une demande en attente peut être annulée.")
+
+    demande.statut = "annulee"
+    await db.commit()
+    await db.refresh(demande)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="ANNULATION_DEMANDE_ACCES_PATIENT",
         statut_action="SUCCES",
         npi_concerne=demande.npi
     )

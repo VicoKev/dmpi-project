@@ -8,7 +8,8 @@ export interface DemandeAcces {
   telephone_contact: string;
   demandeur_email: string;
   etablissement_id: string | null;
-  statut: "en_attente" | "traite" | "rejete";
+  statut: "en_attente" | "traite" | "rejete" | "annulee";
+  motif_rejet: string | null;
   date_creation: string;
 }
 
@@ -30,6 +31,17 @@ export async function getDemandesAcces(statut: string = "en_attente"): Promise<D
   return apiFetch<DemandeAcces[]>(`/demandes-acces/?statut=${encodeURIComponent(statut)}`);
 }
 
-export async function rejeterDemandeAcces(id: number): Promise<DemandeAcces> {
-  return apiFetch<DemandeAcces>(`/demandes-acces/${id}/rejeter`, { method: "PATCH" });
+export async function rejeterDemandeAcces(id: number, motif?: string): Promise<DemandeAcces> {
+  return apiFetch<DemandeAcces>(`/demandes-acces/${id}/rejeter`, {
+    method: "PATCH",
+    body: motif?.trim() ? JSON.stringify({ motif: motif.trim() }) : undefined,
+  });
+}
+
+export async function getMesDemandesAcces(): Promise<DemandeAcces[]> {
+  return apiFetch<DemandeAcces[]>("/demandes-acces/mes-demandes");
+}
+
+export async function annulerDemandeAcces(id: number): Promise<DemandeAcces> {
+  return apiFetch<DemandeAcces>(`/demandes-acces/${id}/annuler`, { method: "PATCH" });
 }

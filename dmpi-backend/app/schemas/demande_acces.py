@@ -9,6 +9,10 @@ class DemandeAccesCreate(BaseModel):
     telephone_contact: str
 
 
+class RejeterDemandeRequest(BaseModel):
+    motif: str | None = None
+
+
 class DemandeAccesOut(BaseModel):
     id: int
     npi: str
@@ -18,6 +22,7 @@ class DemandeAccesOut(BaseModel):
     demandeur_email: str
     etablissement_id: str | None = None
     statut: str
+    motif_rejet: str | None = None
     date_creation: datetime
 
     class Config:
