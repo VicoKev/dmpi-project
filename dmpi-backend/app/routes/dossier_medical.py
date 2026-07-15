@@ -5,12 +5,20 @@ from app.security import get_current_user, require_role
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
-from datetime import datetime
+from datetime import datetime, date as dt_date
 
 router = APIRouter(
     prefix="/dossiers",
     tags=["Dossiers Médicaux (MongoDB)"]
 )
+
+
+def _normaliser_date_naissance(dossier_dict: dict) -> None:
+    """BSON n'encode pas datetime.date : on le convertit en datetime avant insertion/mise à jour."""
+    d_n = dossier_dict.get("date_naissance")
+    if isinstance(d_n, dt_date) and not isinstance(d_n, datetime):
+        dossier_dict["date_naissance"] = datetime.combine(d_n, datetime.min.time())
+
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def creer_dossier_medical(
@@ -31,6 +39,7 @@ async def creer_dossier_medical(
         )
 
     dossier_dict = dossier.model_dump()
+    _normaliser_date_naissance(dossier_dict)
     dossier_dict["updated_at"] = datetime.utcnow()
 
     await dossiers_medicaux_collection.insert_one(dossier_dict)
@@ -103,13 +112,12 @@ async def mettre_a_jour_dossier(
             detail=f"Aucun dossier médical trouvé pour le NPI : {npi}"
         )
 
-    dossier_dict = dossier_update.model_dump()
-    if dossier_dict.get("date_naissance") is not None:
-        d_n = dossier_dict["date_naissance"]
-        from datetime import date as dt_date
-        if isinstance(d_n, dt_date) and not isinstance(d_n, datetime):
-            dossier_dict["date_naissance"] = datetime.combine(d_n, datetime.min.time())
-    
+    # exclude_unset : seuls les champs réellement envoyés par le client sont appliqués.
+    # Un formulaire qui ne gère qu'une partie du dossier (ex: pas nom/prénom/tuteur)
+    # ne doit jamais écraser les autres champs avec leurs valeurs par défaut.
+    dossier_dict = dossier_update.model_dump(exclude_unset=True)
+    _normaliser_date_naissance(dossier_dict)
+
     dossier_dict["updated_at"] = datetime.utcnow()
 
     await dossiers_medicaux_collection.update_one(
