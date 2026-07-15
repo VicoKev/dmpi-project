@@ -22,6 +22,18 @@ from sqlalchemy import select, func
 from app.database_sql import get_sql_db
 from datetime import datetime
 
+
+async def _obtenir_directeur(db_sql: AsyncSession, etablissement_id: str) -> str | None:
+    """Le 'directeur' d'un établissement est calculé depuis le(s) compte(s)
+    admin_etablissement qui lui sont rattachés — il n'est jamais saisi à la main."""
+    result = await db_sql.execute(
+        select(User).where(User.etablissement_id == etablissement_id, User.role == "admin_etablissement")
+    )
+    admins = result.scalars().all()
+    if not admins:
+        return None
+    return ", ".join(f"{a.prenom} {a.nom}" for a in admins)
+
 @router.get("/", response_model=list[EtablissementOut])
 async def lister_etablissements(
     db_mongo: AsyncIOMotorDatabase = Depends(get_mongo_db),
@@ -43,6 +55,15 @@ async def lister_etablissements(
             sql_stats[etab_id]["medecins"] = count
         elif role == "infirmier":
             sql_stats[etab_id]["infirmiers"] = count
+
+    # Directeur = compte(s) admin_etablissement rattaché(s) (PostgreSQL)
+    stmt_admins = select(User.etablissement_id, User.prenom, User.nom).where(
+        User.role == "admin_etablissement", User.etablissement_id.is_not(None)
+    )
+    result_admins = await db_sql.execute(stmt_admins)
+    directeurs: dict[str, list[str]] = {}
+    for etab_id, prenom, nom in result_admins.all():
+        directeurs.setdefault(etab_id, []).append(f"{prenom} {nom}")
 
     # Activité du mois (MongoDB) - Exactement comme /dashboard/national
     maintenant = datetime.utcnow()
@@ -82,6 +103,7 @@ async def lister_etablissements(
         e["consultationsMois"] = m_stats["consultations_du_mois"]
         e["medecins"] = s_stats["medecins"]
         e["infirmiers"] = s_stats["infirmiers"]
+        e["directeur"] = ", ".join(directeurs.get(e_id, [])) or None
         
         result_list.append(format_etablissement(e))
         
@@ -91,22 +113,24 @@ async def lister_etablissements(
 async def creer_etablissement(
     etablissement: EtablissementCreate,
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    db_sql: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(require_role("super_admin"))
 ):
     """Création d'un établissement."""
     nouveau_doc = etablissement.model_dump()
     nouveau_doc["derniereSync"] = datetime.utcnow()
-    
+
     result = await db["etablissements"].insert_one(nouveau_doc)
     created = await db["etablissements"].find_one({"_id": result.inserted_id})
-    
+    created["directeur"] = await _obtenir_directeur(db_sql, str(result.inserted_id))
+
     await enregistrer_log(
         utilisateur_email=current_user.email,
         action="CREATION_ETABLISSEMENT",
         statut_action="SUCCES",
         npi_concerne=None
     )
-    
+
     return format_etablissement(created)
 
 @router.patch("/{etablissement_id}", response_model=EtablissementOut)
@@ -114,35 +138,37 @@ async def modifier_etablissement(
     etablissement_id: str,
     updates: EtablissementUpdate,
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    db_sql: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(require_role("super_admin"))
 ):
     """Modifier un établissement."""
     if not ObjectId.is_valid(etablissement_id):
         raise HTTPException(status_code=400, detail="ID invalide")
-        
+
     update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
     if not update_data:
         raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
-        
+
     update_data["derniereSync"] = datetime.utcnow()
-    
+
     result = await db["etablissements"].update_one(
         {"_id": ObjectId(etablissement_id)},
         {"$set": update_data}
     )
-    
+
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Etablissement introuvable")
         
     updated = await db["etablissements"].find_one({"_id": ObjectId(etablissement_id)})
-    
+    updated["directeur"] = await _obtenir_directeur(db_sql, etablissement_id)
+
     await enregistrer_log(
         utilisateur_email=current_user.email,
         action="MODIFICATION_ETABLISSEMENT",
         statut_action="SUCCES",
         npi_concerne=None
     )
-    
+
     return format_etablissement(updated)
 
 @router.delete("/{etablissement_id}")
