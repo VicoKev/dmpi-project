@@ -35,6 +35,7 @@ class User(Base):
     service = Column(String, nullable=True)
     npi_patient = Column(String(10), nullable=True)  # renseigné uniquement si role == "patient"
     etablissement_id = Column(String, nullable=True)  # ID MongoDB de l'établissement de rattachement
+    disponible = Column(Boolean, default=True, nullable=False)  # medecin uniquement : dispo pour assignation (garde)
     est_actif = Column(Boolean, default=True, nullable=False)
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
     derniere_connexion = Column(DateTime, nullable=True)

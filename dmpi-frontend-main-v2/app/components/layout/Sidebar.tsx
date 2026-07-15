@@ -24,6 +24,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   ],
   infirmier: [
     { to: "/infirmier", icon: "home_health", label: "Tableau de bord" },
+    { to: "/infirmier/file-attente", icon: "assignment_ind", label: "File d'attente" },
     { to: "/infirmier/patients", icon: "groups", label: "Patients" },
     { to: "/infirmier/constantes", icon: "monitor_heart", label: "Constantes" },
     { to: "/infirmier/traitements", icon: "medication", label: "Traitements" },

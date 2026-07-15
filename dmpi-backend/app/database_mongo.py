@@ -23,6 +23,7 @@ constantes_vitales_collection = database["constantes_vitales"]
 administrations_collection = database["administrations_traitements"]
 rendez_vous_collection = database["rendez_vous"]
 etablissements_collection = database["etablissements"]
+file_attente_collection = database["file_attente"]
 
 async def get_mongo_db():
     """Dependency pour injecter la base MongoDB dans les routes."""
