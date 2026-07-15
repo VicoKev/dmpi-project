@@ -3,7 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 from datetime import datetime
 from app.database_mongo import get_mongo_db
-from app.schemas.etablissement import EtablissementCreate, EtablissementUpdate, EtablissementOut
+from app.schemas.etablissement import EtablissementCreate, EtablissementUpdate, EtablissementUpdateSelfService, EtablissementOut
 from app.models_sql import User
 from app.security import require_role
 from app.audit import enregistrer_log
@@ -132,6 +132,65 @@ async def creer_etablissement(
     )
 
     return format_etablissement(created)
+
+@router.get("/moi", response_model=EtablissementOut)
+async def obtenir_mon_etablissement(
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    db_sql: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("admin_etablissement"))
+):
+    """Fiche de l'établissement de l'admin connecté (résolu depuis son compte, pas depuis l'URL)."""
+    if not current_user.etablissement_id or not ObjectId.is_valid(current_user.etablissement_id):
+        raise HTTPException(status_code=404, detail="Votre compte n'est rattaché à aucun établissement.")
+
+    etab = await db["etablissements"].find_one({"_id": ObjectId(current_user.etablissement_id)})
+    if not etab:
+        raise HTTPException(status_code=404, detail="Établissement introuvable.")
+
+    etab["directeur"] = await _obtenir_directeur(db_sql, current_user.etablissement_id)
+    return format_etablissement(etab)
+
+
+@router.patch("/moi", response_model=EtablissementOut)
+async def modifier_mon_etablissement(
+    updates: EtablissementUpdateSelfService,
+    db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    db_sql: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("admin_etablissement"))
+):
+    """
+    Un admin_etablissement ne peut modifier que la localisation/coordonnées de
+    son propre établissement — nom, type, statut restent la gouvernance du
+    super_admin (voir EtablissementUpdateSelfService).
+    """
+    if not current_user.etablissement_id or not ObjectId.is_valid(current_user.etablissement_id):
+        raise HTTPException(status_code=404, detail="Votre compte n'est rattaché à aucun établissement.")
+
+    update_data = {k: v for k, v in updates.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="Aucune donnée à mettre à jour")
+
+    update_data["derniereSync"] = datetime.utcnow()
+
+    result = await db["etablissements"].update_one(
+        {"_id": ObjectId(current_user.etablissement_id)},
+        {"$set": update_data}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Établissement introuvable.")
+
+    updated = await db["etablissements"].find_one({"_id": ObjectId(current_user.etablissement_id)})
+    updated["directeur"] = await _obtenir_directeur(db_sql, current_user.etablissement_id)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="MODIFICATION_MON_ETABLISSEMENT",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return format_etablissement(updated)
+
 
 @router.patch("/{etablissement_id}", response_model=EtablissementOut)
 async def modifier_etablissement(

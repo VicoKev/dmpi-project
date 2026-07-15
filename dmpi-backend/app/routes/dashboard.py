@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
+from bson import ObjectId
+from bson.errors import InvalidId
 from app.database_sql import get_sql_db
 from app.database_mongo import (
     dossiers_medicaux_collection,
@@ -13,12 +15,31 @@ from app.models_sql import User, AuditLog
 from app.security import require_role
 from app.audit import enregistrer_log
 from app.cim10_data import libelle_cim10
-from app.rapport_export import generer_pdf, generer_excel
+from app.rapport_export import generer_pdf, generer_excel, generer_pdf_etablissement, generer_excel_etablissement
+
+
+def _object_id_ou_none(valeur: str | None):
+    if not valeur:
+        return None
+    try:
+        return ObjectId(valeur)
+    except InvalidId:
+        return None
 
 router = APIRouter(
     prefix="/dashboard",
     tags=["Tableaux de bord (Admin établissement / Super Admin)"]
 )
+
+# Actions de simple consultation de page (tableaux de bord, rapports) — à
+# exclure du fil "Activité récente", qui doit refléter l'activité clinique
+# du personnel, pas le fait que l'admin a rechargé sa propre page.
+ACTIONS_CONSULTATION_PAGE = [
+    "CONSULTATION_DASHBOARD_ETABLISSEMENT",
+    "CONSULTATION_DASHBOARD_NATIONAL",
+    "CONSULTATION_RAPPORTS_ANNUELS",
+    "CONSULTATION_STATISTIQUES_ETABLISSEMENT",
+]
 
 
 def _debut_journee() -> datetime:
@@ -59,17 +80,51 @@ async def dashboard_etablissement(
 
     npi_list = await consultations_collection.distinct("npi", mongo_filter)
     total_dossiers = len(npi_list)
-    
-    consultations_aujourdhui = await consultations_collection.count_documents(
-        {**mongo_filter, "created_at": {"$gte": debut_jour}}
+
+    debut_mois = datetime(debut_jour.year, debut_jour.month, 1)
+    consultations_mois = await consultations_collection.count_documents(
+        {**mongo_filter, "created_at": {"$gte": debut_mois}}
     )
-    total_consultations = await consultations_collection.count_documents(mongo_filter)
+
+    # Le personnel soignant (médecin/infirmier) de l'établissement — sert à
+    # scoper les ordonnances (qui ne portent pas etablissement_id, seulement
+    # l'email du prescripteur).
+    result_personnel = await db.execute(
+        select(User).where(user_filter, User.role.in_(["medecin", "infirmier"])).order_by(User.nom)
+    )
+    personnel_liste = result_personnel.scalars().all()
+    emails_personnel = [p.email for p in personnel_liste]
+
+    ordonnances_mois = await ordonnances_collection.count_documents(
+        {"auteur": {"$in": emails_personnel}, "created_at": {"$gte": debut_mois}}
+    ) if emails_personnel else 0
 
     from sqlalchemy import desc
+    stmt_actifs_aujourdhui = (
+        select(AuditLog.utilisateur_email)
+        .join(User, AuditLog.utilisateur_email == User.email)
+        .where(user_filter, AuditLog.horodatage >= debut_jour)
+        .distinct()
+    )
+    result_actifs_aujourdhui = await db.execute(stmt_actifs_aujourdhui)
+    emails_actifs_aujourdhui = {e for (e,) in result_actifs_aujourdhui.all()}
+
+    personnel = [
+        {
+            "nom": p.nom,
+            "prenom": p.prenom,
+            "role": p.role,
+            "specialite": p.specialite,
+            "service": p.service,
+            "actif_aujourdhui": p.email in emails_actifs_aujourdhui,
+        }
+        for p in personnel_liste
+    ]
+
     activites_query = (
         select(AuditLog, User)
         .join(User, AuditLog.utilisateur_email == User.email)
-        .where(user_filter)
+        .where(user_filter, AuditLog.action.notin_(ACTIONS_CONSULTATION_PAGE))
         .order_by(desc(AuditLog.horodatage))
         .limit(5)
     )
@@ -85,31 +140,6 @@ async def dashboard_etablissement(
             "date": alog.horodatage.isoformat() + "Z"
         })
         
-    alertes_query = (
-        select(AuditLog)
-        .join(User, AuditLog.utilisateur_email == User.email)
-        .where(user_filter, AuditLog.statut_action != "SUCCES")
-        .order_by(desc(AuditLog.horodatage))
-        .limit(3)
-    )
-    alertes_result = await db.execute(alertes_query)
-    alertes = []
-    for alog in alertes_result.scalars().all():
-        alertes.append({
-            "id": f"err_{alog.id}",
-            "type": "error",
-            "message": f"Échec d'action: {alog.action}",
-            "date": alog.horodatage.isoformat() + "Z"
-        })
-
-    if not alertes:
-        alertes.append({
-            "id": "sys_1",
-            "type": "info",
-            "message": "Le système fonctionne normalement.",
-            "date": datetime.utcnow().isoformat() + "Z"
-        })
-
     await enregistrer_log(
         utilisateur_email=current_user.email,
         action="CONSULTATION_DASHBOARD_ETABLISSEMENT",
@@ -120,16 +150,169 @@ async def dashboard_etablissement(
     return {
         "stats": {
             "totalPatients": total_dossiers,
-            "consultationsMois": total_consultations, # Approximation pour le MVP
-            "ordonnancesMois": consultations_aujourdhui, # Approximation
+            "consultationsMois": consultations_mois,
+            "ordonnancesMois": ordonnances_mois,
             "medecinActifs": utilisateurs_par_role.get("medecin", 0),
             "infirmierActifs": utilisateurs_par_role.get("infirmier", 0),
-            "tauxOccupation": 0,
         },
-        "alertes": alertes,
+        "personnel": personnel,
         "activite_recente": activite_recente,
         "genere_le": datetime.utcnow().isoformat() + "Z",
     }
+
+
+async def _construire_statistiques_etablissement(db: AsyncSession, current_user: User) -> dict:
+    """
+    Statistiques d'activité locale : évolution mensuelle, épidémiologie
+    (CIM-10) et répartition par service — entièrement calculées depuis
+    PostgreSQL/MongoDB, scopées à l'établissement de l'administrateur.
+    Partagé entre l'endpoint JSON et les exports PDF/Excel.
+    """
+    etablissement_id = current_user.etablissement_id
+    mongo_filter = {"etablissement_id": etablissement_id} if etablissement_id else {}
+    user_filter = (User.etablissement_id == etablissement_id) if etablissement_id else True
+
+    maintenant = datetime.utcnow()
+
+    # Les 7 derniers mois (dont le mois en cours), du plus ancien au plus récent
+    mois_fenetre = []
+    annee_iter, mois_iter = maintenant.year, maintenant.month
+    for _ in range(7):
+        mois_fenetre.append((annee_iter, mois_iter))
+        mois_iter -= 1
+        if mois_iter == 0:
+            mois_iter = 12
+            annee_iter -= 1
+    mois_fenetre.reverse()
+    debut_fenetre = datetime(mois_fenetre[0][0], mois_fenetre[0][1], 1)
+
+    pipeline_mensuel = [
+        {"$match": {**mongo_filter, "created_at": {"$gte": debut_fenetre}}},
+        {"$group": {
+            "_id": {"year": {"$year": "$created_at"}, "month": {"$month": "$created_at"}},
+            "consultations": {"$sum": 1}
+        }},
+    ]
+    resultats_mensuels = await consultations_collection.aggregate(pipeline_mensuel).to_list(length=None)
+    compte_par_mois = {(d["_id"]["year"], d["_id"]["month"]): d["consultations"] for d in resultats_mensuels}
+
+    consultations_par_mois = [
+        {"mois": f"{MOIS_NOMS[m-1]} {a}", "consultations": compte_par_mois.get((a, m), 0)}
+        for a, m in mois_fenetre
+    ]
+
+    debut_annee = datetime(maintenant.year, 1, 1)
+
+    pipeline_diag = [
+        {"$match": {**mongo_filter, "created_at": {"$gte": debut_annee}}},
+        {"$group": {"_id": "$diagnostic_cim10", "count": {"$sum": 1}}},
+        {"$sort": {"count": -1}},
+        {"$limit": 6},
+    ]
+    diag_results = await consultations_collection.aggregate(pipeline_diag).to_list(length=None)
+    total_diag = sum(d["count"] for d in diag_results) or 1
+    top_diagnostics = [
+        {"code": d["_id"], "libelle": libelle_cim10(d["_id"]), "count": d["count"], "pct": round(d["count"] / total_diag * 100)}
+        for d in diag_results
+    ]
+
+    pipeline_par_praticien = [
+        {"$match": {**mongo_filter, "created_at": {"$gte": debut_annee}}},
+        {"$group": {"_id": "$releve_par", "consultations": {"$sum": 1}}},
+    ]
+    par_praticien = await consultations_collection.aggregate(pipeline_par_praticien).to_list(length=None)
+
+    result_services = await db.execute(select(User.email, User.service).where(user_filter))
+    service_par_email = {email: (service or "Non renseigné") for email, service in result_services.all()}
+
+    services_stats: dict[str, int] = {}
+    for p in par_praticien:
+        service = service_par_email.get(p["_id"], "Non renseigné")
+        services_stats[service] = services_stats.get(service, 0) + p["consultations"]
+
+    total_service = sum(services_stats.values()) or 1
+    activite_par_service = sorted(
+        [{"service": s, "consultations": c, "pct": round(c / total_service * 100)} for s, c in services_stats.items()],
+        key=lambda x: x["consultations"], reverse=True
+    )
+
+    nom_etablissement = "Mon établissement"
+    if etablissement_id:
+        etab_doc = await etablissements_collection.find_one({"_id": _object_id_ou_none(etablissement_id)}, {"nom": 1})
+        if etab_doc:
+            nom_etablissement = etab_doc.get("nom", nom_etablissement)
+
+    return {
+        "etablissement": nom_etablissement,
+        "consultations_par_mois": consultations_par_mois,
+        "top_diagnostics": top_diagnostics,
+        "activite_par_service": activite_par_service,
+        "annee": maintenant.year,
+        "genere_le": maintenant.isoformat() + "Z",
+    }
+
+
+@router.get("/etablissement/statistiques")
+async def statistiques_etablissement(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("admin_etablissement", "super_admin"))
+):
+    stats = await _construire_statistiques_etablissement(db, current_user)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="CONSULTATION_STATISTIQUES_ETABLISSEMENT",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return stats
+
+
+@router.get("/etablissement/statistiques/export/pdf")
+async def exporter_statistiques_etablissement_pdf(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("admin_etablissement", "super_admin"))
+):
+    """Statistiques de l'établissement (évolution mensuelle, épidémiologie, activité par service) au format PDF."""
+    stats = await _construire_statistiques_etablissement(db, current_user)
+    contenu_pdf = generer_pdf_etablissement(stats)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="EXPORT_STATISTIQUES_ETABLISSEMENT_PDF",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return Response(
+        content=contenu_pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=statistiques-etablissement-{stats['annee']}.pdf"}
+    )
+
+
+@router.get("/etablissement/statistiques/export/excel")
+async def exporter_statistiques_etablissement_excel(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("admin_etablissement", "super_admin"))
+):
+    """Statistiques de l'établissement (évolution mensuelle, épidémiologie, activité par service) au format Excel (.xlsx)."""
+    stats = await _construire_statistiques_etablissement(db, current_user)
+    contenu_excel = generer_excel_etablissement(stats)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="EXPORT_STATISTIQUES_ETABLISSEMENT_EXCEL",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return Response(
+        content=contenu_excel,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=statistiques-etablissement-{stats['annee']}.xlsx"}
+    )
 
 
 @router.get("/national")

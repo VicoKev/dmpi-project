@@ -230,3 +230,103 @@ def generer_excel(rapport: dict) -> bytes:
     tampon = BytesIO()
     classeur.save(tampon)
     return tampon.getvalue()
+
+
+def generer_pdf_etablissement(stats: dict) -> bytes:
+    """Export PDF des statistiques d'un seul établissement (voir
+    app.routes.dashboard._construire_statistiques_etablissement)."""
+    tampon = BytesIO()
+    doc = SimpleDocTemplate(
+        tampon, pagesize=A4,
+        topMargin=1.5 * cm, bottomMargin=1.5 * cm, leftMargin=1.5 * cm, rightMargin=1.5 * cm,
+    )
+    styles = getSampleStyleSheet()
+    titre_style = ParagraphStyle("TitreDMPI", parent=styles["Title"], fontSize=18, spaceAfter=4)
+    sous_titre_style = ParagraphStyle("SousTitre", parent=styles["Normal"], textColor=colors.grey, spaceAfter=16)
+    section_style = ParagraphStyle("Section", parent=styles["Heading2"], spaceBefore=14, spaceAfter=8)
+
+    def _table_style(entete_bg="#1F3A5F"):
+        return TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor(entete_bg)),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F7FA")]),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ])
+
+    elements = []
+    elements.append(Paragraph(f"Statistiques d'établissement — {stats['etablissement']}", titre_style))
+    elements.append(Paragraph(f"Généré le {stats['genere_le'][:10]} — année {stats['annee']}", sous_titre_style))
+
+    elements.append(Paragraph("Évolution mensuelle des consultations", section_style))
+    donnees_mois = [["Mois", "Consultations"]] + [[m["mois"], str(m["consultations"])] for m in stats["consultations_par_mois"]]
+    table_mois = Table(donnees_mois, colWidths=[8 * cm, 8 * cm])
+    table_mois.setStyle(_table_style())
+    elements.append(table_mois)
+
+    elements.append(Paragraph("Top diagnostics CIM-10 (année en cours)", section_style))
+    if stats["top_diagnostics"]:
+        donnees_diag = [["Code", "Libellé", "Cas", "%"]] + [
+            [d["code"], d["libelle"], str(d["count"]), f"{d['pct']}%"] for d in stats["top_diagnostics"]
+        ]
+        table_diag = Table(donnees_diag, colWidths=[2.5 * cm, 8.5 * cm, 2.5 * cm, 2.5 * cm])
+        table_diag.setStyle(_table_style())
+        elements.append(table_diag)
+    else:
+        elements.append(Paragraph("Aucune consultation enregistrée cette année.", styles["Normal"]))
+
+    elements.append(Paragraph("Activité par service", section_style))
+    if stats["activite_par_service"]:
+        donnees_service = [["Service", "Consultations", "%"]] + [
+            [s["service"], str(s["consultations"]), f"{s['pct']}%"] for s in stats["activite_par_service"]
+        ]
+        table_service = Table(donnees_service, colWidths=[8 * cm, 4 * cm, 4 * cm])
+        table_service.setStyle(_table_style())
+        elements.append(table_service)
+    else:
+        elements.append(Paragraph("Aucune donnée de service disponible.", styles["Normal"]))
+
+    doc.build(elements)
+    return tampon.getvalue()
+
+
+def generer_excel_etablissement(stats: dict) -> bytes:
+    """Export Excel des statistiques d'un seul établissement."""
+    classeur = Workbook()
+    entete_police = Font(bold=True, color="FFFFFF")
+    entete_fond = PatternFill(start_color="1F3A5F", end_color="1F3A5F", fill_type="solid")
+
+    def _entete(feuille, colonnes: list[str]) -> None:
+        feuille.append(colonnes)
+        for cellule in feuille[1]:
+            cellule.font = entete_police
+            cellule.fill = entete_fond
+
+    feuille_mois = classeur.active
+    feuille_mois.title = "Évolution mensuelle"
+    _entete(feuille_mois, ["Mois", "Consultations"])
+    for m in stats["consultations_par_mois"]:
+        feuille_mois.append([m["mois"], m["consultations"]])
+    feuille_mois.column_dimensions["A"].width = 20
+    feuille_mois.column_dimensions["B"].width = 16
+
+    feuille_diag = classeur.create_sheet("Top diagnostics")
+    _entete(feuille_diag, ["Code CIM-10", "Libellé", "Cas", "%"])
+    for d in stats["top_diagnostics"]:
+        feuille_diag.append([d["code"], d["libelle"], d["count"], d["pct"]])
+    for col, largeur in zip("ABCD", [14, 45, 10, 10]):
+        feuille_diag.column_dimensions[col].width = largeur
+
+    feuille_service = classeur.create_sheet("Activité par service")
+    _entete(feuille_service, ["Service", "Consultations", "%"])
+    for s in stats["activite_par_service"]:
+        feuille_service.append([s["service"], s["consultations"], s["pct"]])
+    for col, largeur in zip("ABC", [30, 16, 10]):
+        feuille_service.column_dimensions[col].width = largeur
+
+    tampon = BytesIO()
+    classeur.save(tampon)
+    return tampon.getvalue()

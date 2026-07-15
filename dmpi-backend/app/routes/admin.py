@@ -116,6 +116,19 @@ async def lister_utilisateurs(
     return result.scalars().all()
 
 
+@router.get("/users/mon-etablissement", response_model=list[UserOut])
+async def lister_utilisateurs_mon_etablissement(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("admin_etablissement"))
+):
+    """Comptes utilisateurs (médecins, infirmiers...) de l'établissement de l'admin connecté."""
+    if not current_user.etablissement_id:
+        return []
+
+    result = await db.execute(select(User).where(User.etablissement_id == current_user.etablissement_id))
+    return result.scalars().all()
+
+
 @router.patch("/users/{user_id}/desactiver", response_model=UserOut)
 async def desactiver_utilisateur(
     user_id: int,

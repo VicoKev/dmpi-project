@@ -40,6 +40,9 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { to: "/admin", icon: "dashboard", label: "Tableau de bord" },
     { to: "/admin/supervision", icon: "supervisor_account", label: "Supervision" },
     { to: "/admin/statistiques", icon: "bar_chart", label: "Statistiques" },
+    { to: "/admin/etablissement", icon: "edit_location", label: "Mon établissement" },
+    { to: "/admin/file-attente", icon: "assignment_ind", label: "File d'attente" },
+    { to: "/admin/demandes-acces", icon: "how_to_reg", label: "Demandes d'accès" },
   ],
   superadmin_national: [
     { to: "/superadmin", icon: "dashboard", label: "Tableau de bord" },

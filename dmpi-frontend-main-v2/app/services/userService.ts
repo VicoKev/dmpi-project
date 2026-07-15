@@ -14,6 +14,7 @@ export interface User {
   role: string;
   est_actif: boolean;
   date_creation: string;
+  derniere_connexion?: string | null;
   npi_patient?: string | null;
   specialite?: string | null;
   service?: string | null;
@@ -60,6 +61,10 @@ export const ROLES_SELECTABLE = [
 
 export async function getUsers(): Promise<User[]> {
   return apiFetch<User[]>("/admin/users");
+}
+
+export async function getUsersMonEtablissement(): Promise<User[]> {
+  return apiFetch<User[]>("/admin/users/mon-etablissement");
 }
 
 export async function createUser(payload: UserCreatePayload): Promise<User> {

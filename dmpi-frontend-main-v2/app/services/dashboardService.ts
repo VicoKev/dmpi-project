@@ -6,14 +6,15 @@ export interface StatEtablissement {
   ordonnancesMois: number;
   medecinActifs: number;
   infirmierActifs: number;
-  tauxOccupation: number;
 }
 
-export interface AlerteSysteme {
-  id: string;
-  type: "info" | "warning" | "error";
-  message: string;
-  date: string;
+export interface MembrePersonnel {
+  nom: string;
+  prenom: string;
+  role: string;
+  specialite: string | null;
+  service: string | null;
+  actif_aujourdhui: boolean;
 }
 
 export interface ActiviteRecente {
@@ -26,7 +27,7 @@ export interface ActiviteRecente {
 
 export interface DashboardEtablissementResponse {
   stats: StatEtablissement;
-  alertes: AlerteSysteme[];
+  personnel: MembrePersonnel[];
   activite_recente: ActiviteRecente[];
   genere_le: string;
 }

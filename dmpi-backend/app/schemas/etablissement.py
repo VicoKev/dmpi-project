@@ -45,6 +45,22 @@ class EtablissementUpdate(BaseModel):
     infirmiers: Optional[int] = None
     consultationsMois: Optional[int] = None
 
+class EtablissementUpdateSelfService(BaseModel):
+    """
+    Champs qu'un admin_etablissement peut modifier sur son propre établissement
+    (via /etablissements/moi) — uniquement les coordonnées et la localisation,
+    pas le nom, le type, le statut ni les compteurs (gouvernance du super_admin).
+    """
+    ville: Optional[str] = None
+    departement: Optional[str] = None
+    commune: Optional[str] = None
+    arrondissement: Optional[str] = None
+    quartier: Optional[str] = None
+    adresse: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    telephone: Optional[str] = None
+
 class EtablissementOut(EtablissementBase):
     id: str
     derniereSync: datetime

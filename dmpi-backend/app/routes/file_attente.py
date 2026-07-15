@@ -111,7 +111,7 @@ async def ajouter_a_la_file_attente(
 
 @router.get("/etablissement", response_model=list[FileAttenteOut])
 async def lister_file_attente_etablissement(
-    current_user: User = Depends(require_role("medecin", "infirmier"))
+    current_user: User = Depends(require_role("medecin", "infirmier", "admin_etablissement"))
 ):
     """File d'attente courante (en_attente + assigné) de l'établissement du professionnel connecté."""
     if not current_user.etablissement_id:

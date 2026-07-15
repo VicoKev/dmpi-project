@@ -2,19 +2,7 @@
 import { useState, useEffect } from "react";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
-
-interface Utilisateur {
-  id: number;
-  email: string;
-  nom: string;
-  prenom: string;
-  role: string;
-  specialite?: string;
-  service?: string;
-  est_actif: boolean;
-  date_creation: string;
-  derniere_connexion?: string;
-}
+import { getUsersMonEtablissement, type User as Utilisateur } from "../../services/userService";
 
 const STATUT_CONFIG = {
   actif: { label: "En service", color: "var(--color-success)", bg: "var(--color-success-container)" },
@@ -32,32 +20,17 @@ export default function AdminSupervision() {
   const [filterRole, setFilterRole] = useState<"tous" | "medecin" | "infirmier">("tous");
   const [users, setUsers] = useState<Utilisateur[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/admin/users", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("dmpi_access_token")}`,
-      },
-    })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Erreur serveur HTTP " + res.status);
-        return res.json();
-      })
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          const soignants = (data as Utilisateur[]).filter(u => u.role === "medecin" || u.role === "infirmier");
-          setUsers(soignants);
-        } else {
-          console.error("Format d'utilisateurs invalide:", data);
-          setUsers([]);
-        }
-        setLoading(false);
+    getUsersMonEtablissement()
+      .then((data) => {
+        setUsers(data.filter((u) => u.role === "medecin" || u.role === "infirmier"));
       })
       .catch((err) => {
-        console.error("Erreur chargement utilisateurs:", err);
-        setUsers([]);
-        setLoading(false);
-      });
+        setError((err as Error).message || "Impossible de charger le personnel.");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const filtered = users.filter((u) => {
@@ -141,6 +114,12 @@ export default function AdminSupervision() {
                 <tr>
                   <td colSpan={5} className="py-8 text-center text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
                     Chargement...
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center text-body-md" style={{ color: "var(--color-error)" }}>
+                    {error}
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (

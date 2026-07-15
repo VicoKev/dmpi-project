@@ -42,6 +42,10 @@ export async function getMesDemandesAcces(): Promise<DemandeAcces[]> {
   return apiFetch<DemandeAcces[]>("/demandes-acces/mes-demandes");
 }
 
+export async function getDemandesAccesMonEtablissement(): Promise<DemandeAcces[]> {
+  return apiFetch<DemandeAcces[]>("/demandes-acces/mon-etablissement");
+}
+
 export async function annulerDemandeAcces(id: number): Promise<DemandeAcces> {
   return apiFetch<DemandeAcces>(`/demandes-acces/${id}/annuler`, { method: "PATCH" });
 }

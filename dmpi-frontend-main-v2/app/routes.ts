@@ -38,6 +38,9 @@ export default [
     route("admin", "routes/admin/dashboard.tsx"),
     route("admin/supervision", "routes/admin/supervision.tsx"),
     route("admin/statistiques", "routes/admin/statistiques.tsx"),
+    route("admin/etablissement", "routes/admin/etablissement.tsx"),
+    route("admin/file-attente", "routes/admin/file-attente.tsx"),
+    route("admin/demandes-acces", "routes/admin/demandes-acces.tsx"),
 
     // ─── Espace Super Admin National ──────────────────────────────────
     route("superadmin", "routes/superadmin/dashboard.tsx"),

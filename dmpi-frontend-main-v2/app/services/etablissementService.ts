@@ -63,6 +63,18 @@ export interface EtablissementUpdatePayload {
   consultationsMois?: number;
 }
 
+export interface EtablissementUpdateSelfServicePayload {
+  ville?: string;
+  departement?: string;
+  commune?: string | null;
+  arrondissement?: string | null;
+  quartier?: string | null;
+  adresse?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  telephone?: string;
+}
+
 export const TYPE_OPTIONS = ["CHU", "CHD", "CSC", "Clinique", "Maternite"] as const;
 export const STATUT_OPTIONS = ["actif", "maintenance", "inactif"] as const;
 
@@ -90,4 +102,15 @@ export async function deleteEtablissement(id: string): Promise<void> {
 
 export async function reactivateEtablissement(id: string): Promise<void> {
   return apiFetch<void>(`/etablissements/${id}/reactivate`, { method: "POST" });
+}
+
+export async function getMonEtablissement(): Promise<Etablissement> {
+  return apiFetch<Etablissement>("/etablissements/moi");
+}
+
+export async function updateMonEtablissement(payload: EtablissementUpdateSelfServicePayload): Promise<Etablissement> {
+  return apiFetch<Etablissement>("/etablissements/moi", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
 }

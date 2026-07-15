@@ -88,6 +88,32 @@ async def lister_demandes_acces(
     return result.scalars().all()
 
 
+@router.get("/mon-etablissement", response_model=list[DemandeAccesOut])
+async def lister_demandes_acces_mon_etablissement(
+    statut: str | None = None,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("admin_etablissement"))
+):
+    """
+    Demandes d'accès émises par le personnel de l'établissement de l'admin
+    connecté, tous demandeurs confondus — vue de supervision en lecture
+    seule (rejeter/annuler restent du ressort du super_admin et du demandeur).
+    """
+    if not current_user.etablissement_id:
+        return []
+
+    requete = (
+        select(DemandeAccesPatient)
+        .where(DemandeAccesPatient.etablissement_id == current_user.etablissement_id)
+        .order_by(desc(DemandeAccesPatient.date_creation))
+    )
+    if statut:
+        requete = requete.where(DemandeAccesPatient.statut == statut)
+
+    result = await db.execute(requete)
+    return result.scalars().all()
+
+
 @router.get("/compte-existant/{npi}")
 async def compte_existant_pour_npi(
     npi: str,
