@@ -3,52 +3,29 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 
 import Card, { CardHeader } from "../ui/Card";
-import Input from "../ui/Input";
 import Textarea from "../ui/Textarea";
 import Button from "../ui/Button";
 import Cim10Search from "./Cim10Search";
 
 import { createConsultation } from "../../services/consultationService";
-import type { Cim10Code, Constantes, CreateConsultationPayload } from "../../types/consultation";
+import type { Cim10Code, CreateConsultationPayload } from "../../types/consultation";
 
 interface ConsultationFormProps {
   patientNpi: string;
   onCreated?: (consultationId: string) => void;
 }
 
-const CONSTANTES_FIELDS: {
-  key: keyof Constantes;
-  label: string;
-  unite: string;
-  placeholder: string;
-}[] = [
-  { key: "tensionSystolique", label: "Tension systolique", unite: "mmHg", placeholder: "120" },
-  { key: "tensionDiastolique", label: "Tension diastolique", unite: "mmHg", placeholder: "80" },
-  { key: "pouls", label: "Pouls", unite: "bpm", placeholder: "72" },
-  { key: "temperature", label: "Température", unite: "°C", placeholder: "37.0" },
-  { key: "poids", label: "Poids", unite: "kg", placeholder: "70" },
-  { key: "taille", label: "Taille", unite: "cm", placeholder: "170" },
-  { key: "saturationO2", label: "Saturation O2", unite: "%", placeholder: "98" },
-  { key: "glycemie", label: "Glycémie", unite: "g/L", placeholder: "1.0" },
-];
-
 export default function ConsultationForm({ patientNpi, onCreated }: ConsultationFormProps) {
   const navigate = useNavigate();
 
   const [motif, setMotif] = useState("");
   const [examenClinique, setExamenClinique] = useState("");
-  const [constantes, setConstantes] = useState<Constantes>({});
   const [diagnosticPrincipal, setDiagnosticPrincipal] = useState<Cim10Code | null>(null);
   const [conclusion, setConclusion] = useState("");
   const [conduiteATenir, setConduiteATenir] = useState("");
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleConstanteChange = (key: keyof Constantes, raw: string) => {
-    const val = raw === "" ? undefined : Number(raw);
-    setConstantes((prev) => ({ ...prev, [key]: val }));
-  };
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -69,7 +46,6 @@ export default function ConsultationForm({ patientNpi, onCreated }: Consultation
         patientNpi,
         motif: motif.trim(),
         examenClinique: examenClinique.trim() || undefined,
-        constantes: Object.keys(constantes).length > 0 ? constantes : undefined,
         diagnosticPrincipal: diagnosticPrincipal ?? undefined,
         conclusion: conclusion.trim() || undefined,
         conduiteATenir: conduiteATenir.trim() || undefined,
@@ -103,24 +79,6 @@ export default function ConsultationForm({ patientNpi, onCreated }: Consultation
           onChange={(e) => setMotif(e.target.value)}
           error={errors.motif}
         />
-      </Card>
-
-      {/* Constantes vitales */}
-      <Card>
-        <CardHeader icon="monitor_heart" title="Constantes vitales" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {CONSTANTES_FIELDS.map((field) => (
-            <Input
-              key={field.key}
-              label={`${field.label} (${field.unite})`}
-              type="number"
-              step="0.1"
-              placeholder={field.placeholder}
-              value={constantes[field.key] ?? ""}
-              onChange={(e) => handleConstanteChange(field.key, e.target.value)}
-            />
-          ))}
-        </div>
       </Card>
 
       {/* Examen clinique */}
