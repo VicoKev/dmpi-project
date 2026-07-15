@@ -11,11 +11,11 @@ import {
   reactivateEtablissement,
   TYPE_OPTIONS,
   STATUT_OPTIONS,
-  DEPARTEMENTS_BENIN,
   type Etablissement,
   type EtablissementCreatePayload,
   type EtablissementUpdatePayload,
 } from "../../services/etablissementService";
+import LocalisationPicker from "../../components/etablissement/LocalisationPicker";
 
 // ─── Config UI ────────────────────────────────────────────────────────────────
 
@@ -33,6 +33,10 @@ const STATUT_CONFIG: Record<string, { label: string; color: string; bg: string; 
   inactif:     { label: "Inactif",    color: "var(--color-error)",   bg: "var(--color-error-container)",   dot: false },
 };
 
+function ouTiret(valeur: string | null | undefined): string {
+  return valeur && valeur.trim() ? valeur : "—";
+}
+
 function formatSync(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
   const mins = Math.floor(diff / 60000);
@@ -45,8 +49,10 @@ function formatSync(isoDate: string): string {
 // ─── Formulaire création/édition ──────────────────────────────────────────────
 
 const EMPTY_FORM: EtablissementCreatePayload = {
-  nom: "", ville: "", departement: "Littoral", type: "CHU", statut: "actif",
-  directeur: "", telephone: "", dmpiVersion: "2.1.4",
+  nom: "", ville: "", departement: "", commune: "", arrondissement: "", quartier: "",
+  adresse: "", latitude: null, longitude: null,
+  type: "CHU", statut: "actif",
+  telephone: "", dmpiVersion: "2.1.4",
   patients: 0, medecins: 0, infirmiers: 0, consultationsMois: 0,
 };
 
@@ -60,7 +66,9 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
   const [form, setForm] = useState<EtablissementCreatePayload>(
     initial ? {
       nom: initial.nom, ville: initial.ville, departement: initial.departement,
-      type: initial.type, statut: initial.statut, directeur: initial.directeur,
+      commune: initial.commune ?? "", arrondissement: initial.arrondissement ?? "", quartier: initial.quartier ?? "",
+      adresse: initial.adresse ?? "", latitude: initial.latitude ?? null, longitude: initial.longitude ?? null,
+      type: initial.type, statut: initial.statut,
       telephone: initial.telephone, dmpiVersion: initial.dmpiVersion,
       patients: initial.patients, medecins: initial.medecins,
       infirmiers: initial.infirmiers, consultationsMois: initial.consultationsMois,
@@ -72,9 +80,16 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
   const update = (field: keyof EtablissementCreatePayload, value: string | number) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
+  const updateLocalisation = (patch: Partial<EtablissementCreatePayload>) =>
+    setForm(prev => ({ ...prev, ...patch }));
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (!form.departement) {
+      setError("Veuillez sélectionner un département.");
+      return;
+    }
     setLoading(true);
     try {
       let result: Etablissement;
@@ -130,15 +145,21 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Nom de l'établissement" value={form.nom} onChange={e => update("nom", e.target.value)} required />
 
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Ville" value={form.ville} onChange={e => update("ville", e.target.value)} required />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Département</label>
-              <select value={form.departement} onChange={e => update("departement", e.target.value)} className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none">
-                {DEPARTEMENTS_BENIN.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-          </div>
+          <Input label="Ville" value={form.ville} onChange={e => update("ville", e.target.value)} required />
+
+          <LocalisationPicker
+            value={{
+              ville: form.ville,
+              departement: form.departement,
+              commune: form.commune ?? "",
+              arrondissement: form.arrondissement ?? "",
+              quartier: form.quartier ?? "",
+              adresse: form.adresse ?? "",
+              latitude: form.latitude ?? null,
+              longitude: form.longitude ?? null,
+            }}
+            onChange={updateLocalisation}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
@@ -246,7 +267,7 @@ export default function SuperAdminEtablissements() {
     const matchType = filterType === "tous" || e.type === filterType;
     const matchStatut = filterStatut === "tous" || e.statut === filterStatut;
     const q = search.toLowerCase();
-    const matchSearch = !q || e.nom.toLowerCase().includes(q) || e.ville.toLowerCase().includes(q) || e.departement.toLowerCase().includes(q) || e.directeur.toLowerCase().includes(q);
+    const matchSearch = !q || e.nom.toLowerCase().includes(q) || e.ville.toLowerCase().includes(q) || e.departement.toLowerCase().includes(q) || (e.directeur ?? "").toLowerCase().includes(q);
     return matchType && matchStatut && matchSearch;
   });
 
@@ -305,8 +326,22 @@ export default function SuperAdminEtablissements() {
               ))}
             </div>
             <div className="flex flex-col gap-2 text-body-md mb-5" style={{ color: "var(--color-on-surface-variant)" }}>
-              <div className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">person</span><span>Directeur : <strong style={{ color: "var(--color-on-surface)" }}>{selected.directeur}</strong></span></div>
-              <div className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">call</span><span>{selected.telephone}</span></div>
+              <div className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">person</span><span>Directeur : <strong style={{ color: "var(--color-on-surface)" }}>{ouTiret(selected.directeur)}</strong></span></div>
+              <div className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">call</span><span>{ouTiret(selected.telephone)}</span></div>
+              {(selected.commune || selected.arrondissement || selected.quartier || selected.adresse) && (
+                <div className="flex items-start gap-2">
+                  <span className="material-symbols-outlined text-[16px] mt-0.5">location_on</span>
+                  <span>
+                    {[selected.quartier, selected.arrondissement, selected.commune].filter(Boolean).join(", ")}
+                    {selected.adresse ? ` — ${selected.adresse}` : ""}
+                    {selected.latitude != null && selected.longitude != null && (
+                      <span className="text-caption block">
+                        ({selected.latitude.toFixed(5)}, {selected.longitude.toFixed(5)})
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
               <div className="flex items-center gap-2"><span className="material-symbols-outlined text-[16px]">sync</span><span>Sync : <strong style={{ color: "var(--color-on-surface)" }}>{formatSync(selected.derniereSync)}</strong></span></div>
             </div>
             <div className="flex gap-3">

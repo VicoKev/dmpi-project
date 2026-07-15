@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from app.database_sql import Base
 from datetime import datetime
 
@@ -60,6 +60,41 @@ class DemandeAccesPatient(Base):
     statut = Column(String, default="en_attente", nullable=False)  # "en_attente", "traite", "rejete", "annulee"
     motif_rejet = Column(String, nullable=True)  # renseigné uniquement si statut == "rejete"
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class Departement(Base):
+    """
+    Découpage territorial du Bénin (référentiel officiel, table en lecture seule
+    chargée une fois via load_territoire.py à partir de decoupage_territorial_benin.sql).
+    """
+    __tablename__ = "departement"
+
+    id_dep = Column(Integer, primary_key=True)
+    lib_dep = Column(String(250), nullable=False)
+
+
+class Commune(Base):
+    __tablename__ = "commune"
+
+    id_com = Column(Integer, primary_key=True)
+    lib_com = Column(String(250), nullable=False)
+    id_dep = Column(Integer, ForeignKey("departement.id_dep"), nullable=False)
+
+
+class Arrondissement(Base):
+    __tablename__ = "arrondissement"
+
+    id_arrond = Column(Integer, primary_key=True)
+    lib_arrond = Column(String(250), nullable=False)
+    id_com = Column(Integer, ForeignKey("commune.id_com"), nullable=False)
+
+
+class Quartier(Base):
+    __tablename__ = "quartier"
+
+    id_quart = Column(Integer, primary_key=True)
+    lib_quart = Column(String(250), nullable=False)
+    id_arrond = Column(Integer, ForeignKey("arrondissement.id_arrond"), nullable=False)
 
 
 class DelegationAcces(Base):

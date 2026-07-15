@@ -5,13 +5,19 @@ export interface Etablissement {
   nom: string;
   ville: string;
   departement: string;
+  commune?: string | null;
+  arrondissement?: string | null;
+  quartier?: string | null;
+  adresse?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   type: "CHU" | "CHD" | "CSC" | "Clinique" | "Maternite";
   statut: "actif" | "maintenance" | "inactif";
   patients: number;
   medecins: number;
   infirmiers: number;
   consultationsMois: number;
-  directeur: string;
+  directeur: string | null;
   telephone: string;
   derniereSync: string;
   dmpiVersion: string;
@@ -21,9 +27,14 @@ export interface EtablissementCreatePayload {
   nom: string;
   ville: string;
   departement: string;
+  commune?: string | null;
+  arrondissement?: string | null;
+  quartier?: string | null;
+  adresse?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   type: string;
   statut: string;
-  directeur: string;
   telephone: string;
   dmpiVersion: string;
   patients: number;
@@ -36,9 +47,14 @@ export interface EtablissementUpdatePayload {
   nom?: string;
   ville?: string;
   departement?: string;
+  commune?: string | null;
+  arrondissement?: string | null;
+  quartier?: string | null;
+  adresse?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   type?: string;
   statut?: string;
-  directeur?: string;
   telephone?: string;
   dmpiVersion?: string;
   patients?: number;
@@ -49,10 +65,6 @@ export interface EtablissementUpdatePayload {
 
 export const TYPE_OPTIONS = ["CHU", "CHD", "CSC", "Clinique", "Maternite"] as const;
 export const STATUT_OPTIONS = ["actif", "maintenance", "inactif"] as const;
-export const DEPARTEMENTS_BENIN = [
-  "Alibori", "Atacora", "Atlantique", "Borgou", "Collines",
-  "Couffo", "Donga", "Littoral", "Mono", "Oueme", "Plateau", "Zou"
-];
 
 export async function getEtablissements(): Promise<Etablissement[]> {
   return apiFetch<Etablissement[]>("/etablissements/");

@@ -6,12 +6,17 @@ class EtablissementBase(BaseModel):
     nom: str
     ville: str
     departement: str
+    commune: str | None = None
+    arrondissement: str | None = None
+    quartier: str | None = None
+    adresse: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     type: str  # "CHU", "CHD", "CSC", "Clinique", "Maternite"
     statut: str = "actif"  # "actif", "maintenance", "inactif"
-    directeur: str | None = None
     telephone: str
     dmpiVersion: str | None = None
-    
+
     # Stats (idéalement calculées, mais stockées pour l'MVP)
     patients: int = 0
     medecins: int = 0
@@ -25,9 +30,14 @@ class EtablissementUpdate(BaseModel):
     nom: Optional[str] = None
     ville: Optional[str] = None
     departement: Optional[str] = None
+    commune: Optional[str] = None
+    arrondissement: Optional[str] = None
+    quartier: Optional[str] = None
+    adresse: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
     type: Optional[str] = None
     statut: Optional[str] = None
-    directeur: Optional[str] = None
     telephone: Optional[str] = None
     dmpiVersion: Optional[str] = None
     patients: Optional[int] = None
@@ -38,6 +48,7 @@ class EtablissementUpdate(BaseModel):
 class EtablissementOut(EtablissementBase):
     id: str
     derniereSync: datetime
+    directeur: str | None = None  # calculé depuis les comptes admin_etablissement rattachés, jamais stocké
 
     class Config:
         from_attributes = True
