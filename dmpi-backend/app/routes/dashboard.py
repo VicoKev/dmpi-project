@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from datetime import datetime, timedelta
@@ -12,6 +12,8 @@ from app.database_mongo import (
 from app.models_sql import User, AuditLog
 from app.security import require_role
 from app.audit import enregistrer_log
+from app.cim10_data import libelle_cim10
+from app.rapport_export import generer_pdf, generer_excel
 
 router = APIRouter(
     prefix="/dashboard",
@@ -251,114 +253,259 @@ async def dashboard_national(
         "genere_le": maintenant.isoformat() + "Z",
     }
 
+MOIS_NOMS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+
+
+async def _cumul_periode(db: AsyncSession, debut: datetime, fin: datetime) -> dict:
+    """Métriques 'flux' (comparables d'une période à l'autre) sur [debut, fin)."""
+    filtre_dates = {"created_at": {"$gte": debut, "$lt": fin}}
+
+    consultations = await consultations_collection.count_documents(filtre_dates)
+
+    pipeline_patients = [
+        {"$match": filtre_dates},
+        {"$group": {"_id": "$npi"}},
+        {"$count": "total"}
+    ]
+    patients_list = await consultations_collection.aggregate(pipeline_patients).to_list(length=None)
+    patients_actifs = patients_list[0]["total"] if patients_list else 0
+
+    ordonnances = await ordonnances_collection.count_documents(filtre_dates)
+
+    alertes = await db.scalar(
+        select(func.count())
+        .select_from(AuditLog)
+        .where(
+            AuditLog.statut_action.in_(["ALERTE", "ECHEC"]),
+            AuditLog.horodatage >= debut,
+            AuditLog.horodatage < fin,
+        )
+    )
+
+    return {
+        "consultations": consultations,
+        "patients_actifs": patients_actifs,
+        "ordonnances": ordonnances,
+        "alertes": alertes,
+    }
+
+
+def _variation_pct(actuel: float, precedent: float) -> float | None:
+    if precedent <= 0:
+        return None
+    return round((actuel - precedent) / precedent * 100)
+
+
+async def _construire_rapport_annuel(db: AsyncSession) -> dict:
+    """
+    Construit l'intégralité du rapport annuel (cumul + détail mensuel) à partir
+    de données réelles PostgreSQL/MongoDB. Partagé entre l'endpoint JSON et les
+    exports PDF/Excel pour ne jamais désynchroniser les deux.
+    """
+    maintenant = datetime.utcnow()
+    annee_en_cours = maintenant.year
+    debut_annee = datetime(annee_en_cours, 1, 1)
+
+    try:
+        fin_periode_precedente = maintenant.replace(year=annee_en_cours - 1)
+    except ValueError:  # 29 février sans équivalent l'année précédente
+        fin_periode_precedente = maintenant.replace(year=annee_en_cours - 1, day=28)
+    debut_annee_precedente = datetime(annee_en_cours - 1, 1, 1)
+
+    cumul_actuel = await _cumul_periode(db, debut_annee, maintenant)
+    cumul_precedent = await _cumul_periode(db, debut_annee_precedente, fin_periode_precedente)
+
+    total_dossiers = await dossiers_medicaux_collection.count_documents({})
+    taux_couverture = round((cumul_actuel["patients_actifs"] / total_dossiers * 100)) if total_dossiers > 0 else 0
+    taux_couverture_precedent = round((cumul_precedent["patients_actifs"] / total_dossiers * 100)) if total_dossiers > 0 else 0
+
+    etablissements_actifs = await etablissements_collection.count_documents({"statut": "actif"})
+    etablissements_total = await etablissements_collection.count_documents({})
+
+    etabs_cursor = etablissements_collection.find({}, {"nom": 1, "departement": 1, "type": 1, "statut": 1})
+    etablissements_meta = {
+        str(e["_id"]): {
+            "nom": e.get("nom", "Établissement inconnu"),
+            "departement": e.get("departement") or "Non renseigné",
+            "type": e.get("type") or "Non renseigné",
+            "actif": e.get("statut") == "actif",
+        }
+        async for e in etabs_cursor
+    }
+    noms_etablissements = {eid: meta["nom"] for eid, meta in etablissements_meta.items()}
+
+    # Top diagnostics CIM-10 par mois
+    pipeline_cim10 = [
+        {"$match": {"created_at": {"$gte": debut_annee}}},
+        {"$group": {
+            "_id": {"year": {"$year": "$created_at"}, "month": {"$month": "$created_at"}, "code": "$diagnostic_cim10"},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id.year": -1, "_id.month": -1, "count": -1}}
+    ]
+    cim10_results = await consultations_collection.aggregate(pipeline_cim10).to_list(length=None)
+    diagnostics_par_mois: dict[str, list[dict]] = {}
+    for doc in cim10_results:
+        key = f"{doc['_id']['year']}-{doc['_id']['month']}"
+        bucket = diagnostics_par_mois.setdefault(key, [])
+        if len(bucket) < 5:
+            code = doc["_id"]["code"]
+            bucket.append({"code": code, "libelle": libelle_cim10(code), "count": doc["count"]})
+
+    # Top établissements par mois
+    pipeline_top_etabs = [
+        {"$match": {"created_at": {"$gte": debut_annee}, "etablissement_id": {"$ne": None}}},
+        {"$group": {
+            "_id": {"year": {"$year": "$created_at"}, "month": {"$month": "$created_at"}, "etab": "$etablissement_id"},
+            "count": {"$sum": 1}
+        }},
+        {"$sort": {"_id.year": -1, "_id.month": -1, "count": -1}}
+    ]
+    top_etabs_results = await consultations_collection.aggregate(pipeline_top_etabs).to_list(length=None)
+    etablissements_par_mois: dict[str, list[dict]] = {}
+    for doc in top_etabs_results:
+        key = f"{doc['_id']['year']}-{doc['_id']['month']}"
+        bucket = etablissements_par_mois.setdefault(key, [])
+        if len(bucket) < 5:
+            etab_id = doc["_id"]["etab"]
+            bucket.append({"nom": noms_etablissements.get(etab_id, "Établissement inconnu"), "consultations": doc["count"]})
+
+    # Ordonnances par mois
+    pipeline_ordonnances = [
+        {"$match": {"created_at": {"$gte": debut_annee}}},
+        {"$group": {
+            "_id": {"year": {"$year": "$created_at"}, "month": {"$month": "$created_at"}},
+            "count": {"$sum": 1}
+        }},
+    ]
+    ordonnances_results = await ordonnances_collection.aggregate(pipeline_ordonnances).to_list(length=None)
+    ordonnances_par_mois = {f"{d['_id']['year']}-{d['_id']['month']}": d["count"] for d in ordonnances_results}
+
+    # Répartition annuelle par département et par type d'établissement
+    pipeline_par_etab_annuel = [
+        {"$match": {"created_at": {"$gte": debut_annee}, "etablissement_id": {"$ne": None}}},
+        {"$group": {
+            "_id": "$etablissement_id",
+            "consultations": {"$sum": 1},
+            "npi_uniques": {"$addToSet": "$npi"},
+        }},
+    ]
+    par_etab_annuel = await consultations_collection.aggregate(pipeline_par_etab_annuel).to_list(length=None)
+
+    departements_stats: dict[str, dict] = {}
+    types_stats: dict[str, dict] = {}
+    for r in par_etab_annuel:
+        meta = etablissements_meta.get(r["_id"], {"nom": "Inconnu", "departement": "Non renseigné", "type": "Non renseigné"})
+
+        dep = departements_stats.setdefault(meta["departement"], {"departement": meta["departement"], "consultations": 0, "npis": set(), "etablissements": set()})
+        dep["consultations"] += r["consultations"]
+        dep["npis"].update(r["npi_uniques"])
+        dep["etablissements"].add(r["_id"])
+
+        typ = types_stats.setdefault(meta["type"], {"type": meta["type"], "consultations": 0, "etablissements": set()})
+        typ["consultations"] += r["consultations"]
+        typ["etablissements"].add(r["_id"])
+
+    totaux_par_departement: dict[str, dict] = {}
+    totaux_par_type: dict[str, dict] = {}
+    for meta in etablissements_meta.values():
+        td = totaux_par_departement.setdefault(meta["departement"], {"total": 0, "actifs": 0})
+        td["total"] += 1
+        td["actifs"] += 1 if meta["actif"] else 0
+
+        tt = totaux_par_type.setdefault(meta["type"], {"total": 0})
+        tt["total"] += 1
+
+    repartition_departements = sorted(
+        [
+            {
+                "departement": v["departement"],
+                "consultations": v["consultations"],
+                "patients": len(v["npis"]),
+                "etablissements_actifs": totaux_par_departement.get(v["departement"], {}).get("actifs", 0),
+                "etablissements_total": totaux_par_departement.get(v["departement"], {}).get("total", 0),
+            }
+            for v in departements_stats.values()
+        ],
+        key=lambda x: x["consultations"], reverse=True
+    )
+    repartition_types = sorted(
+        [
+            {
+                "type": v["type"],
+                "consultations": v["consultations"],
+                "etablissements": totaux_par_type.get(v["type"], {}).get("total", len(v["etablissements"])),
+            }
+            for v in types_stats.values()
+        ],
+        key=lambda x: x["consultations"], reverse=True
+    )
+
+    # Consultations + patients + établissements distincts par mois
+    pipeline_stats_mensuelles = [
+        {"$match": {"created_at": {"$gte": debut_annee}}},
+        {"$group": {
+            "_id": {"year": {"$year": "$created_at"}, "month": {"$month": "$created_at"}},
+            "consultations": {"$sum": 1},
+            "npi_uniques": {"$addToSet": "$npi"},
+            "etabs_uniques": {"$addToSet": "$etablissement_id"},
+        }},
+        {"$sort": {"_id.year": -1, "_id.month": -1}}
+    ]
+    stats_results = await consultations_collection.aggregate(pipeline_stats_mensuelles).to_list(length=None)
+
+    rapports_mensuels = []
+    for s in stats_results:
+        y, m = s["_id"]["year"], s["_id"]["month"]
+        key = f"{y}-{m}"
+
+        patients_mois = len(s["npi_uniques"])
+        etabs_actifs_mois = len([e for e in s["etabs_uniques"] if e])
+
+        rapports_mensuels.append({
+            "mois": f"{MOIS_NOMS[m-1]} {y}",
+            "consultations": s["consultations"],
+            "patients": patients_mois,
+            "ordonnances": ordonnances_par_mois.get(key, 0),
+            "etablissements": etabs_actifs_mois,
+            "tauxCouverture": round((patients_mois / total_dossiers * 100)) if total_dossiers > 0 else 0,
+            "topDiagnostics": diagnostics_par_mois.get(key, []),
+            "topEtablissements": etablissements_par_mois.get(key, []),
+        })
+
+    return {
+        "cumul_annuel": {
+            "consultations_ytd": cumul_actuel["consultations"],
+            "consultations_ytd_variation": _variation_pct(cumul_actuel["consultations"], cumul_precedent["consultations"]),
+            "patients_actifs": cumul_actuel["patients_actifs"],
+            "patients_actifs_variation": _variation_pct(cumul_actuel["patients_actifs"], cumul_precedent["patients_actifs"]),
+            "taux_couverture": taux_couverture,
+            "taux_couverture_variation_pts": taux_couverture - taux_couverture_precedent,
+            "etablissements_actifs": etablissements_actifs,
+            "etablissements_total": etablissements_total,
+            "ordonnances_emises": cumul_actuel["ordonnances"],
+            "ordonnances_emises_variation": _variation_pct(cumul_actuel["ordonnances"], cumul_precedent["ordonnances"]),
+            "alertes_securite": cumul_actuel["alertes"],
+            "alertes_securite_variation": (cumul_actuel["alertes"] or 0) - (cumul_precedent["alertes"] or 0),
+        },
+        "rapports_mensuels": rapports_mensuels,
+        "repartition_departements": repartition_departements,
+        "repartition_types_etablissement": repartition_types,
+        "annee": annee_en_cours,
+        "genere_le": maintenant.isoformat() + "Z",
+    }
+
+
 @router.get("/rapports-mensuels")
 async def get_rapports_mensuels(
     db: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(require_role("super_admin"))
 ):
     """
-    Indicateurs annuels et rapports groupés par mois avec données réelles.
+    Indicateurs annuels et rapports groupés par mois, entièrement calculés
+    depuis PostgreSQL/MongoDB (aucune donnée figée).
     """
-    annee_en_cours = datetime.utcnow().year
-    debut_annee = datetime(annee_en_cours, 1, 1)
-
-    consultations_ytd = await consultations_collection.count_documents({"created_at": {"$gte": debut_annee}})
-
-    pipeline_patients_actifs = [
-        {"$match": {"created_at": {"$gte": debut_annee}}},
-        {"$group": {"_id": "$npi"}},
-        {"$count": "total"}
-    ]
-    actifs_cursor = consultations_collection.aggregate(pipeline_patients_actifs)
-    actifs_list = await actifs_cursor.to_list(length=None)
-    patients_actifs = actifs_list[0]["total"] if actifs_list else 0
-
-    total_dossiers = await dossiers_medicaux_collection.count_documents({})
-    taux_couverture = round((patients_actifs / total_dossiers * 100)) if total_dossiers > 0 else 0
-
-    etablissements_actifs = await etablissements_collection.count_documents({"statut": "actif"})
-    etablissements_total = await etablissements_collection.count_documents({})
-
-    ordonnances_emises = await ordonnances_collection.count_documents({"created_at": {"$gte": debut_annee}})
-
-    alertes_securite = await db.scalar(
-        select(func.count())
-        .select_from(AuditLog)
-        .where(
-            AuditLog.statut_action.in_(["ALERTE", "ECHEC"]),
-            AuditLog.horodatage >= debut_annee
-        )
-    )
-
-    pipeline_cim10_mensuel = [
-        {"$match": {"created_at": {"$gte": debut_annee}}},
-        {
-            "$group": {
-                "_id": {
-                    "year": {"$year": "$created_at"},
-                    "month": {"$month": "$created_at"},
-                    "diagnostic_cim10": "$diagnostic_cim10"
-                },
-                "count": {"$sum": 1}
-            }
-        },
-        {"$sort": {"_id.year": -1, "_id.month": -1, "count": -1}}
-    ]
-    cim10_cursor = consultations_collection.aggregate(pipeline_cim10_mensuel)
-    cim10_results = await cim10_cursor.to_list(length=None)
-
-    MOIS_NOMS = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
-    
-    pipeline_stats_mensuelles = [
-        {"$match": {"created_at": {"$gte": debut_annee}}},
-        {
-            "$group": {
-                "_id": {
-                    "year": {"$year": "$created_at"},
-                    "month": {"$month": "$created_at"}
-                },
-                "consultations": {"$sum": 1},
-                "npi_uniques": {"$addToSet": "$npi"}
-            }
-        },
-        {"$sort": {"_id.year": -1, "_id.month": -1}}
-    ]
-    stats_cursor = consultations_collection.aggregate(pipeline_stats_mensuelles)
-    stats_results = await stats_cursor.to_list(length=None)
-
-    rapports_mensuels = []
-    
-    diagnostics_par_mois = {}
-    for doc in cim10_results:
-        y = doc["_id"]["year"]
-        m = doc["_id"]["month"]
-        key = f"{y}-{m}"
-        if key not in diagnostics_par_mois:
-            diagnostics_par_mois[key] = []
-        if len(diagnostics_par_mois[key]) < 5:
-            diagnostics_par_mois[key].append({
-                "code": doc["_id"]["diagnostic_cim10"],
-                "libelle": doc["_id"]["diagnostic_cim10"],
-                "count": doc["count"]
-            })
-
-    for s in stats_results:
-        y = s["_id"]["year"]
-        m = s["_id"]["month"]
-        key = f"{y}-{m}"
-        nom_mois = f"{MOIS_NOMS[m-1]} {y}"
-        
-        rapports_mensuels.append({
-            "mois": nom_mois,
-            "consultations": s["consultations"],
-            "patients": len(s["npi_uniques"]),
-            "ordonnances": 0, 
-            "etablissements": etablissements_actifs,
-            "tauxCouverture": round((len(s["npi_uniques"]) / total_dossiers * 100)) if total_dossiers > 0 else 0,
-            "topDiagnostics": diagnostics_par_mois.get(key, []),
-            "topEtablissements": [], 
-            "evolutionConsultations": [0,0,0,0,0,0,0] 
-        })
+    rapport = await _construire_rapport_annuel(db)
 
     await enregistrer_log(
         utilisateur_email=current_user.email,
@@ -367,15 +514,50 @@ async def get_rapports_mensuels(
         npi_concerne=None
     )
 
-    return {
-        "cumul_annuel": {
-            "consultations_ytd": consultations_ytd,
-            "patients_actifs": patients_actifs,
-            "taux_couverture": taux_couverture,
-            "etablissements_actifs": etablissements_actifs,
-            "etablissements_total": etablissements_total,
-            "ordonnances_emises": ordonnances_emises,
-            "alertes_securite": alertes_securite,
-        },
-        "rapports_mensuels": rapports_mensuels
-    }
+    return rapport
+
+
+@router.get("/rapports-mensuels/export/pdf")
+async def exporter_rapport_pdf(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """Rapport annuel complet (cumul + détail mensuel) au format PDF."""
+    rapport = await _construire_rapport_annuel(db)
+    contenu_pdf = generer_pdf(rapport)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="EXPORT_RAPPORT_ANNUEL_PDF",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return Response(
+        content=contenu_pdf,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=rapport-annuel-dmpi-{rapport['annee']}.pdf"}
+    )
+
+
+@router.get("/rapports-mensuels/export/excel")
+async def exporter_rapport_excel(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """Rapport annuel complet (cumul + détail mensuel) au format Excel (.xlsx)."""
+    rapport = await _construire_rapport_annuel(db)
+    contenu_excel = generer_excel(rapport)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="EXPORT_RAPPORT_ANNUEL_EXCEL",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return Response(
+        content=contenu_excel,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename=rapport-annuel-dmpi-{rapport['annee']}.xlsx"}
+    )
