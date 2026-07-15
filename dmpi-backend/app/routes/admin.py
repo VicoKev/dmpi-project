@@ -289,11 +289,4 @@ async def consulter_journal_audit(
             )
         )
 
-    await enregistrer_log(
-        utilisateur_email=current_user.email,
-        action="CONSULTATION_JOURNAL_AUDIT",
-        statut_action="SUCCES",
-        npi_concerne=npi
-    )
-
     return logs_out
