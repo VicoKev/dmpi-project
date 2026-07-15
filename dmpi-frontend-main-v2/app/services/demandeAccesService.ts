@@ -45,3 +45,8 @@ export async function getMesDemandesAcces(): Promise<DemandeAcces[]> {
 export async function annulerDemandeAcces(id: number): Promise<DemandeAcces> {
   return apiFetch<DemandeAcces>(`/demandes-acces/${id}/annuler`, { method: "PATCH" });
 }
+
+export async function compteExistantPourNpi(npi: string): Promise<boolean> {
+  const result = await apiFetch<{ npi: string; a_un_compte: boolean }>(`/demandes-acces/compte-existant/${npi}`);
+  return result.a_un_compte;
+}

@@ -94,6 +94,12 @@ export interface ExamenValeur {
   anormal?: boolean;
 }
 
+export interface Tuteur {
+  nom: string;
+  telephone: string;
+  lienParente: string;
+}
+
 export interface DossierPatient {
   patient: Patient;
   contactsUrgence: ContactUrgence[];
@@ -103,6 +109,8 @@ export interface DossierPatient {
   vaccinations: Vaccination[];
   hospitalisations: Hospitalisation[];
   examens: ResultatExamen[];
+  /** Tuteur / parent — pour mineurs et nouveau-nés sans contact propre */
+  tuteur?: Tuteur | null;
   /** Dernière mise à jour du dossier */
   derniereMaj: string;
   /** Établissement ayant créé le dossier */

@@ -16,6 +16,7 @@ import PrescriptionList from "../../components/dossier/PrescriptionList";
 import ExamensCard from "../../components/dossier/ExamensCard";
 import VaccinationsCard from "../../components/dossier/VaccinationsCard";
 import ConstanteRow from "../../components/dossier/ConstanteRow";
+import DemanderAccesButton from "../../components/patient/DemanderAccesButton";
 
 import { getDossierPatient } from "../../services/patientService";
 import { getConsultationsByPatient } from "../../services/consultationService";
@@ -117,6 +118,12 @@ export default function DossierPatientPage() {
         </Button>
 
         <div className="flex flex-wrap items-center gap-2">
+          <DemanderAccesButton
+            npi={npi!}
+            nom={dossier.patient.nom}
+            prenom={dossier.patient.prenom}
+            telephoneDefault={dossier.tuteur?.telephone}
+          />
           <Link to={`/medecin/dossier/${npi}/modifier`}>
             <Button icon="edit" variant="outline" size="sm">
               Modifier le dossier

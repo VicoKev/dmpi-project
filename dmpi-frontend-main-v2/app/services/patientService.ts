@@ -20,6 +20,12 @@ interface BackendTraitement {
   indication?: string;
 }
 
+interface BackendTuteur {
+  nom: string;
+  telephone: string;
+  lien_parente: string;
+}
+
 interface BackendDossier {
   npi: string;
   nom?: string;
@@ -30,6 +36,7 @@ interface BackendDossier {
   allergies: BackendAllergie[];
   antecedents: string[];
   traitements_en_cours: BackendTraitement[];
+  tuteur?: BackendTuteur | null;
   updated_at: string;
   _id?: string;
 }
@@ -86,6 +93,9 @@ function mapBackendDossier(raw: BackendDossier): DossierPatient {
     vaccinations: [],
     hospitalisations: [],
     examens: [],
+    tuteur: raw.tuteur
+      ? { nom: raw.tuteur.nom, telephone: raw.tuteur.telephone, lienParente: raw.tuteur.lien_parente }
+      : null,
     derniereMaj: raw.updated_at,
   };
 }

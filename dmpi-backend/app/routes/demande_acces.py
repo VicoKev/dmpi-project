@@ -43,6 +43,13 @@ async def creer_demande_acces(
             detail="Une demande d'accès est déjà en attente pour ce patient."
         )
 
+    compte_existant = await db.execute(select(User).where(User.npi_patient == demande.npi))
+    if compte_existant.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400,
+            detail="Ce patient dispose déjà d'un compte de connexion."
+        )
+
     nouvelle_demande = DemandeAccesPatient(
         npi=demande.npi,
         nom=demande.nom,
@@ -79,6 +86,20 @@ async def lister_demandes_acces(
 
     result = await db.execute(requete)
     return result.scalars().all()
+
+
+@router.get("/compte-existant/{npi}")
+async def compte_existant_pour_npi(
+    npi: str,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("medecin", "infirmier", "super_admin"))
+):
+    """
+    Indique si un compte de connexion est déjà lié à ce NPI, sans exposer son identité
+    (email, etc.) — sert uniquement à décider d'afficher ou non le bouton de demande d'accès.
+    """
+    result = await db.execute(select(User).where(User.npi_patient == npi))
+    return {"npi": npi, "a_un_compte": result.scalar_one_or_none() is not None}
 
 
 @router.get("/mes-demandes", response_model=list[DemandeAccesOut])
