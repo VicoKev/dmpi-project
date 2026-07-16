@@ -5,6 +5,7 @@ interface BackendMedicament {
   nom_medicament: string;
   posologie: string;
   duree: string;
+  renouvelable: boolean;
 }
 
 interface BackendOrdonnance {
@@ -16,6 +17,7 @@ interface BackendOrdonnance {
   created_at: string;
   auteur?: string;
   etablissement_nom?: string | null;
+  renouvelee_depuis?: string | null;
 }
 
 function mapOrdonnance(
@@ -32,6 +34,7 @@ function mapOrdonnance(
     prescripteurId: ordo.auteur ?? "",
     etablissement: ordo.etablissement_nom ?? "",
     date: ordo.created_at,
+    renouveleeDepuis: ordo.renouvelee_depuis ?? null,
     lignes: ordo.traitements.map((m, i) => ({
       id: `lig_${index}_${i}`,
       medicament: m.nom_medicament,
@@ -40,7 +43,7 @@ function mapOrdonnance(
       posologie: m.posologie,
       frequence: "autre" as const,
       dureeJours: parseInt(m.duree) || 0,
-      renouvelable: false,
+      renouvelable: m.renouvelable,
       instructions: m.duree,
     })),
     noteGlobale: ordo.notes_additionnelles,
@@ -87,6 +90,7 @@ export async function createPrescription(payload: CreatePrescriptionPayload): Pr
       nom_medicament: `${l.medicament} ${l.dosage}`,
       posologie: l.posologie,
       duree: `${l.dureeJours} jours`,
+      renouvelable: l.renouvelable,
     })),
     notes_additionnelles: payload.noteGlobale,
   };
@@ -118,6 +122,20 @@ export async function createPrescription(payload: CreatePrescriptionPayload): Pr
  * "pres_<id>" utilisé côté frontend (voir mapOrdonnance/createPrescription). */
 export function ordonnanceIdDepuisPrescriptionId(prescriptionId: string): string {
   return prescriptionId.replace(/^pres_/, "");
+}
+
+/**
+ * Renouvelle une ordonnance : crée une nouvelle ordonnance ne reprenant que
+ * les médicaments marqués "renouvelable" sur l'originale, sans nouvelle
+ * consultation. Réservé aux médecins.
+ */
+export async function renouvelerPrescription(prescriptionId: string): Promise<{ ordonnanceId: string; message: string }> {
+  const ordonnanceId = ordonnanceIdDepuisPrescriptionId(prescriptionId);
+  const result = await apiFetch<{ message: string; ordonnance_id: string; npi_patient: string }>(
+    `/ordonnances/${ordonnanceId}/renouveler`,
+    { method: "POST" }
+  );
+  return { ordonnanceId: result.ordonnance_id, message: result.message };
 }
 
 export interface PharmacieProche {

@@ -42,6 +42,8 @@ export interface Prescription {
   etablissement: string;
   date: string; // ISO 8601
   dateExpiration?: string;
+  /** ID de l'ordonnance d'origine si celle-ci a été créée par renouvellement */
+  renouveleeDepuis?: string | null;
   lignes: LigneMedicament[];
   noteGlobale?: string;
   statut: "brouillon" | "signee" | "dispensee" | "expiree";

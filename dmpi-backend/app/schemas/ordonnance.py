@@ -5,6 +5,7 @@ class MedicamentPrescrit(BaseModel):
     nom_medicament: str  # ex: Paracétamol 500mg
     posologie: str       # ex: 1 comprimé 3 fois par jour
     duree: str           # ex: 5 jours
+    renouvelable: bool = False  # le médecin autorise un renouvellement sans nouvelle consultation
 
 class OrdonnanceMongo(BaseModel):
     npi: str = Field(..., min_length=10, max_length=10, description="Le NPI à 10 chiffres du patient")
@@ -12,6 +13,7 @@ class OrdonnanceMongo(BaseModel):
     traitements: list[MedicamentPrescrit] = []
     notes_additionnelles: str | None = None
     auteur: str | None = Field(None, description="Email du médecin prescripteur")
+    renouvelee_depuis: str | None = Field(None, description="ID de l'ordonnance d'origine, si créée par renouvellement")
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

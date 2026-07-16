@@ -10,7 +10,7 @@ from app.database_mongo import (
 )
 from app.schemas.ordonnance import OrdonnanceMongo, OrdonnanceOut
 from app.schemas.prestataire import PharmaciesProchesResponse, ReferenceLocalisation, PharmacieProche
-from app.security import get_current_user
+from app.security import get_current_user, require_role
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
@@ -112,6 +112,82 @@ async def enregistrer_ordonnance(
         "message": "Ordonnance enregistrée avec succès !",
         "ordonnance_id": str(result.inserted_id),
         "npi_patient": ordonnance.npi
+    }
+
+@router.post("/{ordonnance_id}/renouveler", status_code=status.HTTP_201_CREATED)
+async def renouveler_ordonnance(
+    ordonnance_id: str,
+    current_user: User = Depends(require_role("medecin"))
+):
+    """
+    Crée une nouvelle ordonnance reprenant uniquement les médicaments marqués
+    'renouvelable' sur l'ordonnance d'origine — sans nouvelle consultation.
+    """
+    try:
+        object_id = ObjectId(ordonnance_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Identifiant d'ordonnance invalide.")
+
+    originale = await ordonnances_collection.find_one({"_id": object_id})
+    if not originale:
+        raise HTTPException(status_code=404, detail="Ordonnance introuvable.")
+
+    traitements_renouvelables = [
+        t for t in originale.get("traitements", []) if t.get("renouvelable")
+    ]
+    if not traitements_renouvelables:
+        raise HTTPException(
+            status_code=400,
+            detail="Aucun médicament renouvelable sur cette ordonnance."
+        )
+
+    nouvelle_ordonnance = {
+        "npi": originale["npi"],
+        "consultation_id": None,
+        "traitements": traitements_renouvelables,
+        "notes_additionnelles": None,
+        "auteur": current_user.email,
+        "renouvelee_depuis": ordonnance_id,
+        "created_at": datetime.utcnow(),
+    }
+    result = await ordonnances_collection.insert_one(nouvelle_ordonnance)
+
+    nouveaux_traitements = [
+        {
+            "nom_medicament": t["nom_medicament"],
+            "posologie": t["posologie"],
+            "indication": f"Renouvelé le {datetime.utcnow().strftime('%d/%m/%Y')} (durée: {t['duree']})"
+        }
+        for t in traitements_renouvelables
+    ]
+    await dossiers_medicaux_collection.update_one(
+        {"npi": originale["npi"]},
+        {
+            "$push": {"traitements_en_cours": {"$each": nouveaux_traitements}},
+            "$set": {"updated_at": datetime.utcnow()}
+        }
+    )
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="RENOUVELLEMENT_ORDONNANCE",
+        statut_action="SUCCES",
+        npi_concerne=originale["npi"]
+    )
+
+    await publier_evenement("dmpi.consultations", {
+        "type": "NOUVELLE_ORDONNANCE",
+        "npi": originale["npi"],
+        "ordonnance_id": str(result.inserted_id),
+        "consultation_id": None,
+        "auteur": current_user.email,
+        "horodatage": datetime.utcnow().isoformat()
+    })
+
+    return {
+        "message": f"Ordonnance renouvelée avec succès ({len(traitements_renouvelables)} médicament(s)).",
+        "ordonnance_id": str(result.inserted_id),
+        "npi_patient": originale["npi"]
     }
 
 

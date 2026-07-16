@@ -1,6 +1,6 @@
 // Vue Dossier Patient Unifié — Espace Médecin
 // Affichage complet et sans restriction des données médicales (contexte d'urgence)
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 
 import Button from "../../components/ui/Button";
@@ -73,6 +73,11 @@ export default function DossierPatientPage() {
     return () => {
       cancelled = true;
     };
+  }, [npi]);
+
+  const rafraichirPrescriptions = useCallback(() => {
+    if (!npi) return;
+    getPrescriptionsByPatient(npi).then(setPrescriptions);
   }, [npi]);
 
   if (loading) {
@@ -169,7 +174,11 @@ export default function DossierPatientPage() {
                 Dernières ordonnances
               </h2>
               {prescriptions.length > 0 ? (
-                <PrescriptionList prescriptions={prescriptions.slice(0, 3)} />
+                <PrescriptionList
+                  prescriptions={prescriptions.slice(0, 3)}
+                  peutRenouveler
+                  onRenouvele={rafraichirPrescriptions}
+                />
               ) : (
                 <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>Aucune ordonnance récente.</p>
               )}
@@ -242,7 +251,11 @@ export default function DossierPatientPage() {
 
         {activeTab === "ordonnances" && (
           <div className="lg:col-span-2">
-            <PrescriptionList prescriptions={prescriptions} />
+            <PrescriptionList
+              prescriptions={prescriptions}
+              peutRenouveler
+              onRenouvele={rafraichirPrescriptions}
+            />
           </div>
         )}
 
