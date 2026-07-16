@@ -10,8 +10,8 @@ class EtablissementBase(BaseModel):
     arrondissement: str | None = None
     quartier: str | None = None
     adresse: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float | None = Field(None, ge=-90, le=90)
+    longitude: float | None = Field(None, ge=-180, le=180)
     type: str  # "CHU", "CHD", "CSC", "Clinique", "Maternite"
     statut: str = "actif"  # "actif", "maintenance", "inactif"
     telephone: str
@@ -24,7 +24,12 @@ class EtablissementBase(BaseModel):
     consultationsMois: int = 0
 
 class EtablissementCreate(EtablissementBase):
-    pass
+    # Requis à la création uniquement — EtablissementBase les garde optionnels
+    # car il est aussi hérité par EtablissementOut, qui doit pouvoir sérialiser
+    # les établissements existants créés avant cette contrainte.
+    commune: str
+    arrondissement: str
+    quartier: str
 
 class EtablissementUpdate(BaseModel):
     nom: Optional[str] = None
@@ -34,8 +39,8 @@ class EtablissementUpdate(BaseModel):
     arrondissement: Optional[str] = None
     quartier: Optional[str] = None
     adresse: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
     type: Optional[str] = None
     statut: Optional[str] = None
     telephone: Optional[str] = None
@@ -57,8 +62,8 @@ class EtablissementUpdateSelfService(BaseModel):
     arrondissement: Optional[str] = None
     quartier: Optional[str] = None
     adresse: Optional[str] = None
-    latitude: Optional[float] = None
-    longitude: Optional[float] = None
+    latitude: Optional[float] = Field(None, ge=-90, le=90)
+    longitude: Optional[float] = Field(None, ge=-180, le=180)
     telephone: Optional[str] = None
 
 class EtablissementOut(EtablissementBase):

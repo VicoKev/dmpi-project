@@ -76,6 +76,7 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localisationValide, setLocalisationValide] = useState(true);
 
   const update = (field: keyof EtablissementCreatePayload, value: string | number) =>
     setForm(prev => ({ ...prev, [field]: value }));
@@ -86,8 +87,12 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!form.departement) {
-      setError("Veuillez sélectionner un département.");
+    if (!form.departement || !form.commune || !form.arrondissement || !form.quartier) {
+      setError("Veuillez sélectionner un département, une commune, un arrondissement et un quartier.");
+      return;
+    }
+    if (!localisationValide) {
+      setError("Corrigez la latitude/longitude avant de continuer.");
       return;
     }
     setLoading(true);
@@ -159,6 +164,8 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
               longitude: form.longitude ?? null,
             }}
             onChange={updateLocalisation}
+            territoireRequis
+            onValiditeChange={setLocalisationValide}
           />
 
           <div className="grid grid-cols-2 gap-3">
@@ -182,7 +189,7 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
 
           <div className="flex gap-3 pt-4">
             <Button variant="outline" fullWidth type="button" onClick={onCancel} disabled={loading}>Annuler</Button>
-            <Button fullWidth type="submit" loading={loading} icon={initial ? "save" : "add_business"}>
+            <Button fullWidth type="submit" loading={loading} disabled={!localisationValide} icon={initial ? "save" : "add_business"}>
               {initial ? "Enregistrer" : "Créer l'établissement"}
             </Button>
           </div>

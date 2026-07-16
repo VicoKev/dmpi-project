@@ -1,7 +1,8 @@
 // Sélecteur de position sur carte (Leaflet). Ce module accède à `window` dès son
 // chargement (bug connu de Leaflet) : il ne doit être importé que dynamiquement,
 // côté client — jamais statiquement, sous peine de faire planter le rendu SSR.
-import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
+import { useEffect } from "react";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import L from "leaflet";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
@@ -34,6 +35,19 @@ function GestionnaireClic({ onPositionChange }: { onPositionChange: (lat: number
   return null;
 }
 
+// Recentre la carte quand la position change depuis en dehors de la carte
+// elle-même (ex : saisie manuelle des champs latitude/longitude) — sans quoi
+// le marqueur peut se retrouver hors du cadre visible.
+function RecentrerCarte({ latitude, longitude }: { latitude: number; longitude: number }) {
+  const map = useMap();
+  useEffect(() => {
+    const zoom = map.getZoom() >= 13 ? map.getZoom() : 15;
+    map.setView([latitude, longitude], zoom);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [latitude, longitude]);
+  return null;
+}
+
 export default function CarteEtablissement({ latitude, longitude, onPositionChange }: CarteEtablissementProps) {
   const position: [number, number] = latitude != null && longitude != null ? [latitude, longitude] : CENTRE_BENIN;
 
@@ -45,7 +59,12 @@ export default function CarteEtablissement({ latitude, longitude, onPositionChan
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <GestionnaireClic onPositionChange={onPositionChange} />
-        {latitude != null && longitude != null && <Marker position={[latitude, longitude]} />}
+        {latitude != null && longitude != null && (
+          <>
+            <Marker position={[latitude, longitude]} />
+            <RecentrerCarte latitude={latitude} longitude={longitude} />
+          </>
+        )}
       </MapContainer>
     </div>
   );

@@ -26,6 +26,12 @@ export interface LocalisationValue {
 interface LocalisationPickerProps {
   value: LocalisationValue;
   onChange: (patch: Partial<LocalisationValue>) => void;
+  /** Affiche département/commune/arrondissement/quartier comme requis (astérisque). */
+  territoireRequis?: boolean;
+  /** Notifie le parent si les champs latitude/longitude sont dans un état
+   * saisissable mais non exploitable (texte non numérique) — pour bloquer la
+   * soumission plutôt que de silencieusement garder l'ancienne valeur. */
+  onValiditeChange?: (valide: boolean) => void;
 }
 
 const selectClass = "w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2";
@@ -35,7 +41,51 @@ const selectStyle = {
   color: "var(--color-on-surface)",
 };
 
-export default function LocalisationPicker({ value, onChange }: LocalisationPickerProps) {
+function LabelChamp({ children, requis }: { children: string; requis: boolean }) {
+  return (
+    <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
+      {children}
+      {requis && <span className="ml-0.5" style={{ color: "var(--color-error)" }}>*</span>}
+    </label>
+  );
+}
+
+/**
+ * Texte de saisie libre pour un champ numérique, synchronisé avec une valeur
+ * `number | null` détenue par le parent. Ne réécrase le texte local que
+ * lorsque la valeur externe diverge de ce que l'utilisateur est en train de
+ * taper (ex : clic sur la carte) — sinon un "6." ou "6.30" en cours de
+ * saisie serait reformaté à chaque frappe et empêcherait de taper la suite.
+ */
+function useSaisieNombre(valeur: number | null, onCommit: (n: number | null) => void) {
+  const [texte, setTexte] = useState(valeur != null ? String(valeur) : "");
+
+  useEffect(() => {
+    const parsed = texte.trim() === "" ? null : Number(texte);
+    const parsedValide = parsed !== null && !Number.isNaN(parsed);
+    if ((parsedValide ? parsed : null) !== valeur) {
+      setTexte(valeur != null ? String(valeur) : "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [valeur]);
+
+  const gererChangement = (brut: string) => {
+    setTexte(brut);
+    const trimmed = brut.trim();
+    if (trimmed === "") {
+      onCommit(null);
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (!Number.isNaN(parsed)) {
+      onCommit(parsed);
+    }
+  };
+
+  return [texte, gererChangement] as const;
+}
+
+export default function LocalisationPicker({ value, onChange, territoireRequis = false, onValiditeChange }: LocalisationPickerProps) {
   const [departements, setDepartements] = useState<Departement[]>([]);
   const [communes, setCommunes] = useState<Commune[]>([]);
   const [arrondissements, setArrondissements] = useState<Arrondissement[]>([]);
@@ -85,18 +135,39 @@ export default function LocalisationPicker({ value, onChange }: LocalisationPick
     onChange({ arrondissement: lib_arrond, quartier: "" });
   };
 
+  const [latText, handleLatChange] = useSaisieNombre(value.latitude, (lat) => onChange({ latitude: lat }));
+  const [lngText, handleLngChange] = useSaisieNombre(value.longitude, (lng) => onChange({ longitude: lng }));
+
+  // Texte présent mais non numérique : useSaisieNombre n'a alors rien commité
+  // au parent (l'ancienne valeur, ou null, est restée) — sans ce contrôle,
+  // le formulaire pourrait être soumis avec une coordonnée jamais réellement
+  // saisie, sans que l'utilisateur s'en rende compte.
+  const latTexteInvalide = latText.trim() !== "" && Number.isNaN(Number(latText.trim()));
+  const lngTexteInvalide = lngText.trim() !== "" && Number.isNaN(Number(lngText.trim()));
+  const latHorsPlage = value.latitude != null && (value.latitude < -90 || value.latitude > 90);
+  const lngHorsPlage = value.longitude != null && (value.longitude < -180 || value.longitude > 180);
+
+  const localisationValide = !latTexteInvalide && !lngTexteInvalide;
+  useEffect(() => {
+    onValiditeChange?.(localisationValide);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [localisationValide]);
+
+  const latErreur = latTexteInvalide ? "Doit être un nombre." : latHorsPlage ? "Doit être comprise entre -90 et 90." : undefined;
+  const lngErreur = lngTexteInvalide ? "Doit être un nombre." : lngHorsPlage ? "Doit être comprise entre -180 et 180." : undefined;
+
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Département</label>
+          <LabelChamp requis={territoireRequis}>Département</LabelChamp>
           <select value={value.departement} onChange={e => handleDepartementChange(e.target.value)} className={selectClass} style={selectStyle}>
             <option value="">Sélectionner…</option>
             {departements.map(d => <option key={d.id_dep} value={d.lib_dep}>{d.lib_dep}</option>)}
           </select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Commune</label>
+          <LabelChamp requis={territoireRequis}>Commune</LabelChamp>
           <select
             value={value.commune}
             onChange={e => handleCommuneChange(e.target.value)}
@@ -112,7 +183,7 @@ export default function LocalisationPicker({ value, onChange }: LocalisationPick
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
-          <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Arrondissement</label>
+          <LabelChamp requis={territoireRequis}>Arrondissement</LabelChamp>
           <select
             value={value.arrondissement}
             onChange={e => handleArrondissementChange(e.target.value)}
@@ -125,7 +196,7 @@ export default function LocalisationPicker({ value, onChange }: LocalisationPick
           </select>
         </div>
         <div className="flex flex-col gap-1.5">
-          <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Quartier</label>
+          <LabelChamp requis={territoireRequis}>Quartier</LabelChamp>
           <select
             value={value.quartier}
             onChange={e => onChange({ quartier: e.target.value })}
@@ -148,15 +219,33 @@ export default function LocalisationPicker({ value, onChange }: LocalisationPick
 
       <div className="flex flex-col gap-1.5">
         <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
-          Position sur la carte {value.latitude != null && value.longitude != null && (
-            <span className="font-normal text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-              ({value.latitude.toFixed(5)}, {value.longitude.toFixed(5)})
-            </span>
-          )}
+          Position
         </label>
         <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-          Cliquez sur la carte pour positionner l'établissement.
+          Cliquez sur la carte, ou saisissez directement les coordonnées si vous les connaissez.
         </p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Latitude"
+            type="text"
+            inputMode="decimal"
+            value={latText}
+            onChange={e => handleLatChange(e.target.value)}
+            placeholder="Ex : 6.37028"
+            error={latErreur}
+          />
+          <Input
+            label="Longitude"
+            type="text"
+            inputMode="decimal"
+            value={lngText}
+            onChange={e => handleLngChange(e.target.value)}
+            placeholder="Ex : 2.39122"
+            error={lngErreur}
+          />
+        </div>
+
         <CarteEtablissementLazy
           latitude={value.latitude}
           longitude={value.longitude}

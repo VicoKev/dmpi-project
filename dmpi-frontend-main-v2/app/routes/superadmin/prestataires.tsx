@@ -39,12 +39,17 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localisationValide, setLocalisationValide] = useState(true);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     if (!localisation.departement) {
       setError("Veuillez sélectionner un département.");
+      return;
+    }
+    if (!localisationValide) {
+      setError("Corrigez la latitude/longitude avant de continuer.");
       return;
     }
     setLoading(true);
@@ -108,11 +113,15 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
 
           <Input label="Horaires (optionnel)" value={horaires} onChange={(e) => setHoraires(e.target.value)} placeholder="Ex : Lun-Sam 8h-20h" />
 
-          <LocalisationPicker value={localisation} onChange={(patch) => setLocalisation((prev) => ({ ...prev, ...patch }))} />
+          <LocalisationPicker
+            value={localisation}
+            onChange={(patch) => setLocalisation((prev) => ({ ...prev, ...patch }))}
+            onValiditeChange={setLocalisationValide}
+          />
 
           <div className="flex gap-3 pt-4">
             <Button variant="outline" fullWidth type="button" onClick={onCancel} disabled={loading}>Annuler</Button>
-            <Button fullWidth type="submit" loading={loading} icon={initial ? "save" : "add_business"}>
+            <Button fullWidth type="submit" loading={loading} disabled={!localisationValide} icon={initial ? "save" : "add_business"}>
               {initial ? "Enregistrer" : "Créer la pharmacie"}
             </Button>
           </div>

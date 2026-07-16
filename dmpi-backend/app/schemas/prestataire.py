@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 
@@ -10,8 +10,8 @@ class PrestataireBase(BaseModel):
     arrondissement: str | None = None
     quartier: str | None = None
     adresse: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float | None = Field(None, ge=-90, le=90)
+    longitude: float | None = Field(None, ge=-180, le=180)
     telephone: str
     email: str | None = None
     horaires: str | None = None
@@ -33,8 +33,8 @@ class PrestataireUpdate(BaseModel):
     arrondissement: str | None = None
     quartier: str | None = None
     adresse: str | None = None
-    latitude: float | None = None
-    longitude: float | None = None
+    latitude: float | None = Field(None, ge=-90, le=90)
+    longitude: float | None = Field(None, ge=-180, le=180)
     telephone: str | None = None
     email: str | None = None
     horaires: str | None = None

@@ -34,6 +34,7 @@ export default function AdminMonEtablissement() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saveSucces, setSaveSucces] = useState(false);
+  const [localisationValide, setLocalisationValide] = useState(true);
 
   const charger = () => {
     setLoading(true);
@@ -62,6 +63,14 @@ export default function AdminMonEtablissement() {
     e.preventDefault();
     setSaveError(null);
     setSaveSucces(false);
+    if (!localisation.departement || !localisation.commune || !localisation.arrondissement || !localisation.quartier) {
+      setSaveError("Veuillez sélectionner un département, une commune, un arrondissement et un quartier.");
+      return;
+    }
+    if (!localisationValide) {
+      setSaveError("Corrigez la latitude/longitude avant de continuer.");
+      return;
+    }
     setSaving(true);
     try {
       const updated = await updateMonEtablissement({
@@ -149,10 +158,15 @@ export default function AdminMonEtablissement() {
 
               <Input label="Téléphone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+229 21 XX XX XX" />
 
-              <LocalisationPicker value={localisation} onChange={(patch) => setLocalisation((prev) => ({ ...prev, ...patch }))} />
+              <LocalisationPicker
+                value={localisation}
+                onChange={(patch) => setLocalisation((prev) => ({ ...prev, ...patch }))}
+                territoireRequis
+                onValiditeChange={setLocalisationValide}
+              />
 
               <div className="flex justify-end pt-2">
-                <Button type="submit" icon="save" loading={saving}>Enregistrer</Button>
+                <Button type="submit" icon="save" loading={saving} disabled={!localisationValide}>Enregistrer</Button>
               </div>
             </form>
           </Card>
