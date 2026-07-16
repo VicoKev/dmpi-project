@@ -21,7 +21,16 @@ if config.config_file_name is not None:
 
 # L'URL de connexion vient des mêmes variables d'environnement que le reste de
 # l'app (voir app/database_sql.py), pas d'un secret dupliqué dans alembic.ini.
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+#
+# set_main_option() passe par configparser, qui interprète nativement tout "%"
+# comme le début d'une référence d'interpolation (ex "%(name)s") — un mot de
+# passe contenant un caractère spécial (@, :, /, %...) est correctement
+# pourcenté-encodé par quote_plus() dans database_sql.py (ex "@" -> "%40"),
+# mais ce "%40" fait alors planter configparser avec "invalid interpolation
+# syntax". On échappe donc "%" en "%%" uniquement pour cet appel : la valeur
+# stockée puis relue par Alembic reste la bonne URL, "%%" n'étant qu'un
+# artefact de la syntaxe d'échappement de configparser.
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 target_metadata = Base.metadata
 
