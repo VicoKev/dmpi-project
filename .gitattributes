@@ -1,0 +1,6 @@
+# Les scripts shell sont exécutés via leur shebang (#!/bin/sh) à l'intérieur
+# de conteneurs Linux. Si git les convertit en CRLF au checkout (comportement
+# fréquent sur Windows avec core.autocrlf=true), le shebang devient invalide
+# et le conteneur ne démarre plus. On force LF quelle que soit la config
+# locale de chaque développeur.
+*.sh text eol=lf

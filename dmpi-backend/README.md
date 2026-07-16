@@ -144,7 +144,11 @@ docker compose down -v       # arrête et supprime aussi les volumes (reset comp
 
 ## Migrations PostgreSQL (Alembic)
 
-Le schéma PostgreSQL est géré par [Alembic](https://alembic.sqlalchemy.org/), pas par `Base.metadata.create_all` (qui ne peut de toute façon jamais modifier une table déjà existante). À chaque démarrage du conteneur `backend`, `entrypoint.sh` exécute `alembic upgrade head` avant de lancer `uvicorn` — sur une base vierge, cela crée tout le schéma d'un coup ; sur une base déjà à jour, c'est un no-op.
+Le schéma PostgreSQL est géré par [Alembic](https://alembic.sqlalchemy.org/), pas par `Base.metadata.create_all` (qui ne peut de toute façon jamais modifier une table déjà existante). À chaque démarrage du conteneur `backend`, `entrypoint.sh` exécute `migrer.py` avant de lancer `uvicorn` :
+
+* **Base vierge** (nouveau clone) : `alembic upgrade head` crée tout le schéma d'un coup.
+* **Base déjà à jour** : no-op.
+* **Base créée avant l'introduction d'Alembic** (tables présentes via l'ancien `create_all`, mais sans table `alembic_version`) : `migrer.py` détecte ce cas et marque la base à la révision actuelle (`alembic stamp head`) avant de poursuivre, au lieu de planter en tentant de recréer des tables existantes. Si vous avez déjà une base locale d'avant ce changement, aucune action manuelle n'est nécessaire.
 
 ### Ajouter/modifier une colonne
 
@@ -273,7 +277,8 @@ dmpi-backend/
 │   ├── env.py
 │   └── versions/
 ├── alembic.ini
-├── entrypoint.sh                 # Lance `alembic upgrade head` puis uvicorn
+├── entrypoint.sh                 # Lance migrer.py puis uvicorn
+├── migrer.py                     # Applique les migrations Alembic (gère aussi les bases pré-Alembic)
 ├── create_admin.py              # Crée le premier compte Super Admin (mot de passe via .env)
 ├── seed_complet.py              # Jeu de données de démo complet (établissements, comptes, dossiers...)
 ├── load_territoire.py           # Charge le découpage territorial du Bénin en base
