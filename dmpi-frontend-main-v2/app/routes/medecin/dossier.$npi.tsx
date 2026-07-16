@@ -22,6 +22,7 @@ import { getDossierPatient } from "../../services/patientService";
 import { getConsultationsByPatient } from "../../services/consultationService";
 import { getPrescriptionsByPatient } from "../../services/prescriptionService";
 import { getRelevesByPatient, type ReleveConstantes } from "../../services/constanstesService";
+import { getMesPatientsAssignes, demarrerConsultation, type EntreeFileAttente } from "../../services/fileAttenteService";
 
 import type { DossierPatient } from "../../types/patient";
 import type { Consultation } from "../../types/consultation";
@@ -38,6 +39,8 @@ export default function DossierPatientPage() {
   const [activeTab, setActiveTab] = useState<DossierTabKey>("synthese");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [assignationEnAttente, setAssignationEnAttente] = useState<EntreeFileAttente | null>(null);
+  const [demarrageEnCours, setDemarrageEnCours] = useState(false);
 
   useEffect(() => {
     if (!npi) return;
@@ -47,11 +50,12 @@ export default function DossierPatientPage() {
     setNotFound(false);
 
     async function loadAll() {
-      const [dossierData, consultationsData, prescriptionsData, relevesData] = await Promise.all([
+      const [dossierData, consultationsData, prescriptionsData, relevesData, patientsAssignes] = await Promise.all([
         getDossierPatient(npi!),
         getConsultationsByPatient(npi!),
         getPrescriptionsByPatient(npi!),
         getRelevesByPatient(npi!),
+        getMesPatientsAssignes().catch(() => []),
       ]);
 
       if (cancelled) return;
@@ -66,6 +70,9 @@ export default function DossierPatientPage() {
       setConsultations(consultationsData);
       setPrescriptions(prescriptionsData);
       setReleves(relevesData);
+      setAssignationEnAttente(
+        patientsAssignes.find((p) => p.npi === npi && p.statut === "assigne") ?? null
+      );
       setLoading(false);
     }
 
@@ -74,6 +81,18 @@ export default function DossierPatientPage() {
       cancelled = true;
     };
   }, [npi]);
+
+  const handleCommencerConsultation = async () => {
+    if (!assignationEnAttente) return;
+    setDemarrageEnCours(true);
+    try {
+      await demarrerConsultation(assignationEnAttente.id);
+      navigate(`/medecin/dossier/${npi}/consultation/nouvelle`);
+    } catch (err) {
+      alert((err as Error).message || "Erreur lors de la prise en charge.");
+      setDemarrageEnCours(false);
+    }
+  };
 
   const rafraichirPrescriptions = useCallback(() => {
     if (!npi) return;
@@ -134,11 +153,22 @@ export default function DossierPatientPage() {
               Modifier le dossier
             </Button>
           </Link>
-          <Link to={`/medecin/dossier/${npi}/consultation/nouvelle`}>
-            <Button icon="add" variant="outline" size="sm">
-              Nouvelle consultation
+          {assignationEnAttente ? (
+            <Button
+              icon="play_arrow"
+              size="sm"
+              loading={demarrageEnCours}
+              onClick={handleCommencerConsultation}
+            >
+              Commencer la consultation
             </Button>
-          </Link>
+          ) : (
+            <Link to={`/medecin/dossier/${npi}/consultation/nouvelle`}>
+              <Button icon="add" variant="outline" size="sm">
+                Nouvelle consultation
+              </Button>
+            </Link>
+          )}
           <Link to={`/medecin/dossier/${npi}/ordonnance/nouvelle`}>
             <Button icon="prescriptions" size="sm">
               Rédiger une ordonnance

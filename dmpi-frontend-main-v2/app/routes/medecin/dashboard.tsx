@@ -149,24 +149,22 @@ function FileAttenteCard() {
                 </p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <Button
+                  icon="folder_open"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => navigate(`/medecin/dossier/${p.npi}`)}
+                >
+                  Dossier
+                </Button>
                 {p.statut === "assigne" ? (
                   <Button icon="play_arrow" size="sm" loading={actionId === p.id} onClick={() => handleCommencer(p)}>
                     Commencer
                   </Button>
                 ) : (
-                  <>
-                    <Button
-                      icon="folder_open"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/medecin/dossier/${p.npi}`)}
-                    >
-                      Dossier
-                    </Button>
-                    <Button icon="check_circle" size="sm" loading={actionId === p.id} onClick={() => handleTerminer(p)}>
-                      Terminer
-                    </Button>
-                  </>
+                  <Button icon="check_circle" size="sm" loading={actionId === p.id} onClick={() => handleTerminer(p)}>
+                    Terminer
+                  </Button>
                 )}
               </div>
             </li>
