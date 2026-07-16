@@ -201,10 +201,14 @@ Les ports des bases sont exposés sur `localhost` pour pouvoir les inspecter ave
 
 ### MongoDB (MongoDB Compass, mongosh...)
 
+| Champ | Valeur |
+|-|-|
+| Port | **`27018`** ⚠️ (MongoDB écoute sur `27017` *dans* le conteneur, mais Docker le mappe sur `27018` côté hôte pour ne pas entrer en conflit avec un éventuel MongoDB déjà installé sur la machine — voir `docker-compose.yml`) |
+
 Chaîne de connexion (adapter user/password si modifiés dans `.env`) :
 
 ```
-mongodb://admin:admin123@localhost:27017/?authSource=admin
+mongodb://admin:admin123@localhost:27018/?authSource=admin
 ```
 
 Base à ouvrir : `dmpi_db`.
