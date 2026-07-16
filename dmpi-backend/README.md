@@ -121,7 +121,7 @@ python3 -c "import secrets; print(secrets.token_hex(32))"   # pour JWT_SECRET_KE
 docker compose up -d --build
 ```
 
-Ceci démarre 5 conteneurs : `dmpi-postgres`, `dmpi-mongodb`, `dmpi-zookeeper`, `dmpi-kafka`, `dmpi-fastapi`. Le schéma PostgreSQL est créé/mis à jour automatiquement au démarrage de l'API via Alembic (`alembic upgrade head`, voir [Migrations PostgreSQL (Alembic)](#migrations-postgresql-alembic)) — aucune étape manuelle nécessaire, y compris sur une base vierge.
+Ceci démarre 5 conteneurs : `dmpi-postgres`, `dmpi-mongodb`, `dmpi-zookeeper`, `dmpi-kafka`, `dmpi-fastapi`. Le schéma PostgreSQL est créé/mis à jour automatiquement au démarrage de l'API via Alembic (voir [Migrations PostgreSQL (Alembic)](#migrations-postgresql-alembic)), et le découpage territorial du Bénin (départements/communes/arrondissements/quartiers) est chargé automatiquement s'il est absent — aucune étape manuelle nécessaire, y compris sur une base vierge.
 
 L'API est accessible sur `http://localhost:8000` (Swagger : `http://localhost:8000/docs`).
 
@@ -149,6 +149,8 @@ Le schéma PostgreSQL est géré par [Alembic](https://alembic.sqlalchemy.org/),
 * **Base vierge** (nouveau clone) : `alembic upgrade head` crée tout le schéma d'un coup.
 * **Base déjà à jour** : no-op.
 * **Base créée avant l'introduction d'Alembic** (tables présentes via l'ancien `create_all`, mais sans table `alembic_version`) : `migrer.py` détecte ce cas et marque la base à la révision actuelle (`alembic stamp head`) avant de poursuivre, au lieu de planter en tentant de recréer des tables existantes. Si vous avez déjà une base locale d'avant ce changement, aucune action manuelle n'est nécessaire.
+
+`migrer.py` charge aussi automatiquement le découpage territorial du Bénin (départements/communes/arrondissements/quartiers) si la table `departement` — créée par Alembic mais jamais peuplée par lui, les données venant d'un dump SQL séparé (`decoupage_territorial_benin.sql`, chargé par `load_territoire.py`) — est vide. Rechargement manuel possible avec `docker compose exec backend python load_territoire.py` (idempotent).
 
 ### Ajouter/modifier une colonne
 
@@ -285,7 +287,7 @@ dmpi-backend/
 ├── migrer.py                     # Applique les migrations Alembic (gère aussi les bases pré-Alembic)
 ├── create_admin.py              # Crée le premier compte Super Admin (mot de passe via .env)
 ├── seed_complet.py              # Jeu de données de démo complet (établissements, comptes, dossiers...)
-├── load_territoire.py           # Charge le découpage territorial du Bénin en base
+├── load_territoire.py           # Charge le découpage territorial du Bénin en base (auto via migrer.py si vide)
 ├── Dockerfile
 ├── docker-compose.yml
 ├── requirements.txt

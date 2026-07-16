@@ -12,14 +12,21 @@ initialisé.
 
 Sur une base neuve (ni tables ni suivi Alembic), le comportement est
 inchangé : `alembic upgrade head` crée tout le schéma normalement.
+
+Charge aussi automatiquement le découpage territorial du Bénin (via
+load_territoire.py) si la table `departement` — créée par Alembic mais
+jamais peuplée par lui — est vide. Ce chargement est un DDL+DML séparé
+d'Alembic (dump SQL brut, pas de modèle géré par migration) : sans cette
+vérification, la table reste silencieusement vide sur un nouveau clone.
 """
 import asyncio
 
 from alembic.config import Config
 from alembic import command
-from sqlalchemy import inspect
+from sqlalchemy import inspect, text
 
 from app.database_sql import engine
+from load_territoire import charger_territoire
 
 
 async def _etat_base() -> tuple[bool, bool]:
@@ -28,7 +35,21 @@ async def _etat_base() -> tuple[bool, bool]:
         def _inspecter(sync_conn):
             insp = inspect(sync_conn)
             return insp.has_table("users"), insp.has_table("alembic_version")
-        return await conn.run_sync(_inspecter)
+        resultat = await conn.run_sync(_inspecter)
+    # `engine` est un module global réutilisé par un second `asyncio.run()`
+    # plus bas (_territoire_vide) : sans dispose, son pool asyncpg reste lié
+    # à la boucle d'événements de CET appel-ci, qui va se fermer avec lui,
+    # et le second appel plante avec "attached to a different loop".
+    await engine.dispose()
+    return resultat
+
+
+async def _territoire_vide() -> bool:
+    """Vrai si la table `departement` ne contient aucune ligne (elle existe
+    déjà à ce stade, créée par `alembic upgrade head`)."""
+    async with engine.connect() as conn:
+        resultat = await conn.execute(text("SELECT COUNT(*) FROM departement"))
+        return resultat.scalar() == 0
 
 
 def main() -> None:
@@ -41,6 +62,10 @@ def main() -> None:
         command.stamp(config, "head")
 
     command.upgrade(config, "head")
+
+    if asyncio.run(_territoire_vide()):
+        print("[migrer] Découpage territorial absent — chargement automatique...")
+        asyncio.run(charger_territoire())
 
 
 if __name__ == "__main__":

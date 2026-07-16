@@ -2,7 +2,9 @@
 Charge le découpage territorial du Bénin (département > commune > arrondissement > quartier)
 dans PostgreSQL à partir de decoupage_territorial_benin.sql (dump MySQL).
 
-Usage : docker exec dmpi-fastapi python load_territoire.py
+Appelé automatiquement par migrer.py au démarrage du conteneur si la table
+'departement' est vide. Rechargement manuel possible avec :
+docker exec dmpi-fastapi python load_territoire.py
 
 Idempotent : chaque table est droppée puis recréée (DROP TABLE IF EXISTS en tête de dump),
 donc le script peut être relancé sans effet de bord.
@@ -37,7 +39,7 @@ def _vers_sql_postgres(brut: str) -> str:
     return sql
 
 
-async def main() -> None:
+async def charger_territoire() -> None:
     sql = _vers_sql_postgres(DUMP_PATH.read_text(encoding="utf-8"))
 
     # asyncpg via SQLAlchemy passe toujours par des prepared statements, qui
@@ -59,4 +61,4 @@ async def main() -> None:
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    asyncio.run(charger_territoire())
