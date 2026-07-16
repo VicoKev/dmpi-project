@@ -22,6 +22,7 @@ from app.database_mongo import (
     etablissements_collection,
     ordonnances_collection,
     rendez_vous_collection,
+    prestataires_partenaires_collection,
 )
 
 def utc_now() -> datetime:
@@ -41,6 +42,8 @@ ETABLISSEMENTS = [
         "telephone": "+229 21-30-01-55",
         "dmpiVersion": "1.2.0",
         "adresse": "Avenue Jean-Paul II, Cotonou",
+        "latitude": 6.3703,
+        "longitude": 2.3912,
         "email_contact": "contact@cnhu-hkm.bj",
         "capacite_lits": 500,
         "patients": 0,
@@ -59,6 +62,8 @@ ETABLISSEMENTS = [
         "telephone": "+229 23-61-00-45",
         "dmpiVersion": "1.1.5",
         "adresse": "Route de l'Hôpital, Parakou",
+        "latitude": 9.3372,
+        "longitude": 2.6303,
         "email_contact": "contact@chd-borgou.bj",
         "capacite_lits": 220,
         "patients": 0,
@@ -77,6 +82,8 @@ ETABLISSEMENTS = [
         "telephone": "+229 23-82-10-55",
         "dmpiVersion": "1.0.8",
         "adresse": "Centre-ville, Natitingou",
+        "latitude": 10.3042,
+        "longitude": 1.3796,
         "email_contact": "contact@csc-natitingou.bj",
         "capacite_lits": 60,
         "patients": 0,
@@ -377,6 +384,66 @@ def make_rdv() -> list[dict]:
     ]
 
 
+def make_prestataires() -> list[dict]:
+    """Pharmacies partenaires de démonstration, positionnées autour des trois
+    établissements du seed pour que le calcul de distance donne des résultats
+    réalistes (feature 'orientation vers pharmacie la plus proche')."""
+    return [
+        {
+            "nom": "Pharmacie Jonquet",
+            "types": ["pharmacie"],
+            "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Jonquet",
+            "adresse": "Rue du Gouverneur Bayol, Cotonou",
+            "latitude": 6.3625, "longitude": 2.4005,
+            "telephone": "+229 21-31-45-12", "email": None,
+            "horaires": "Lun-Sam 8h-20h, dimanche fermé",
+            "etablissement_rattachement_id": None,
+            "statut": "actif", "source_donnees": "saisi_super_admin",
+            "derniere_verification": utc_now() - timedelta(days=5),
+            "created_at": utc_now(), "updated_at": utc_now(),
+        },
+        {
+            "nom": "Pharmacie du Phare",
+            "types": ["pharmacie"],
+            "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Le Phare",
+            "adresse": "Boulevard Saint-Michel, Cotonou",
+            "latitude": 6.3550, "longitude": 2.4300,
+            "telephone": "+229 21-30-88-40", "email": None,
+            "horaires": "Ouverte 24h/24",
+            "etablissement_rattachement_id": None,
+            "statut": "actif", "source_donnees": "saisi_super_admin",
+            "derniere_verification": utc_now() - timedelta(days=20),
+            "created_at": utc_now(), "updated_at": utc_now(),
+        },
+        {
+            "nom": "Pharmacie Centrale de Parakou",
+            "types": ["pharmacie"],
+            "departement": "Borgou", "commune": "Parakou", "arrondissement": None, "quartier": "Centre-ville",
+            "adresse": "Avenue de la Gare, Parakou",
+            "latitude": 9.3410, "longitude": 2.6280,
+            "telephone": "+229 23-61-14-02", "email": None,
+            "horaires": "Lun-Sam 8h-19h30",
+            "etablissement_rattachement_id": None,
+            "statut": "actif", "source_donnees": "saisi_super_admin",
+            "derniere_verification": utc_now() - timedelta(days=2),
+            "created_at": utc_now(), "updated_at": utc_now(),
+        },
+        {
+            "nom": "Pharmacie de l'Atacora",
+            "types": ["pharmacie"],
+            "departement": "Atacora", "commune": "Natitingou", "arrondissement": None, "quartier": "Centre-ville",
+            "adresse": "Route Nationale, Natitingou",
+            "latitude": 10.3100, "longitude": 1.3830,
+            "telephone": "+229 23-82-05-77", "email": None,
+            "horaires": "Lun-Sam 8h-19h",
+            "etablissement_rattachement_id": None,
+            "statut": "actif", "source_donnees": "saisi_super_admin",
+            "derniere_verification": utc_now() - timedelta(days=45),
+            "created_at": utc_now(), "updated_at": utc_now(),
+        },
+    ]
+
+
 def make_constantes(etab_cnhu_id: str) -> list[dict]:
     return [
         {"npi": "1001002001", "tension_arterielle": "130/85", "pouls": 72, "temperature": 36.8, "saturation_oxygene": 98,
@@ -399,7 +466,7 @@ async def reset_et_seed():
     print("=" * 60)
 
     # 1. Vider PostgreSQL
-    print("\n[1/6] Vidage de PostgreSQL...")
+    print("\n[1/7] Vidage de PostgreSQL...")
     async with AsyncSessionLocal() as db:
         await db.execute(text("DELETE FROM delegations_acces"))
         await db.execute(text("DELETE FROM demandes_acces_patient"))
@@ -414,7 +481,7 @@ async def reset_et_seed():
     print("    ✓ Tables PostgreSQL vidées et séquences réinitialisées.")
 
     # 2. Vider MongoDB
-    print("\n[2/6] Vidage de MongoDB...")
+    print("\n[2/7] Vidage de MongoDB...")
     await dossiers_medicaux_collection.delete_many({})
     await consultations_collection.delete_many({})
     await constantes_vitales_collection.delete_many({})
@@ -422,10 +489,11 @@ async def reset_et_seed():
     await etablissements_collection.delete_many({})
     await ordonnances_collection.delete_many({})
     await rendez_vous_collection.delete_many({})
+    await prestataires_partenaires_collection.delete_many({})
     print("    ✓ Collections MongoDB vidées.")
 
     # 3. Créer les établissements
-    print("\n[3/6] Création des établissements...")
+    print("\n[3/7] Création des établissements...")
     etab_docs = ETABLISSEMENTS
     result = await etablissements_collection.insert_many(etab_docs)
     etab_ids = [str(oid) for oid in result.inserted_ids]
@@ -437,7 +505,7 @@ async def reset_et_seed():
     print(f"    ✓ CSC Natitingou id={etab_natitingou_id}")
 
     # 4. Créer les utilisateurs
-    print("\n[4/6] Création des utilisateurs PostgreSQL...")
+    print("\n[4/7] Création des utilisateurs PostgreSQL...")
     users_data = make_users(etab_cnhu_id, etab_borgou_id)
     async with AsyncSessionLocal() as db:
         for u in users_data:
@@ -446,7 +514,7 @@ async def reset_et_seed():
     print(f"    ✓ {len(users_data)} utilisateurs créés.")
 
     # 5. Créer les dossiers, consultations et constantes MongoDB
-    print("\n[5/6] Insertion des données cliniques MongoDB...")
+    print("\n[5/7] Insertion des données cliniques MongoDB...")
     dossiers = make_dossiers(etab_cnhu_id, etab_borgou_id)
     await dossiers_medicaux_collection.insert_many(dossiers)
     print(f"    ✓ {len(dossiers)} dossiers médicaux insérés.")
@@ -461,7 +529,7 @@ async def reset_et_seed():
     print(f"    ✓ {len(constantes)} constantes vitales insérées.")
 
     # 6. Créer les ordonnances et rendez-vous MongoDB
-    print("\n[6/6] Insertion des ordonnances et rendez-vous MongoDB...")
+    print("\n[6/7] Insertion des ordonnances et rendez-vous MongoDB...")
     ordonnances = make_ordonnances(consult_ids)
     await ordonnances_collection.insert_many(ordonnances)
     print(f"    ✓ {len(ordonnances)} ordonnances insérées.")
@@ -469,6 +537,11 @@ async def reset_et_seed():
     rdvs = make_rdv()
     await rendez_vous_collection.insert_many(rdvs)
     print(f"    ✓ {len(rdvs)} rendez-vous planifiés.")
+
+    print("\n[7/7] Insertion des prestataires partenaires (pharmacies)...")
+    prestataires = make_prestataires()
+    await prestataires_partenaires_collection.insert_many(prestataires)
+    print(f"    ✓ {len(prestataires)} prestataires partenaires insérés.")
 
     print("\n" + "=" * 60)
     print("  Seed terminé avec succès !")

@@ -47,6 +47,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   superadmin_national: [
     { to: "/superadmin", icon: "dashboard", label: "Tableau de bord" },
     { to: "/superadmin/etablissements", icon: "domain", label: "Établissements" },
+    { to: "/superadmin/prestataires", icon: "local_pharmacy", label: "Pharmacies partenaires" },
     { to: "/superadmin/utilisateurs", icon: "manage_accounts", label: "Utilisateurs" },
     { to: "/superadmin/demandes-acces", icon: "how_to_reg", label: "Demandes d'accès" },
     { to: "/superadmin/audit", icon: "policy", label: "Journal d'audit" },

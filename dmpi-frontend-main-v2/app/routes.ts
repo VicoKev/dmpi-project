@@ -46,6 +46,7 @@ export default [
     route("superadmin", "routes/superadmin/dashboard.tsx"),
     route("superadmin/audit", "routes/superadmin/audit.tsx"),
     route("superadmin/etablissements", "routes/superadmin/etablissements.tsx"),
+    route("superadmin/prestataires", "routes/superadmin/prestataires.tsx"),
     route("superadmin/utilisateurs", "routes/superadmin/utilisateurs.tsx"),
     route("superadmin/demandes-acces", "routes/superadmin/demandes-acces.tsx"),
     route("superadmin/monitoring", "routes/superadmin/monitoring.tsx"),

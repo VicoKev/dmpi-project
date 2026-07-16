@@ -8,6 +8,7 @@ import { getPrescriptionsByPatient } from "../../services/prescriptionService";
 import { formatDateFr } from "../../services/patientService";
 import type { Prescription } from "../../types/prescription";
 import { FREQUENCE_LABELS } from "../../types/prescription";
+import PharmaciesProchesCard from "../../components/prescription/PharmaciesProchesCard";
 
 function PrescriptionCard({ prescription: p }: { prescription: Prescription }) {
   const [open, setOpen] = useState(false);
@@ -106,6 +107,8 @@ function PrescriptionCard({ prescription: p }: { prescription: Prescription }) {
               {p.noteGlobale}
             </div>
           )}
+
+          <PharmaciesProchesCard prescriptionId={p.id} />
         </div>
       )}
     </Card>

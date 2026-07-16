@@ -13,3 +13,11 @@ class OrdonnanceMongo(BaseModel):
     notes_additionnelles: str | None = None
     auteur: str | None = Field(None, description="Email du médecin prescripteur")
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OrdonnanceOut(OrdonnanceMongo):
+    """Ordonnance telle que renvoyée par l'API — inclut l'id Mongo (absent de
+    OrdonnanceMongo, qui sert aussi de modèle d'entrée) et le nom de
+    l'établissement prescripteur, résolu depuis l'auteur."""
+    id: str
+    etablissement_nom: str | None = None

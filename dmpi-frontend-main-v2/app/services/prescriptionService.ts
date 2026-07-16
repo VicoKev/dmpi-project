@@ -8,13 +8,14 @@ interface BackendMedicament {
 }
 
 interface BackendOrdonnance {
-  _id?: string;
+  id: string;
   npi: string;
   consultation_id?: string;
   traitements: BackendMedicament[];
   notes_additionnelles?: string;
   created_at: string;
   auteur?: string;
+  etablissement_nom?: string | null;
 }
 
 function mapOrdonnance(
@@ -24,12 +25,12 @@ function mapOrdonnance(
   if (!ordo || !ordo.traitements || ordo.traitements.length === 0) return null;
 
   return {
-    id: `pres_${ordo._id ?? index}`,
+    id: `pres_${ordo.id ?? index}`,
     consultationId: ordo.consultation_id ?? "",
     patientNpi: ordo.npi,
     prescripteur: ordo.auteur ?? "Professionnel de sante",
     prescripteurId: ordo.auteur ?? "",
-    etablissement: "",
+    etablissement: ordo.etablissement_nom ?? "",
     date: ordo.created_at,
     lignes: ordo.traitements.map((m, i) => ({
       id: `lig_${index}_${i}`,
@@ -111,4 +112,50 @@ export async function createPrescription(payload: CreatePrescriptionPayload): Pr
     statut: "signee",
     signee: true,
   };
+}
+
+/** Retrouve l'identifiant Mongo brut d'une ordonnance à partir de l'id
+ * "pres_<id>" utilisé côté frontend (voir mapOrdonnance/createPrescription). */
+export function ordonnanceIdDepuisPrescriptionId(prescriptionId: string): string {
+  return prescriptionId.replace(/^pres_/, "");
+}
+
+export interface PharmacieProche {
+  id: string;
+  nom: string;
+  adresse: string | null;
+  commune: string | null;
+  latitude: number;
+  longitude: number;
+  telephone: string;
+  horaires: string | null;
+  distance_km: number;
+  derniere_verification: string | null;
+}
+
+export interface ReferenceLocalisation {
+  latitude: number;
+  longitude: number;
+  source: "etablissement_prescripteur" | "position_utilisateur";
+}
+
+export interface PharmaciesProchesResponse {
+  reference: ReferenceLocalisation | null;
+  pharmacies: PharmacieProche[];
+}
+
+export async function getPharmaciesProches(
+  prescriptionId: string,
+  position?: { latitude: number; longitude: number }
+): Promise<PharmaciesProchesResponse> {
+  const ordonnanceId = ordonnanceIdDepuisPrescriptionId(prescriptionId);
+  const params = new URLSearchParams();
+  if (position) {
+    params.set("latitude", String(position.latitude));
+    params.set("longitude", String(position.longitude));
+  }
+  const qs = params.toString();
+  return apiFetch<PharmaciesProchesResponse>(
+    `/ordonnances/${ordonnanceId}/pharmacies-proches${qs ? `?${qs}` : ""}`
+  );
 }
