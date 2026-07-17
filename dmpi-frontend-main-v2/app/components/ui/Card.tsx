@@ -62,7 +62,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ icon, title, action, className = "" }: CardHeaderProps) {
   return (
-    <div className={`flex items-center justify-between mb-3 ${className}`}>
+    <div className={`flex items-center justify-between flex-wrap gap-2 mb-3 ${className}`}>
       <div className="flex items-center gap-2">
         {icon && (
           <div

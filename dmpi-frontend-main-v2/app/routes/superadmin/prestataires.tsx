@@ -148,7 +148,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input label="Téléphone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+229 21 XX XX XX" required />
             <Input label="Email (optionnel)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>

@@ -158,7 +158,7 @@ export default function PatientDashboard() {
       )}
 
       {/* Statistiques rapides */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[
           { icon: "medical_services", label: "Consultations", value: consultations.length, color: "var(--color-primary)" },
           { icon: "prescriptions", label: "Ordonnances", value: prescriptions.length, color: "var(--color-secondary)" },

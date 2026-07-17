@@ -109,12 +109,12 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
         required
       />
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input label="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
         <Input label="Nom" value={nom} onChange={(e) => setNom(e.target.value)} required />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Input
           label="Date de naissance"
           type="date"
@@ -159,7 +159,7 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
         <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
           Tuteur / parent (optionnel — recommandé pour les mineurs et nouveau-nés)
         </p>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Nom du tuteur" value={tuteurNom} onChange={(e) => setTuteurNom(e.target.value)} placeholder="Ex: Mariam Kouassi" />
           <div className="flex flex-col gap-1">
             <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Lien de parenté</label>

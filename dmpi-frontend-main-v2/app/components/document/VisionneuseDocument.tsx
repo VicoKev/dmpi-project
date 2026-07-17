@@ -43,11 +43,11 @@ export default function VisionneuseDocument({ document: doc, fichier, onClose }:
       style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
       onClick={onClose}
     >
-      <div className="absolute top-4 right-4 flex items-center gap-3">
-        <span className="text-body-md font-semibold text-white">{fichier.nom_original}</span>
+      <div className="absolute top-4 left-4 right-4 flex items-center justify-between gap-3">
+        <span className="text-body-md font-semibold text-white truncate min-w-0">{fichier.nom_original}</span>
         <button
           onClick={onClose}
-          className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20"
+          className="w-10 h-10 rounded-full flex items-center justify-center bg-white/10 hover:bg-white/20 shrink-0"
           aria-label="Fermer"
         >
           <span className="material-symbols-outlined text-white text-[24px]">close</span>

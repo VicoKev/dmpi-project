@@ -168,7 +168,7 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
             onValiditeChange={setLocalisationValide}
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex flex-col gap-1.5">
               <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Type</label>
               <select value={form.type} onChange={e => update("type", e.target.value)} className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none">
@@ -316,7 +316,7 @@ export default function SuperAdminEtablissements() {
                 <span className="material-symbols-outlined text-[20px]">close</span>
               </button>
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
               {[
                 { icon: "group", label: "Patients", value: selected.patients.toLocaleString("fr-FR") },
                 { icon: "stethoscope", label: "Médecins", value: selected.medecins },

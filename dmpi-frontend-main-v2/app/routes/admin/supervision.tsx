@@ -89,7 +89,7 @@ export default function AdminSupervision() {
           title={`Personnel (${filtered.length})`}
         />
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full min-w-[700px] text-left border-collapse">
             <thead>
               <tr className="border-b" style={{ borderColor: "var(--color-outline-variant)" }}>
                 <th className="py-3 px-4 text-label-lg" style={{ color: "var(--color-on-surface-variant)" }}>

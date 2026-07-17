@@ -227,41 +227,43 @@ function RdvCard({ rdv, onAnnule }: { rdv: RendezVous; onAnnule: (id: string) =>
 
   return (
     <Card>
-      <div className="flex items-start gap-4">
-        {/* Date bloc */}
-        <div
-          className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl shrink-0 text-center"
-          style={{
-            backgroundColor: passe ? "var(--color-surface-container)" : "var(--color-primary-container)",
-            color: passe ? "var(--color-outline)" : "var(--color-on-primary-container)",
-          }}
-        >
-          <span className="text-headline-sm leading-none font-bold">
-            {new Date(rdv.date_rdv).getDate()}
-          </span>
-          <span className="text-caption leading-none">
-            {new Date(rdv.date_rdv).toLocaleDateString("fr-FR", { month: "short" })}
-          </span>
-        </div>
+      <div className="flex flex-col items-start sm:flex-row gap-3 sm:gap-4">
+        <div className="flex items-start gap-4 flex-1 min-w-0 w-full sm:w-auto">
+          {/* Date bloc */}
+          <div
+            className="flex flex-col items-center justify-center w-14 h-14 rounded-2xl shrink-0 text-center"
+            style={{
+              backgroundColor: passe ? "var(--color-surface-container)" : "var(--color-primary-container)",
+              color: passe ? "var(--color-outline)" : "var(--color-on-primary-container)",
+            }}
+          >
+            <span className="text-headline-sm leading-none font-bold">
+              {new Date(rdv.date_rdv).getDate()}
+            </span>
+            <span className="text-caption leading-none">
+              {new Date(rdv.date_rdv).toLocaleDateString("fr-FR", { month: "short" })}
+            </span>
+          </div>
 
-        {/* Infos */}
-        <div className="flex-1 min-w-0">
-          <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
-            {rdv.motif}
-          </p>
-          <p className="text-caption mt-0.5" style={{ color: "var(--color-on-surface-variant)" }}>
-            {formatRdvTime(rdv.date_rdv)} · {rdv.prenom_patient} {rdv.nom_patient}
-            <span className="ml-1 opacity-60">({rdv.npi_patient})</span>
-          </p>
-          {rdv.notes && (
-            <p className="text-caption mt-1 italic" style={{ color: "var(--color-on-surface-variant)" }}>
-              {rdv.notes}
+          {/* Infos */}
+          <div className="flex-1 min-w-0">
+            <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
+              {rdv.motif}
             </p>
-          )}
+            <p className="text-caption mt-0.5" style={{ color: "var(--color-on-surface-variant)" }}>
+              {formatRdvTime(rdv.date_rdv)} · {rdv.prenom_patient} {rdv.nom_patient}
+              <span className="ml-1 opacity-60">({rdv.npi_patient})</span>
+            </p>
+            {rdv.notes && (
+              <p className="text-caption mt-1 italic" style={{ color: "var(--color-on-surface-variant)" }}>
+                {rdv.notes}
+              </p>
+            )}
+          </div>
         </div>
 
         {/* Statut + annulation */}
-        <div className="flex flex-col items-end gap-2 shrink-0">
+        <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 shrink-0">
           <div
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
             style={{ backgroundColor: cfg.bg, color: cfg.color }}

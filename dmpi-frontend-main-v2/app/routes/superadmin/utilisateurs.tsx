@@ -188,7 +188,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Identite — non pertinent pour un laboratoire (organisation, pas une personne) */}
           {form.role !== "laboratoire" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input
                 label="Prénom"
                 value={form.prenom}
@@ -267,7 +267,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
 
           {/* Spécialité / Service conditionnel */}
           {(form.role === "medecin" || form.role === "infirmier") && (
-            <div className="grid grid-cols-2 gap-3 animate-fade-in-up">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in-up">
               {form.role === "medecin" && (
                 <Input
                   label="Spécialité (Optionnel)"
@@ -311,7 +311,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                 Le patient ne pourra consulter que son propre dossier via ce NPI.
               </p>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                 <Input
                   label="Date de naissance"
                   type="date"
@@ -578,7 +578,7 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
           />
           
           {form.role !== "laboratoire" && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <Input label="Prénom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} required />
               <Input label="Nom" value={form.nom ?? ""} onChange={(e) => update("nom", e.target.value)} required />
             </div>

@@ -172,7 +172,7 @@ export default function ConstantesForm({
           </div>
         )}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {FIELDS.map((field) => {
             const rawVal = rawConstantes[field.key] ?? "";
             const parsedVal = parsedConstantes[field.key];
@@ -229,7 +229,7 @@ export default function ConstantesForm({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-3 justify-end sticky bottom-4">
+      <div className="flex flex-wrap gap-3 justify-end sticky bottom-24 lg:bottom-4 z-30">
         <Button
           type="button"
           variant="outline"

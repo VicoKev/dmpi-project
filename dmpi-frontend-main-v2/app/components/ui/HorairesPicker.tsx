@@ -168,7 +168,7 @@ export default function HorairesPicker({ value, onChange }: HorairesPickerProps)
         <button
           type="button"
           onClick={dupliquerLundiPartout}
-          className="text-caption font-semibold underline"
+          className="text-caption font-semibold underline py-2 -my-2"
           style={{ color: "var(--color-primary)" }}
         >
           Copier le lundi vers tous les jours

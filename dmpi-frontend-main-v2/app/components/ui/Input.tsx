@@ -86,7 +86,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               type="button"
               onClick={onTrailingIconClick}
               className={[
-                "absolute right-3 top-1/2 -translate-y-1/2",
+                "absolute right-1 top-1/2 -translate-y-1/2 p-2",
                 "material-symbols-outlined text-[20px]",
                 onTrailingIconClick ? "cursor-pointer hover:opacity-70" : "cursor-default pointer-events-none",
               ]

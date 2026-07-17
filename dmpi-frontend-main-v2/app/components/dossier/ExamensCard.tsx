@@ -48,7 +48,7 @@ export default function ExamensCard({ npi }: ExamensCardProps) {
     <Card>
       <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
         <CardHeader icon="biotech" title="Examens & documents médicaux" />
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" icon="upload" onClick={() => setDemandeAUploader("libre")}>
             Déposer un document
           </Button>

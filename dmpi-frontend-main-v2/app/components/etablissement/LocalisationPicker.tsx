@@ -157,7 +157,7 @@ export default function LocalisationPicker({ value, onChange, territoireRequis =
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <LabelChamp requis={territoireRequis}>Département</LabelChamp>
           <SelectRecherche
@@ -182,7 +182,7 @@ export default function LocalisationPicker({ value, onChange, territoireRequis =
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <LabelChamp requis={territoireRequis}>Arrondissement</LabelChamp>
           <SelectRecherche
@@ -224,7 +224,7 @@ export default function LocalisationPicker({ value, onChange, territoireRequis =
           Cliquez sur la carte, ou saisissez directement les coordonnées si vous les connaissez.
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             label="Latitude"
             type="text"

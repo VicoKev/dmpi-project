@@ -92,7 +92,7 @@ export default function ZoneDepotFichiers({
               <button
                 type="button"
                 onClick={() => retirerFichier(i)}
-                className="material-symbols-outlined text-[18px] shrink-0"
+                className="material-symbols-outlined text-[18px] shrink-0 p-2 -m-2 rounded-full hover:bg-[var(--color-surface-container)]"
                 style={{ color: "var(--color-on-surface-variant)" }}
                 aria-label={`Retirer ${f.name}`}
               >

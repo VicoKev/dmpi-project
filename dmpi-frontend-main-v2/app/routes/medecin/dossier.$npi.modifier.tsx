@@ -112,7 +112,7 @@ export default function EditDossierPatient() {
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up max-w-4xl mx-auto mb-10">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 flex-wrap">
         <Button icon="arrow_back" variant="ghost" onClick={() => navigate(`/medecin/dossier/${npi}`)}>
           Retour au dossier
         </Button>
@@ -163,7 +163,7 @@ export default function EditDossierPatient() {
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardHeader icon="warning" title="Allergies" />
             <Button type="button" icon="add" variant="outline" size="sm" onClick={handleAddAllergie}>
               Ajouter une allergie
@@ -205,7 +205,7 @@ export default function EditDossierPatient() {
                       placeholder="Ex: Éruptions cutanées"
                     />
                   </div>
-                  <button type="button" onClick={() => handleRemoveAllergie(index)} className="mt-8 text-[var(--color-error)]">
+                  <button type="button" onClick={() => handleRemoveAllergie(index)} className="self-end md:self-auto md:mt-8 text-[var(--color-error)]">
                     <span className="material-symbols-outlined">delete</span>
                   </button>
                 </div>
@@ -215,7 +215,7 @@ export default function EditDossierPatient() {
         </Card>
 
         <Card>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <CardHeader icon="history" title="Antécédents (Médicaux, Chirurgicaux, etc.)" />
             <Button type="button" icon="add" variant="outline" size="sm" onClick={handleAddAntecedent}>
               Ajouter un antécédent
@@ -236,7 +236,7 @@ export default function EditDossierPatient() {
                       required
                     />
                   </div>
-                  <button type="button" onClick={() => handleRemoveAntecedent(index)} className="mt-6 text-[var(--color-error)]">
+                  <button type="button" onClick={() => handleRemoveAntecedent(index)} className="text-[var(--color-error)]">
                     <span className="material-symbols-outlined">delete</span>
                   </button>
                 </div>

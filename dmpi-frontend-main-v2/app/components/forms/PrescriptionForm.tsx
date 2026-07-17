@@ -221,7 +221,7 @@ export default function PrescriptionForm({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-3 justify-end sticky bottom-4">
+      <div className="flex flex-wrap gap-3 justify-end sticky bottom-24 lg:bottom-4 z-30">
         <Button
           type="button"
           variant="outline"

@@ -255,7 +255,7 @@ export default function SuperAdminRapports() {
           Depuis le lancement
         </p>
         {liveLoading ? (
-          <div className="grid grid-cols-3 gap-3 mb-5">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="h-20 rounded-2xl animate-pulse" style={{ backgroundColor: "var(--color-surface-container)" }} />
             ))}
