@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { AuthProvider } from "./contexts/AuthContext";
+import { ConfirmProvider } from "./contexts/ConfirmContext";
 
 export const links: Route.LinksFunction = () => [
   // Preconnect
@@ -49,7 +50,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <Outlet />
+      <ConfirmProvider>
+        <Outlet />
+      </ConfirmProvider>
     </AuthProvider>
   );
 }
