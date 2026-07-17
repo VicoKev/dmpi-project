@@ -10,6 +10,8 @@ from app.database_mongo import (
     consultations_collection,
     etablissements_collection,
     ordonnances_collection,
+    demandes_examen_collection,
+    prestataires_partenaires_collection,
 )
 from app.models_sql import User, AuditLog
 from app.security import require_role
@@ -455,6 +457,8 @@ async def _cumul_periode(db: AsyncSession, debut: datetime, fin: datetime) -> di
 
     ordonnances = await ordonnances_collection.count_documents(filtre_dates)
 
+    demandes_examen = await demandes_examen_collection.count_documents(filtre_dates)
+
     alertes = await db.scalar(
         select(func.count())
         .select_from(AuditLog)
@@ -469,6 +473,7 @@ async def _cumul_periode(db: AsyncSession, debut: datetime, fin: datetime) -> di
         "consultations": consultations,
         "patients_actifs": patients_actifs,
         "ordonnances": ordonnances,
+        "demandes_examen": demandes_examen,
         "alertes": alertes,
     }
 
@@ -500,6 +505,9 @@ async def _construire_rapport_annuel(db: AsyncSession) -> dict:
 
     etablissements_actifs = await etablissements_collection.count_documents({"statut": "actif"})
     etablissements_total = await etablissements_collection.count_documents({})
+
+    prestataires_actifs = await prestataires_partenaires_collection.count_documents({"statut": "actif"})
+    prestataires_total = await prestataires_partenaires_collection.count_documents({})
 
     etabs_cursor = etablissements_collection.find({}, {"nom": 1, "departement": 1, "type": 1, "statut": 1})
     etablissements_meta = {
@@ -559,6 +567,17 @@ async def _construire_rapport_annuel(db: AsyncSession) -> dict:
     ]
     ordonnances_results = await ordonnances_collection.aggregate(pipeline_ordonnances).to_list(length=None)
     ordonnances_par_mois = {f"{d['_id']['year']}-{d['_id']['month']}": d["count"] for d in ordonnances_results}
+
+    # Demandes d'examen par mois (prescription + suivi laboratoire)
+    pipeline_examens = [
+        {"$match": {"created_at": {"$gte": debut_annee}}},
+        {"$group": {
+            "_id": {"year": {"$year": "$created_at"}, "month": {"$month": "$created_at"}},
+            "count": {"$sum": 1}
+        }},
+    ]
+    examens_results = await demandes_examen_collection.aggregate(pipeline_examens).to_list(length=None)
+    examens_par_mois = {f"{d['_id']['year']}-{d['_id']['month']}": d["count"] for d in examens_results}
 
     # Répartition annuelle par département et par type d'établissement
     pipeline_par_etab_annuel = [
@@ -646,6 +665,7 @@ async def _construire_rapport_annuel(db: AsyncSession) -> dict:
             "consultations": s["consultations"],
             "patients": patients_mois,
             "ordonnances": ordonnances_par_mois.get(key, 0),
+            "demandesExamen": examens_par_mois.get(key, 0),
             "etablissements": etabs_actifs_mois,
             "topDiagnostics": diagnostics_par_mois.get(key, []),
             "topEtablissements": etablissements_par_mois.get(key, []),
@@ -659,8 +679,12 @@ async def _construire_rapport_annuel(db: AsyncSession) -> dict:
             "patients_actifs_variation": _variation_pct(cumul_actuel["patients_actifs"], cumul_precedent["patients_actifs"]),
             "etablissements_actifs": etablissements_actifs,
             "etablissements_total": etablissements_total,
+            "prestataires_actifs": prestataires_actifs,
+            "prestataires_total": prestataires_total,
             "ordonnances_emises": cumul_actuel["ordonnances"],
             "ordonnances_emises_variation": _variation_pct(cumul_actuel["ordonnances"], cumul_precedent["ordonnances"]),
+            "demandes_examen_emises": cumul_actuel["demandes_examen"],
+            "demandes_examen_emises_variation": _variation_pct(cumul_actuel["demandes_examen"], cumul_precedent["demandes_examen"]),
             "alertes_securite": cumul_actuel["alertes"],
             "alertes_securite_variation": (cumul_actuel["alertes"] or 0) - (cumul_precedent["alertes"] or 0),
         },

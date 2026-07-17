@@ -29,7 +29,9 @@ def _lignes_cumul(cumul: dict) -> list[tuple[str, str, str]]:
         ("Consultations (cumul annuel)", f"{cumul['consultations_ytd']:,}".replace(",", " "), _fmt_variation(cumul["consultations_ytd_variation"])),
         ("Patients actifs", f"{cumul['patients_actifs']:,}".replace(",", " "), _fmt_variation(cumul["patients_actifs_variation"])),
         ("Établissements actifs", f"{cumul['etablissements_actifs']}/{cumul['etablissements_total']}", "—"),
+        ("Prestataires partenaires actifs", f"{cumul['prestataires_actifs']}/{cumul['prestataires_total']}", "—"),
         ("Ordonnances émises", f"{cumul['ordonnances_emises']:,}".replace(",", " "), _fmt_variation(cumul["ordonnances_emises_variation"])),
+        ("Demandes d'examen émises", f"{cumul['demandes_examen_emises']:,}".replace(",", " "), _fmt_variation(cumul["demandes_examen_emises_variation"])),
         ("Alertes sécurité", str(cumul["alertes_securite"]), _fmt_variation(cumul["alertes_securite_variation"], "")),
     ]
 
@@ -112,10 +114,10 @@ def generer_pdf(rapport: dict) -> bytes:
         elements.append(Paragraph(f"Rapport mensuel — {mois['mois']}", section_style))
 
         donnees_chiffres = [
-            ["Consultations", "Patients suivis", "Ordonnances", "Établissements actifs"],
-            [str(mois["consultations"]), str(mois["patients"]), str(mois["ordonnances"]), str(mois["etablissements"])],
+            ["Consultations", "Patients suivis", "Ordonnances", "Demandes d'examen", "Établissements actifs"],
+            [str(mois["consultations"]), str(mois["patients"]), str(mois["ordonnances"]), str(mois["demandesExamen"]), str(mois["etablissements"])],
         ]
-        table_chiffres = Table(donnees_chiffres, colWidths=[4 * cm] * 4)
+        table_chiffres = Table(donnees_chiffres, colWidths=[3.6 * cm] * 5)
         table_chiffres.setStyle(TableStyle([
             ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#E8EDF3")),
             ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
@@ -189,10 +191,10 @@ def generer_excel(rapport: dict) -> bytes:
     feuille_cumul.column_dimensions["C"].width = 18
 
     feuille_mensuel = classeur.create_sheet("Rapport mensuel")
-    _entete(feuille_mensuel, ["Mois", "Consultations", "Patients", "Ordonnances", "Établissements actifs"])
+    _entete(feuille_mensuel, ["Mois", "Consultations", "Patients", "Ordonnances", "Demandes d'examen", "Établissements actifs"])
     for m in rapport["rapports_mensuels"]:
-        feuille_mensuel.append([m["mois"], m["consultations"], m["patients"], m["ordonnances"], m["etablissements"]])
-    for col, largeur in zip("ABCDE", [18, 14, 12, 14, 20]):
+        feuille_mensuel.append([m["mois"], m["consultations"], m["patients"], m["ordonnances"], m["demandesExamen"], m["etablissements"]])
+    for col, largeur in zip("ABCDEF", [18, 14, 12, 14, 18, 20]):
         feuille_mensuel.column_dimensions[col].width = largeur
 
     feuille_diag = classeur.create_sheet("Top diagnostics")
