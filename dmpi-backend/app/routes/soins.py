@@ -87,6 +87,21 @@ async def lister_constantes_patient(
     return constantes
 
 
+@router.get("/constantes/moi", response_model=list[ConstantesVitales])
+async def lister_mes_constantes(
+    current_user: User = Depends(require_role("infirmier", "medecin"))
+):
+    """
+    Historique des relevés de constantes saisis par le professionnel connecté
+    (du plus récent au plus ancien) — alimente le tableau de bord et
+    l'historique personnel de l'infirmier.
+    """
+    cursor = constantes_vitales_collection.find(
+        {"releve_par": current_user.email}
+    ).sort("created_at", -1)
+    return await cursor.to_list(length=200)
+
+
 @router.post("/administrations", status_code=status.HTTP_201_CREATED)
 async def valider_administration_traitement(
     administration: AdministrationTraitement,
@@ -168,3 +183,18 @@ async def lister_administrations_patient(
     )
 
     return administrations
+
+
+@router.get("/administrations/moi", response_model=list[AdministrationTraitement])
+async def lister_mes_administrations(
+    current_user: User = Depends(require_role("infirmier", "medecin"))
+):
+    """
+    Historique des administrations de traitements validées par le
+    professionnel connecté (du plus récent au plus ancien) — alimente le
+    tableau de bord et l'historique personnel de l'infirmier.
+    """
+    cursor = administrations_collection.find(
+        {"administre_par": current_user.email}
+    ).sort("horodatage", -1)
+    return await cursor.to_list(length=200)

@@ -19,5 +19,9 @@ class AdministrationTraitement(BaseModel):
     npi: str = Field(..., min_length=10, max_length=10)
     consultation_id: str | None = Field(None, description="ID Mongo de la consultation contenant l'ordonnance")
     nom_medicament: str
+    dosage: str | None = None
+    voie_administration: str | None = None
+    statut: str = "administre"  # "administre" | "refuse" | "reporte"
+    notes: str | None = None
     administre_par: str | None = None  # renseigné automatiquement côté serveur
     horodatage: datetime = Field(default_factory=datetime.utcnow)
