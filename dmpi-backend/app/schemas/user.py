@@ -20,11 +20,12 @@ class UserCreate(BaseModel):
     mot_de_passe: str
     nom: str
     prenom: str
-    role: str  # "medecin", "infirmier", "admin_etablissement", "super_admin", "patient"
+    role: str  # "medecin", "infirmier", "admin_etablissement", "super_admin", "patient", "laboratoire"
     specialite: str | None = None
     service: str | None = None
     npi_patient: str | None = None  # renseigné uniquement si role == "patient"
     etablissement_id: str | None = None  # renseigné si role == "medecin" ou "infirmier"
+    prestataire_id: str | None = None  # renseigné si role == "laboratoire"
     date_naissance: date | None = None
     sexe: str | None = None
     groupe_sanguin: str | None = None
@@ -44,6 +45,7 @@ class UserUpdate(BaseModel):
     service: str | None = None
     npi_patient: str | None = None
     etablissement_id: str | None = None
+    prestataire_id: str | None = None
 
     @field_validator("email")
     @classmethod
@@ -60,6 +62,7 @@ class UserOut(BaseModel):
     service: str | None = None
     npi_patient: str | None = None
     etablissement_id: str | None = None
+    prestataire_id: str | None = None
     est_actif: bool
     date_creation: datetime
     derniere_connexion: datetime | None = None

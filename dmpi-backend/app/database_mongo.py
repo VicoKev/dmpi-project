@@ -25,6 +25,8 @@ rendez_vous_collection = database["rendez_vous"]
 etablissements_collection = database["etablissements"]
 file_attente_collection = database["file_attente"]
 prestataires_partenaires_collection = database["prestataires_partenaires"]
+demandes_examen_collection = database["demandes_examen"]
+documents_medicaux_collection = database["documents_medicaux"]
 
 async def get_mongo_db():
     """Dependency pour injecter la base MongoDB dans les routes."""

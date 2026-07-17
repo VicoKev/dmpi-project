@@ -30,11 +30,12 @@ class User(Base):
     mot_de_passe_hash = Column(String, nullable=False)
     nom = Column(String, nullable=False)
     prenom = Column(String, nullable=False)
-    role = Column(String, nullable=False)  # "medecin", "infirmier", "admin_etablissement", "super_admin", "patient"
+    role = Column(String, nullable=False)  # "medecin", "infirmier", "admin_etablissement", "super_admin", "patient", "laboratoire"
     specialite = Column(String, nullable=True)
     service = Column(String, nullable=True)
     npi_patient = Column(String(10), nullable=True)  # renseigné uniquement si role == "patient"
     etablissement_id = Column(String, nullable=True)  # ID MongoDB de l'établissement de rattachement
+    prestataire_id = Column(String, nullable=True)  # ID MongoDB du prestataire (labo) de rattachement, si role == "laboratoire"
     disponible = Column(Boolean, default=True, nullable=False)  # medecin uniquement : dispo pour assignation (garde)
     est_actif = Column(Boolean, default=True, nullable=False)
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)

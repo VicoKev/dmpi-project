@@ -1,11 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from bson import ObjectId
 from datetime import datetime
 from app.database_mongo import get_mongo_db
+from app.database_sql import get_sql_db
 from app.schemas.prestataire import PrestataireCreate, PrestataireUpdate, PrestataireOut
 from app.models_sql import User
-from app.security import require_role
+from app.security import require_role, get_current_user
 from app.audit import enregistrer_log
 
 router = APIRouter(
@@ -22,9 +25,14 @@ def _formater(doc: dict) -> dict:
 @router.get("/", response_model=list[PrestataireOut])
 async def lister_prestataires(
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
-    current_user: User = Depends(require_role("super_admin"))
+    current_user: User = Depends(get_current_user)
 ):
-    """Liste tous les prestataires partenaires (pharmacies, laboratoires)."""
+    """
+    Liste tous les prestataires partenaires (pharmacies, laboratoires).
+    Lecture ouverte à tout compte authentifié : un médecin doit pouvoir
+    parcourir l'annuaire des laboratoires partenaires pour y prescrire un
+    examen. Création/modification/suppression restent réservées au super admin.
+    """
     prestataires = await db["prestataires_partenaires"].find().sort("nom", 1).to_list(1000)
     return [_formater(p) for p in prestataires]
 
@@ -59,6 +67,7 @@ async def modifier_prestataire(
     prestataire_id: str,
     updates: PrestataireUpdate,
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    db_sql: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(require_role("super_admin"))
 ):
     """Modifier un prestataire partenaire."""
@@ -79,6 +88,22 @@ async def modifier_prestataire(
         raise HTTPException(status_code=404, detail="Prestataire introuvable")
 
     updated = await db["prestataires_partenaires"].find_one({"_id": ObjectId(prestataire_id)})
+
+    # Le prénom/nom d'un compte laboratoire est dérivé du nom et de la
+    # commune de sa fiche partenaire (un laboratoire n'a pas d'identité
+    # propre) — sans cette resynchronisation, renommer la fiche laisserait
+    # les comptes déjà créés afficher l'ancien nom indéfiniment.
+    if updated.get("type") == "laboratoire":
+        nouveau_prenom = updated.get("nom")
+        nouveau_nom = updated.get("commune") or updated.get("departement")
+        if nouveau_prenom and nouveau_nom:
+            comptes = await db_sql.execute(
+                select(User).where(User.role == "laboratoire", User.prestataire_id == prestataire_id)
+            )
+            for compte in comptes.scalars().all():
+                compte.prenom = nouveau_prenom
+                compte.nom = nouveau_nom
+            await db_sql.commit()
 
     await enregistrer_log(
         utilisateur_email=current_user.email,

@@ -76,6 +76,9 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - ADMIN_INITIAL_PASSWORD=${ADMIN_INITIAL_PASSWORD}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      - UPLOAD_DIR=/app/uploads
+    volumes:
+      - uploads:/app/uploads
     depends_on:
       - postgres
       - mongodb
@@ -92,3 +95,4 @@ volumes:
   pgdata:
   mongodata:
   kafkadata:
+  uploads:

@@ -1,10 +1,23 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+
+TYPES_PRESTATAIRE_VALIDES = {"pharmacie", "laboratoire"}
+
+
+def _valider_type(type_prestataire: str) -> str:
+    if type_prestataire not in TYPES_PRESTATAIRE_VALIDES:
+        raise ValueError(
+            f"Type de prestataire invalide : {type_prestataire}. "
+            f"Valeurs autorisées : {', '.join(TYPES_PRESTATAIRE_VALIDES)}."
+        )
+    return type_prestataire
 
 
 class PrestataireBase(BaseModel):
     nom: str
-    types: list[str] = ["pharmacie"]  # v1 : toujours "pharmacie" — liste pour permettre labo/imagerie en phase 2
+    # Un seul type par prestataire : une pharmacie n'est pas un laboratoire
+    # et inversement, ce sont deux métiers distincts sur le terrain.
+    type: str = "pharmacie"
     departement: str
     commune: str | None = None
     arrondissement: str | None = None
@@ -20,6 +33,11 @@ class PrestataireBase(BaseModel):
     source_donnees: str = "saisi_super_admin"
     derniere_verification: datetime | None = None
 
+    @field_validator("type")
+    @classmethod
+    def type_valide(cls, v: str) -> str:
+        return _valider_type(v)
+
 
 class PrestataireCreate(PrestataireBase):
     pass
@@ -27,7 +45,7 @@ class PrestataireCreate(PrestataireBase):
 
 class PrestataireUpdate(BaseModel):
     nom: str | None = None
-    types: list[str] | None = None
+    type: str | None = None
     departement: str | None = None
     commune: str | None = None
     arrondissement: str | None = None
@@ -42,6 +60,11 @@ class PrestataireUpdate(BaseModel):
     statut: str | None = None
     source_donnees: str | None = None
     derniere_verification: datetime | None = None
+
+    @field_validator("type")
+    @classmethod
+    def type_valide(cls, v: str | None) -> str | None:
+        return _valider_type(v) if v is not None else v
 
 
 class PrestataireOut(PrestataireBase):

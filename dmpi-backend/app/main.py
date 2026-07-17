@@ -19,6 +19,8 @@ from app.routes.demande_acces import router as demande_acces_router
 from app.routes.file_attente import router as file_attente_router
 from app.routes.territoire import router as territoire_router
 from app.routes.prestataire import router as prestataire_router
+from app.routes.demande_examen import router as demande_examen_router
+from app.routes.document_medical import router as document_medical_router
 from app.kafka_producer import demarrer_producer, arreter_producer
 
 app = FastAPI(
@@ -78,6 +80,8 @@ app.include_router(demande_acces_router)
 app.include_router(file_attente_router)
 app.include_router(territoire_router)
 app.include_router(prestataire_router)
+app.include_router(demande_examen_router)
+app.include_router(document_medical_router)
 
 @app.get("/")
 async def root():

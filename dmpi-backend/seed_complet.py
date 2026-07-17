@@ -23,6 +23,7 @@ from app.database_mongo import (
     ordonnances_collection,
     rendez_vous_collection,
     prestataires_partenaires_collection,
+    demandes_examen_collection,
 )
 
 def utc_now() -> datetime:
@@ -97,7 +98,7 @@ ETABLISSEMENTS = [
 
 # ─── 2. Données des utilisateurs ────────────────────────────────────────────
 
-def make_users(etab_cnhu_id: str, etab_borgou_id: str) -> list[dict]:
+def make_users(etab_cnhu_id: str, etab_borgou_id: str, labo_id: str) -> list[dict]:
     return [
         # Super Admin national
         {
@@ -181,6 +182,15 @@ def make_users(etab_cnhu_id: str, etab_borgou_id: str) -> list[dict]:
             "role": "infirmier",
             "service": "Pédiatrie",
             "etablissement_id": etab_borgou_id,
+            "est_actif": True,
+        },
+        # Laboratoire partenaire
+        {
+            "email": "labo.bioanalyses@dmpi.bj",
+            "mot_de_passe_hash": hash_password("Labo2025!"),
+            "prenom": "Laboratoire Bio-Analyses Cotonou", "nom": "Cotonou",
+            "role": "laboratoire",
+            "prestataire_id": labo_id,
             "est_actif": True,
         },
         # Patients
@@ -391,7 +401,7 @@ def make_prestataires() -> list[dict]:
     return [
         {
             "nom": "Pharmacie Jonquet",
-            "types": ["pharmacie"],
+            "type": "pharmacie",
             "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Jonquet",
             "adresse": "Rue du Gouverneur Bayol, Cotonou",
             "latitude": 6.3625, "longitude": 2.4005,
@@ -404,7 +414,7 @@ def make_prestataires() -> list[dict]:
         },
         {
             "nom": "Pharmacie du Phare",
-            "types": ["pharmacie"],
+            "type": "pharmacie",
             "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Le Phare",
             "adresse": "Boulevard Saint-Michel, Cotonou",
             "latitude": 6.3550, "longitude": 2.4300,
@@ -417,7 +427,7 @@ def make_prestataires() -> list[dict]:
         },
         {
             "nom": "Pharmacie Centrale de Parakou",
-            "types": ["pharmacie"],
+            "type": "pharmacie",
             "departement": "Borgou", "commune": "Parakou", "arrondissement": None, "quartier": "Centre-ville",
             "adresse": "Avenue de la Gare, Parakou",
             "latitude": 9.3410, "longitude": 2.6280,
@@ -430,7 +440,7 @@ def make_prestataires() -> list[dict]:
         },
         {
             "nom": "Pharmacie de l'Atacora",
-            "types": ["pharmacie"],
+            "type": "pharmacie",
             "departement": "Atacora", "commune": "Natitingou", "arrondissement": None, "quartier": "Centre-ville",
             "adresse": "Route Nationale, Natitingou",
             "latitude": 10.3100, "longitude": 1.3830,
@@ -439,6 +449,19 @@ def make_prestataires() -> list[dict]:
             "etablissement_rattachement_id": None,
             "statut": "actif", "source_donnees": "saisi_super_admin",
             "derniere_verification": utc_now() - timedelta(days=45),
+            "created_at": utc_now(), "updated_at": utc_now(),
+        },
+        {
+            "nom": "Laboratoire Bio-Analyses Cotonou",
+            "type": "laboratoire",
+            "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Akpakpa",
+            "adresse": "Carrefour Akpakpa, Cotonou",
+            "latitude": 6.3667, "longitude": 2.4472,
+            "telephone": "+229 21-33-20-08", "email": "contact@bioanalyses-cotonou.bj",
+            "horaires": "Lun-Sam 7h-18h",
+            "etablissement_rattachement_id": None,
+            "statut": "actif", "source_donnees": "saisi_super_admin",
+            "derniere_verification": utc_now() - timedelta(days=1),
             "created_at": utc_now(), "updated_at": utc_now(),
         },
     ]
@@ -481,7 +504,7 @@ async def reset_et_seed():
     print("    ✓ Tables PostgreSQL vidées et séquences réinitialisées.")
 
     # 2. Vider MongoDB
-    print("\n[2/7] Vidage de MongoDB...")
+    print("\n[2/8] Vidage de MongoDB...")
     await dossiers_medicaux_collection.delete_many({})
     await consultations_collection.delete_many({})
     await constantes_vitales_collection.delete_many({})
@@ -490,10 +513,11 @@ async def reset_et_seed():
     await ordonnances_collection.delete_many({})
     await rendez_vous_collection.delete_many({})
     await prestataires_partenaires_collection.delete_many({})
+    await demandes_examen_collection.delete_many({})
     print("    ✓ Collections MongoDB vidées.")
 
     # 3. Créer les établissements
-    print("\n[3/7] Création des établissements...")
+    print("\n[3/8] Création des établissements...")
     etab_docs = ETABLISSEMENTS
     result = await etablissements_collection.insert_many(etab_docs)
     etab_ids = [str(oid) for oid in result.inserted_ids]
@@ -504,17 +528,27 @@ async def reset_et_seed():
     print(f"    ✓ CHD Borgou id={etab_borgou_id}")
     print(f"    ✓ CSC Natitingou id={etab_natitingou_id}")
 
-    # 4. Créer les utilisateurs
-    print("\n[4/7] Création des utilisateurs PostgreSQL...")
-    users_data = make_users(etab_cnhu_id, etab_borgou_id)
+    # 4. Créer les prestataires partenaires (pharmacies + laboratoire) —
+    # avant les utilisateurs, car le compte laboratoire de démo a besoin de
+    # l'id Mongo réel du laboratoire pour son prestataire_id.
+    print("\n[4/8] Insertion des prestataires partenaires (pharmacies, laboratoire)...")
+    prestataires = make_prestataires()
+    prest_result = await prestataires_partenaires_collection.insert_many(prestataires)
+    prest_ids = [str(oid) for oid in prest_result.inserted_ids]
+    labo_id = prest_ids[-1]  # le laboratoire est le dernier de la liste
+    print(f"    ✓ {len(prestataires)} prestataires partenaires insérés (labo id={labo_id}).")
+
+    # 5. Créer les utilisateurs
+    print("\n[5/8] Création des utilisateurs PostgreSQL...")
+    users_data = make_users(etab_cnhu_id, etab_borgou_id, labo_id)
     async with AsyncSessionLocal() as db:
         for u in users_data:
             db.add(User(**u))
         await db.commit()
     print(f"    ✓ {len(users_data)} utilisateurs créés.")
 
-    # 5. Créer les dossiers, consultations et constantes MongoDB
-    print("\n[5/7] Insertion des données cliniques MongoDB...")
+    # 6. Créer les dossiers, consultations et constantes MongoDB
+    print("\n[6/8] Insertion des données cliniques MongoDB...")
     dossiers = make_dossiers(etab_cnhu_id, etab_borgou_id)
     await dossiers_medicaux_collection.insert_many(dossiers)
     print(f"    ✓ {len(dossiers)} dossiers médicaux insérés.")
@@ -528,8 +562,8 @@ async def reset_et_seed():
     await constantes_vitales_collection.insert_many(constantes)
     print(f"    ✓ {len(constantes)} constantes vitales insérées.")
 
-    # 6. Créer les ordonnances et rendez-vous MongoDB
-    print("\n[6/7] Insertion des ordonnances et rendez-vous MongoDB...")
+    # 7. Créer les ordonnances et rendez-vous MongoDB
+    print("\n[7/8] Insertion des ordonnances et rendez-vous MongoDB...")
     ordonnances = make_ordonnances(consult_ids)
     await ordonnances_collection.insert_many(ordonnances)
     print(f"    ✓ {len(ordonnances)} ordonnances insérées.")
@@ -538,10 +572,19 @@ async def reset_et_seed():
     await rendez_vous_collection.insert_many(rdvs)
     print(f"    ✓ {len(rdvs)} rendez-vous planifiés.")
 
-    print("\n[7/7] Insertion des prestataires partenaires (pharmacies)...")
-    prestataires = make_prestataires()
-    await prestataires_partenaires_collection.insert_many(prestataires)
-    print(f"    ✓ {len(prestataires)} prestataires partenaires insérés.")
+    # 8. Créer une demande d'examen de démonstration, en attente auprès du labo
+    print("\n[8/8] Insertion d'une demande d'examen de démonstration...")
+    demande_examen = {
+        "npi": "1001002001",
+        "prestataire_id": labo_id,
+        "type_examen": "Numération formule sanguine (NFS)",
+        "motif": "Suspicion dengue — recherche de thrombopénie",
+        "medecin_email": "dr.amoussou@dmpi.bj",
+        "statut": "en_attente",
+        "created_at": utc_now() - timedelta(days=2),
+    }
+    await demandes_examen_collection.insert_one(demande_examen)
+    print("    ✓ 1 demande d'examen en attente insérée.")
 
     print("\n" + "=" * 60)
     print("  Seed terminé avec succès !")
@@ -550,6 +593,7 @@ async def reset_et_seed():
     print("  ┌─ Super Admin  : superadmin@dmpi.bj       / Admin2025!")
     print("  ├─ Médecin      : dr.kouassi@dmpi.bj       / Medecin2025!")
     print("  ├─ Infirmier    : inf.mensah@dmpi.bj       / Infirmier2025!")
+    print("  ├─ Laboratoire  : labo.bioanalyses@dmpi.bj / Labo2025!")
     print("  └─ Patient      : patient.dossou@dmpi.bj   / Patient2025!")
 
 

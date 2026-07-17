@@ -286,7 +286,7 @@ async def pharmacies_proches(
         return PharmaciesProchesResponse(reference=None, pharmacies=[])
 
     cursor = prestataires_partenaires_collection.find({
-        "types": "pharmacie",
+        "type": "pharmacie",
         "statut": "actif",
         "latitude": {"$ne": None},
         "longitude": {"$ne": None},

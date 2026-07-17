@@ -13,7 +13,7 @@ router = APIRouter(
     tags=["Administration (Super Admin)"]
 )
 
-ROLES_VALIDES = {"medecin", "infirmier", "admin_etablissement", "super_admin", "patient"}
+ROLES_VALIDES = {"medecin", "infirmier", "admin_etablissement", "super_admin", "patient", "laboratoire"}
 
 
 @router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -39,6 +39,12 @@ async def creer_utilisateur(
             detail=f"L'identifiant de l'établissement de rattachement est requis pour le rôle {nouvel_utilisateur.role}."
         )
 
+    if nouvel_utilisateur.role == "laboratoire" and not nouvel_utilisateur.prestataire_id:
+        raise HTTPException(
+            status_code=400,
+            detail="L'identifiant du laboratoire de rattachement (prestataire_id) est requis pour le rôle laboratoire."
+        )
+
     result = await db.execute(select(User).where(User.email == nouvel_utilisateur.email))
     if result.scalar_one_or_none():
         raise HTTPException(
@@ -56,6 +62,7 @@ async def creer_utilisateur(
         service=nouvel_utilisateur.service,
         npi_patient=nouvel_utilisateur.npi_patient,
         etablissement_id=nouvel_utilisateur.etablissement_id,
+        prestataire_id=nouvel_utilisateur.prestataire_id,
         est_actif=True
     )
 
@@ -233,6 +240,8 @@ async def modifier_utilisateur(
         utilisateur.npi_patient = updates.npi_patient
     if updates.etablissement_id is not None:
         utilisateur.etablissement_id = updates.etablissement_id
+    if updates.prestataire_id is not None:
+        utilisateur.prestataire_id = updates.prestataire_id
 
     await db.commit()
     await db.refresh(utilisateur)

@@ -13,3 +13,5 @@ bcrypt==4.0.1
 aiokafka
 reportlab
 openpyxl
+pillow
+python-multipart
