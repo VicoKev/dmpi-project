@@ -20,16 +20,16 @@ import LocalisationPicker from "../../components/etablissement/LocalisationPicke
 // ─── Config UI ────────────────────────────────────────────────────────────────
 
 const TYPE_CONFIG: Record<string, { color: string; bg: string; icon: string }> = {
-  CHU:      { color: "var(--color-primary)",   bg: "var(--color-primary-container)",   icon: "local_hospital" },
+  CHU:      { color: "var(--color-on-primary-container)",   bg: "var(--color-primary-container)",   icon: "local_hospital" },
   CHD:      { color: "var(--color-secondary)", bg: "var(--color-secondary-container)", icon: "emergency" },
-  CSC:      { color: "var(--color-tertiary)",  bg: "var(--color-tertiary-container)",  icon: "home_health" },
-  Clinique: { color: "var(--color-success)",   bg: "var(--color-success-container)",   icon: "healing" },
+  CSC:      { color: "var(--color-on-tertiary-container)",  bg: "var(--color-tertiary-container)",  icon: "home_health" },
+  Clinique: { color: "var(--color-on-success-container)",   bg: "var(--color-success-container)",   icon: "healing" },
   Maternite:{ color: "#EC4899", bg: "#FCE7F3",                                         icon: "pediatrics" },
 };
 
 const STATUT_CONFIG: Record<string, { label: string; color: string; bg: string; dot: boolean }> = {
-  actif:       { label: "Actif",       color: "var(--color-success)", bg: "var(--color-success-container)", dot: true },
-  maintenance: { label: "Maintenance", color: "var(--color-warning)", bg: "var(--color-warning-container)", dot: false },
+  actif:       { label: "Actif",       color: "var(--color-on-success-container)", bg: "var(--color-success-container)", dot: true },
+  maintenance: { label: "Maintenance", color: "var(--color-on-warning-container)", bg: "var(--color-warning-container)", dot: false },
   inactif:     { label: "Inactif",    color: "var(--color-error)",   bg: "var(--color-error-container)",   dot: false },
 };
 
@@ -123,7 +123,7 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
         <div className="flex items-start justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--color-primary-container)" }}>
-              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-primary)" }}>
+              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>
                 {initial ? "edit" : "add_business"}
               </span>
             </div>
@@ -389,7 +389,7 @@ export default function SuperAdminEtablissements() {
           { icon: "domain",      label: "Établissements actifs",    value: `${totaux.actifs}/${etablissements.length}`, color: "var(--color-primary)" },
           { icon: "group",       label: "Patients enregistrés",     value: totaux.patients.toLocaleString("fr-FR"),      color: "var(--color-secondary)" },
           { icon: "stethoscope", label: "Médecins",                  value: totaux.medecins,                              color: "var(--color-tertiary)" },
-          { icon: "vaccines",    label: "Infirmiers",                value: totaux.infirmiers,                            color: "var(--color-success)" },
+          { icon: "vaccines",    label: "Infirmiers",                value: totaux.infirmiers,                            color: "var(--color-on-success-container)" },
         ].map(s => (
           <div key={s.label} className="flex flex-col gap-2 p-4 rounded-2xl" style={{ backgroundColor: "var(--color-surface-container-low)" }}>
             <span className="material-symbols-outlined filled text-[22px]" style={{ color: s.color }}>{s.icon}</span>

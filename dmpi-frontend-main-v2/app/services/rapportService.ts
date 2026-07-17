@@ -7,8 +7,12 @@ export interface CumulAnnuel {
   patients_actifs_variation: number | null;
   etablissements_actifs: number;
   etablissements_total: number;
+  prestataires_actifs: number;
+  prestataires_total: number;
   ordonnances_emises: number;
   ordonnances_emises_variation: number | null;
+  demandes_examen_emises: number;
+  demandes_examen_emises_variation: number | null;
   alertes_securite: number;
   alertes_securite_variation: number;
 }
@@ -29,6 +33,7 @@ export interface RapportMensuel {
   consultations: number;
   patients: number;
   ordonnances: number;
+  demandesExamen: number;
   etablissements: number;
   topDiagnostics: TopDiagnostic[];
   topEtablissements: TopEtablissementRapport[];

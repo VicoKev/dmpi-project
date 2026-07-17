@@ -125,7 +125,7 @@ export default function InfirmierDashboard() {
           icon="check_circle"
           label="Médicaments administrés"
           value={loading ? 0 : administrations.filter((a) => a.statut === "administre").length}
-          color="var(--color-success)"
+          color="var(--color-on-success-container)"
         />
       </div>
 

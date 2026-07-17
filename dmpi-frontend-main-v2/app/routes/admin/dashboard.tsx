@@ -116,7 +116,7 @@ export default function AdminDashboard() {
                   className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                   style={{ backgroundColor: "var(--color-primary-container)" }}
                 >
-                  <span className="material-symbols-outlined filled text-[16px]" style={{ color: "var(--color-primary)" }}>
+                  <span className="material-symbols-outlined filled text-[16px]" style={{ color: "var(--color-on-primary-container)" }}>
                     {ACTIVITE_ICON[a.type]}
                   </span>
                 </div>
@@ -170,7 +170,7 @@ export default function AdminDashboard() {
                   </div>
                   <span
                     className="text-caption font-semibold shrink-0"
-                    style={{ color: p.actif_aujourdhui ? "var(--color-success)" : "var(--color-on-surface-variant)" }}
+                    style={{ color: p.actif_aujourdhui ? "var(--color-on-success-container)" : "var(--color-on-surface-variant)" }}
                   >
                     ● {p.actif_aujourdhui ? "Actif aujourd'hui" : "Inactif aujourd'hui"}
                   </span>

@@ -18,7 +18,7 @@ export default function NouvelleOrdonnancePage() {
     return (
       <div className="flex flex-col gap-6 animate-fade-in-up max-w-3xl mx-auto w-full">
         <div className="flex items-center gap-3 p-4 rounded-2xl" style={{ backgroundColor: "var(--color-success-container)" }}>
-          <span className="material-symbols-outlined filled text-[24px]" style={{ color: "var(--color-success)" }}>check_circle</span>
+          <span className="material-symbols-outlined filled text-[24px]" style={{ color: "var(--color-on-success-container)" }}>check_circle</span>
           <p className="text-body-md font-semibold" style={{ color: "var(--color-on-success-container)" }}>
             Ordonnance enregistrée avec succès.
           </p>

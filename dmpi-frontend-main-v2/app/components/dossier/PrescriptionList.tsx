@@ -24,6 +24,16 @@ export default function PrescriptionList({
   const [renouvellementEnCours, setRenouvellementEnCours] = useState<string | null>(null);
   const [erreurParOrdonnance, setErreurParOrdonnance] = useState<Record<string, string>>({});
 
+  // Une ordonnance d'origine → l'ordonnance créée par son renouvellement (s'il
+  // a déjà eu lieu), pour remplacer le bouton par un badge plutôt que de
+  // permettre un second renouvellement accidentel.
+  const renouvellementsParOrigine = new Map<string, Prescription>();
+  for (const p of prescriptions) {
+    if (p.renouveleeDepuis) {
+      renouvellementsParOrigine.set(p.renouveleeDepuis, p);
+    }
+  }
+
   const handleRenouveler = async (id: string) => {
     if (!confirm("Renouveler cette ordonnance ? Une nouvelle ordonnance identique sera créée pour le patient.")) return;
     setRenouvellementEnCours(id);
@@ -60,6 +70,8 @@ export default function PrescriptionList({
         <ul className="flex flex-col gap-3">
           {prescriptions.map((p) => {
             const aDesLignesRenouvelables = p.lignes.some((l) => l.renouvelable);
+            const renouvellement = renouvellementsParOrigine.get(p.id);
+            const dejaRenouvelee = !!renouvellement;
             return (
               <li
                 key={p.id}
@@ -74,30 +86,46 @@ export default function PrescriptionList({
                 </div>
 
                 <ul className="flex flex-col gap-1.5">
-                  {p.lignes.map((ligne) => (
-                    <li
-                      key={ligne.id}
-                      className="flex items-start gap-2 text-body-md"
-                      style={{ color: "var(--color-on-surface)" }}
-                    >
-                      <span
-                        className="material-symbols-outlined text-[16px] mt-0.5"
-                        style={{ color: "var(--color-primary)" }}
+                  {p.lignes.map((ligne) => {
+                    const estAtteinteParLeRenouvellement = ligne.renouvelable && dejaRenouvelee;
+                    return (
+                      <li
+                        key={ligne.id}
+                        className="flex items-start gap-2 text-body-md"
+                        style={{
+                          color: estAtteinteParLeRenouvellement
+                            ? "var(--color-on-surface-variant)"
+                            : "var(--color-on-surface)",
+                        }}
                       >
-                        medication
-                      </span>
-                      <span className="flex-1">
-                        <span className="font-semibold">{ligne.medicament}</span>{" "}
-                        {ligne.dosage} — {FREQUENCE_LABELS[ligne.frequence]}
-                        {ligne.dureeJours ? ` pendant ${ligne.dureeJours} jours` : ""}
-                        {ligne.renouvelable && (
-                          <Badge variant="info" icon="autorenew" size="sm" className="ml-2 align-middle">
-                            Renouvelable
-                          </Badge>
-                        )}
-                      </span>
-                    </li>
-                  ))}
+                        <span
+                          className="material-symbols-outlined text-[16px] mt-0.5"
+                          style={{
+                            color: estAtteinteParLeRenouvellement
+                              ? "var(--color-outline)"
+                              : "var(--color-primary)",
+                          }}
+                        >
+                          medication
+                        </span>
+                        <span className="flex-1">
+                          <span className="font-semibold">{ligne.medicament}</span>{" "}
+                          {ligne.dosage} — {FREQUENCE_LABELS[ligne.frequence]}
+                          {ligne.dureeJours ? ` pendant ${ligne.dureeJours} jours` : ""}
+                          {ligne.renouvelable && (
+                            <Badge
+                              variant={estAtteinteParLeRenouvellement ? "neutral" : "info"}
+                              icon={estAtteinteParLeRenouvellement ? "check" : "autorenew"}
+                              size="sm"
+                              className="ml-2 align-middle"
+                            >
+                              {estAtteinteParLeRenouvellement ? "Renouvelé" : "Renouvelable"}
+                            </Badge>
+                          )}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
 
                 {p.noteGlobale && (
@@ -114,19 +142,27 @@ export default function PrescriptionList({
 
                 {peutRenouveler && aDesLignesRenouvelables && (
                   <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--color-outline-variant)" }}>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      icon="autorenew"
-                      loading={renouvellementEnCours === p.id}
-                      onClick={() => handleRenouveler(p.id)}
-                    >
-                      Renouveler
-                    </Button>
-                    {erreurParOrdonnance[p.id] && (
-                      <p className="text-caption mt-2" style={{ color: "var(--color-error)" }}>
-                        {erreurParOrdonnance[p.id]}
-                      </p>
+                    {dejaRenouvelee ? (
+                      <Badge variant="success" icon="check_circle" size="sm">
+                        Renouvelée le {formatDateFr(renouvellement!.date)}
+                      </Badge>
+                    ) : (
+                      <>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          icon="autorenew"
+                          loading={renouvellementEnCours === p.id}
+                          onClick={() => handleRenouveler(p.id)}
+                        >
+                          Renouveler
+                        </Button>
+                        {erreurParOrdonnance[p.id] && (
+                          <p className="text-caption mt-2" style={{ color: "var(--color-error)" }}>
+                            {erreurParOrdonnance[p.id]}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

@@ -37,12 +37,12 @@ const TYPE_COLORS: Record<string, string> = {
   CHU: "var(--color-primary)",
   CHD: "var(--color-secondary)",
   CSC: "var(--color-tertiary)",
-  Clinique: "var(--color-success)",
+  Clinique: "var(--color-on-success-container)",
 };
 
 const STATUT_CONFIG = {
-  actif: { label: "Actif", color: "var(--color-success)", bg: "var(--color-success-container)" },
-  maintenance: { label: "Maintenance", color: "var(--color-warning)", bg: "var(--color-warning-container)" },
+  actif: { label: "Actif", color: "var(--color-on-success-container)", bg: "var(--color-success-container)" },
+  maintenance: { label: "Maintenance", color: "var(--color-on-warning-container)", bg: "var(--color-warning-container)" },
   inactif: { label: "Inactif", color: "var(--color-error)", bg: "var(--color-error-container)" },
 };
 
@@ -59,7 +59,7 @@ const ROLE_ICONS: Record<string, { icon: string; color: string }> = {
   infirmier: { icon: "vaccines", color: "var(--color-tertiary)" },
   admin_etablissement: { icon: "admin_panel_settings", color: "var(--color-secondary)" },
   super_admin: { icon: "shield_person", color: "#8B5CF6" },
-  patient: { icon: "person", color: "var(--color-success)" },
+  patient: { icon: "person", color: "var(--color-on-success-container)" },
 };
 
 export default function SuperAdminDashboard() {
@@ -102,8 +102,8 @@ export default function SuperAdminDashboard() {
           className="flex items-center gap-2 px-4 py-2 rounded-full text-body-md font-semibold"
           style={
             systemeOperationnel === false
-              ? { backgroundColor: "var(--color-error-container)", color: "var(--color-error)" }
-              : { backgroundColor: "var(--color-success-container)", color: "var(--color-success)" }
+              ? { backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }
+              : { backgroundColor: "var(--color-success-container)", color: "var(--color-on-success-container)" }
           }
         >
           <span
@@ -167,7 +167,7 @@ export default function SuperAdminDashboard() {
                   label: "Comptes utilisateurs",
                   value: totalUtilisateurs.toLocaleString("fr-FR"),
                   sub: "dans PostgreSQL",
-                  color: "var(--color-success)",
+                  color: "var(--color-on-success-container)",
                 },
               ].map((s) => (
                 <div
@@ -242,7 +242,7 @@ export default function SuperAdminDashboard() {
                       <div key={d.diagnostic_cim10} className="flex items-start gap-2">
                         <span
                           className="w-5 h-5 rounded-full flex items-center justify-center text-caption font-bold flex-shrink-0 mt-0.5"
-                          style={{ backgroundColor: "var(--color-primary-container)", color: "var(--color-primary)" }}
+                          style={{ backgroundColor: "var(--color-primary-container)", color: "var(--color-on-primary-container)" }}
                         >
                           {i + 1}
                         </span>
@@ -274,7 +274,7 @@ export default function SuperAdminDashboard() {
           {data.urgences.total_acces_break_the_glass > 0 && (
             <div
               className="flex items-center gap-3 p-4 rounded-2xl"
-              style={{ backgroundColor: "var(--color-warning-container)", color: "var(--color-warning)" }}
+              style={{ backgroundColor: "var(--color-warning-container)", color: "var(--color-on-warning-container)" }}
             >
               <span className="material-symbols-outlined filled text-[24px]">emergency</span>
               <div>

@@ -54,7 +54,7 @@ export default function AdminFileAttente() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         {[
-          { icon: "hourglass_empty", label: "À assigner", value: enAttente, color: "var(--color-warning)" },
+          { icon: "hourglass_empty", label: "À assigner", value: enAttente, color: "var(--color-on-warning-container)" },
           { icon: "medical_services", label: "En cours de prise en charge", value: enCours, color: "var(--color-primary)" },
           { icon: "groups", label: "Total dans la file", value: entrees.length, color: "var(--color-secondary)" },
         ].map((s) => (

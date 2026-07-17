@@ -19,7 +19,7 @@ import { getPatientByNpi, validateNpi } from "../../services/patientService";
 import type { PatientSearchResult } from "../../types/patient";
 
 const STATUT_CFG = {
-  confirme: { label: "Confirmé", color: "var(--color-success)", bg: "var(--color-success-container)", icon: "check_circle" },
+  confirme: { label: "Confirmé", color: "var(--color-on-success-container)", bg: "var(--color-success-container)", icon: "check_circle" },
   annule:   { label: "Annulé",   color: "var(--color-error)",   bg: "var(--color-error-container)",   icon: "cancel" },
   complete: { label: "Effectué", color: "var(--color-outline)", bg: "var(--color-surface-container)", icon: "task_alt" },
 };

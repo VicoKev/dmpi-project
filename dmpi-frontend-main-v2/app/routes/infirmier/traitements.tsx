@@ -344,7 +344,7 @@ export default function InfirmierTraitements() {
               className="w-16 h-16 rounded-full flex items-center justify-center"
               style={{ backgroundColor: "var(--color-success-container)" }}
             >
-              <span className="material-symbols-outlined filled text-[36px]" style={{ color: "var(--color-success)" }}>
+              <span className="material-symbols-outlined filled text-[36px]" style={{ color: "var(--color-on-success-container)" }}>
                 check_circle
               </span>
             </div>

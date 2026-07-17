@@ -54,7 +54,7 @@ const SERVICES: ServiceDef[] = [
 ];
 
 const STATUT_SVC: Record<StatutService, { label: string; color: string; bg: string; icon: string }> = {
-  operationnel: { label: "Opérationnel", color: "var(--color-success)", bg: "var(--color-success-container)", icon: "check_circle" },
+  operationnel: { label: "Opérationnel", color: "var(--color-on-success-container)", bg: "var(--color-success-container)", icon: "check_circle" },
   incident: { label: "Indisponible", color: "var(--color-error)", bg: "var(--color-error-container)", icon: "error" },
   verification: { label: "Vérification...", color: "var(--color-on-surface-variant)", bg: "var(--color-surface-container-high)", icon: "hourglass_empty" },
 };
@@ -107,7 +107,7 @@ export default function SuperAdminMonitoring() {
           className="flex items-center gap-2 px-4 py-2 rounded-full text-body-md font-semibold"
           style={{
             backgroundColor: nbIncidents > 0 ? "var(--color-error-container)" : "var(--color-success-container)",
-            color: nbIncidents > 0 ? "var(--color-error)" : "var(--color-success)",
+            color: nbIncidents > 0 ? "var(--color-on-error-container)" : "var(--color-on-success-container)",
           }}
         >
           <span

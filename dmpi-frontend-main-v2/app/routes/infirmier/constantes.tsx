@@ -178,7 +178,7 @@ export default function InfirmierConstantes() {
             >
               <span
                 className="material-symbols-outlined filled text-[36px]"
-                style={{ color: "var(--color-success)" }}
+                style={{ color: "var(--color-on-success-container)" }}
               >
                 check_circle
               </span>

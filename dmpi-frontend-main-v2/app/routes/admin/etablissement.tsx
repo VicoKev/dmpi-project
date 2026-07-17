@@ -15,8 +15,8 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const STATUT_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
-  actif: { label: "Actif", color: "var(--color-success)", bg: "var(--color-success-container)" },
-  maintenance: { label: "Maintenance", color: "var(--color-warning)", bg: "var(--color-warning-container)" },
+  actif: { label: "Actif", color: "var(--color-on-success-container)", bg: "var(--color-success-container)" },
+  maintenance: { label: "Maintenance", color: "var(--color-on-warning-container)", bg: "var(--color-warning-container)" },
   inactif: { label: "Inactif", color: "var(--color-error)", bg: "var(--color-error-container)" },
 };
 

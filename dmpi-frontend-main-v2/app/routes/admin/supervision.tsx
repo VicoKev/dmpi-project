@@ -5,7 +5,7 @@ import Input from "../../components/ui/Input";
 import { getUsersMonEtablissement, type User as Utilisateur } from "../../services/userService";
 
 const STATUT_CONFIG = {
-  actif: { label: "En service", color: "var(--color-success)", bg: "var(--color-success-container)" },
+  actif: { label: "En service", color: "var(--color-on-success-container)", bg: "var(--color-success-container)" },
   inactif: { label: "Inactif", color: "var(--color-outline)", bg: "var(--color-surface-container)" },
 };
 

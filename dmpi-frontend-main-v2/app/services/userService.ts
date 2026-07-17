@@ -48,12 +48,12 @@ export const ROLE_LABELS: Record<string, string> = {
 };
 
 export const ROLE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
-  medecin: { icon: "stethoscope", color: "var(--color-primary)", bg: "var(--color-primary-container)" },
-  infirmier: { icon: "vaccines", color: "var(--color-tertiary)", bg: "var(--color-tertiary-container)" },
+  medecin: { icon: "stethoscope", color: "var(--color-on-primary-container)", bg: "var(--color-primary-container)" },
+  infirmier: { icon: "vaccines", color: "var(--color-on-tertiary-container)", bg: "var(--color-tertiary-container)" },
   admin_etablissement: { icon: "admin_panel_settings", color: "var(--color-secondary)", bg: "var(--color-secondary-container)" },
-  super_admin: { icon: "shield_person", color: "#8B5CF6", bg: "#EDE9FE" },
-  patient: { icon: "person", color: "var(--color-success)", bg: "var(--color-success-container)" },
-  laboratoire: { icon: "biotech", color: "#0891B2", bg: "#CFFAFE" },
+  super_admin: { icon: "shield_person", color: "#5B21B6", bg: "#EDE9FE" },
+  patient: { icon: "person", color: "var(--color-on-success-container)", bg: "var(--color-success-container)" },
+  laboratoire: { icon: "biotech", color: "#0E7490", bg: "#CFFAFE" },
 };
 
 export const ROLES_SELECTABLE = [

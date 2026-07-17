@@ -50,8 +50,10 @@ function construireIndicateurs(rapport: RapportAnnuel): Indicateur[] {
   return [
     { label: "Consultations YTD", valeur: c.consultations_ytd.toLocaleString("fr-FR"), variation: variationTexte(c.consultations_ytd_variation), tendance: tendanceHausse(c.consultations_ytd_variation), icon: "medical_services", color: "var(--color-primary)" },
     { label: "Patients actifs", valeur: c.patients_actifs.toLocaleString("fr-FR"), variation: variationTexte(c.patients_actifs_variation), tendance: tendanceHausse(c.patients_actifs_variation), icon: "group", color: "var(--color-secondary)" },
-    { label: "Établissements actifs", valeur: `${c.etablissements_actifs}/${c.etablissements_total}`, variation: "=", tendance: "stable", icon: "domain", color: "var(--color-success)" },
+    { label: "Établissements actifs", valeur: `${c.etablissements_actifs}/${c.etablissements_total}`, variation: "=", tendance: "stable", icon: "domain", color: "var(--color-on-success-container)" },
+    { label: "Prestataires partenaires actifs", valeur: `${c.prestataires_actifs}/${c.prestataires_total}`, variation: "=", tendance: "stable", icon: "storefront", color: "var(--color-tertiary)" },
     { label: "Ordonnances emises", valeur: c.ordonnances_emises.toLocaleString("fr-FR"), variation: variationTexte(c.ordonnances_emises_variation), tendance: tendanceHausse(c.ordonnances_emises_variation), icon: "receipt_long", color: "var(--color-primary)" },
+    { label: "Demandes d'examen emises", valeur: c.demandes_examen_emises.toLocaleString("fr-FR"), variation: variationTexte(c.demandes_examen_emises_variation), tendance: tendanceHausse(c.demandes_examen_emises_variation), icon: "lab_panel", color: "var(--color-secondary)" },
   ];
 }
 
@@ -60,7 +62,7 @@ function CouleurTendance(tendance: Tendance) {
     backgroundColor:
       tendance === "hausse" ? "var(--color-primary-container)" : tendance === "baisse_positive" ? "var(--color-success-container)" : "var(--color-surface-container)",
     color:
-      tendance === "hausse" ? "var(--color-primary)" : tendance === "baisse_positive" ? "var(--color-success)" : "var(--color-on-surface-variant)",
+      tendance === "hausse" ? "var(--color-on-primary-container)" : tendance === "baisse_positive" ? "var(--color-on-success-container)" : "var(--color-on-surface-variant)",
   };
 }
 
@@ -215,8 +217,8 @@ export default function SuperAdminRapports() {
   const alertes = rapportAnnuel?.cumul_annuel.alertes_securite ?? 0;
   const alertesVariation = rapportAnnuel?.cumul_annuel.alertes_securite_variation ?? 0;
   const alertesCouleur = alertes === 0
-    ? { bg: "var(--color-success-container)", fg: "var(--color-success)" }
-    : { bg: "var(--color-warning-container)", fg: "var(--color-warning)" };
+    ? { bg: "var(--color-success-container)", fg: "var(--color-on-success-container)" }
+    : { bg: "var(--color-warning-container)", fg: "var(--color-on-warning-container)" };
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -419,7 +421,8 @@ export default function SuperAdminRapports() {
                   { icon: "medical_services", label: "Consultations", value: rapport.consultations.toLocaleString("fr-FR"), color: "var(--color-primary)" },
                   { icon: "group", label: "Patients suivis", value: rapport.patients.toLocaleString("fr-FR"), color: "var(--color-secondary)" },
                   { icon: "receipt_long", label: "Ordonnances", value: rapport.ordonnances.toLocaleString("fr-FR"), color: "var(--color-tertiary)" },
-                  { icon: "domain", label: "Établissements", value: rapport.etablissements, color: "var(--color-success)" },
+                  { icon: "lab_panel", label: "Demandes d'examen", value: rapport.demandesExamen.toLocaleString("fr-FR"), color: "var(--color-secondary)" },
+                  { icon: "domain", label: "Établissements", value: rapport.etablissements, color: "var(--color-on-success-container)" },
                 ].map((s) => (
                   <div
                     key={s.label}
@@ -456,7 +459,7 @@ export default function SuperAdminRapports() {
                           <div className="flex items-center gap-2">
                             <span
                               className="w-5 h-5 rounded-full flex items-center justify-center text-caption font-bold flex-shrink-0"
-                              style={{ backgroundColor: "var(--color-primary-container)", color: "var(--color-primary)" }}
+                              style={{ backgroundColor: "var(--color-primary-container)", color: "var(--color-on-primary-container)" }}
                             >
                               {i + 1}
                             </span>

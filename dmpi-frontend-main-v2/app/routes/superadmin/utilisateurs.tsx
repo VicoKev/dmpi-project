@@ -145,7 +145,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
             >
               <span
                 className="material-symbols-outlined text-[20px]"
-                style={{ color: "var(--color-primary)" }}
+                style={{ color: "var(--color-on-primary-container)" }}
               >
                 person_add
               </span>
@@ -542,7 +542,7 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ backgroundColor: "var(--color-primary-container)" }}
             >
-              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-primary)" }}>edit</span>
+              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>edit</span>
             </div>
             <div>
               <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
@@ -1020,7 +1020,7 @@ export default function SuperAdminUtilisateurs() {
                               ? "var(--color-success-container)"
                               : "var(--color-surface-container)",
                             color: user.est_actif
-                              ? "var(--color-success)"
+                              ? "var(--color-on-success-container)"
                               : "var(--color-on-surface-variant)",
                           }}
                         >

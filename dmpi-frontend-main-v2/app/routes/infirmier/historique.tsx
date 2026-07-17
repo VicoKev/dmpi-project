@@ -151,7 +151,7 @@ export default function InfirmierHistorique() {
                 >
                   <span
                     className="material-symbols-outlined filled text-[20px]"
-                    style={{ color: e.type === "constante" ? "var(--color-primary)" : "var(--color-secondary)" }}
+                    style={{ color: e.type === "constante" ? "var(--color-on-primary-container)" : "var(--color-secondary)" }}
                   >
                     {e.type === "constante" ? "monitor_heart" : "medication"}
                   </span>

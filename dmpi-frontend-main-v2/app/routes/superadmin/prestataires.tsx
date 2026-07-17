@@ -137,7 +137,10 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
                     onChange={() => setType(opt)}
                     className="w-4 h-4"
                   />
-                  <span className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
+                  <span
+                    className="text-body-md font-semibold"
+                    style={{ color: type === opt ? "var(--color-on-primary-container)" : "var(--color-on-surface)" }}
+                  >
                     {TYPE_LABELS[opt] ?? opt}
                   </span>
                 </label>
@@ -305,7 +308,7 @@ export default function SuperAdminPrestataires() {
                     className="text-caption font-semibold px-2.5 py-1 rounded-full"
                     style={{
                       backgroundColor: p.statut === "actif" ? "var(--color-success-container)" : "var(--color-surface-container)",
-                      color: p.statut === "actif" ? "var(--color-success)" : "var(--color-on-surface-variant)",
+                      color: p.statut === "actif" ? "var(--color-on-success-container)" : "var(--color-on-surface-variant)",
                     }}
                   >
                     {p.statut === "actif" ? "Actif" : "Inactif"}
