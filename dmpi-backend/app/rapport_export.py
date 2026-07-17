@@ -28,7 +28,6 @@ def _lignes_cumul(cumul: dict) -> list[tuple[str, str, str]]:
     return [
         ("Consultations (cumul annuel)", f"{cumul['consultations_ytd']:,}".replace(",", " "), _fmt_variation(cumul["consultations_ytd_variation"])),
         ("Patients actifs", f"{cumul['patients_actifs']:,}".replace(",", " "), _fmt_variation(cumul["patients_actifs_variation"])),
-        ("Taux de couverture", f"{cumul['taux_couverture']}%", _fmt_variation(cumul["taux_couverture_variation_pts"], " pts")),
         ("Établissements actifs", f"{cumul['etablissements_actifs']}/{cumul['etablissements_total']}", "—"),
         ("Ordonnances émises", f"{cumul['ordonnances_emises']:,}".replace(",", " "), _fmt_variation(cumul["ordonnances_emises_variation"])),
         ("Alertes sécurité", str(cumul["alertes_securite"]), _fmt_variation(cumul["alertes_securite_variation"], "")),
@@ -128,7 +127,6 @@ def generer_pdf(rapport: dict) -> bytes:
         ]))
         elements.append(table_chiffres)
         elements.append(Spacer(1, 0.4 * cm))
-        elements.append(Paragraph(f"Taux de couverture : {mois['tauxCouverture']}%", styles["Normal"]))
 
         elements.append(Paragraph("Top diagnostics CIM-10", sous_section_style))
         if mois["topDiagnostics"]:
@@ -191,10 +189,10 @@ def generer_excel(rapport: dict) -> bytes:
     feuille_cumul.column_dimensions["C"].width = 18
 
     feuille_mensuel = classeur.create_sheet("Rapport mensuel")
-    _entete(feuille_mensuel, ["Mois", "Consultations", "Patients", "Ordonnances", "Établissements actifs", "Taux de couverture (%)"])
+    _entete(feuille_mensuel, ["Mois", "Consultations", "Patients", "Ordonnances", "Établissements actifs"])
     for m in rapport["rapports_mensuels"]:
-        feuille_mensuel.append([m["mois"], m["consultations"], m["patients"], m["ordonnances"], m["etablissements"], m["tauxCouverture"]])
-    for col, largeur in zip("ABCDEF", [18, 14, 12, 14, 20, 20]):
+        feuille_mensuel.append([m["mois"], m["consultations"], m["patients"], m["ordonnances"], m["etablissements"]])
+    for col, largeur in zip("ABCDE", [18, 14, 12, 14, 20]):
         feuille_mensuel.column_dimensions[col].width = largeur
 
     feuille_diag = classeur.create_sheet("Top diagnostics")

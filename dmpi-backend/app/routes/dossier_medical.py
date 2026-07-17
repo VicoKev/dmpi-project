@@ -69,7 +69,7 @@ async def obtenir_dossier_medical(
     if len(npi) != 10 or not npi.isdigit():
         raise HTTPException(
             status_code=400,
-            detail="Le NPI doit être composé de exactement 10 chiffres."
+            detail="Le NPI doit être composé d'exactement 10 chiffres."
         )
 
     dossier = await dossiers_medicaux_collection.find_one({"npi": npi})

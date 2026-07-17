@@ -206,7 +206,7 @@ async def lister_ordonnances_patient(
         )
         raise HTTPException(
             status_code=400,
-            detail="Le NPI doit être composé de exactement 10 chiffres."
+            detail="Le NPI doit être composé d'exactement 10 chiffres."
         )
 
     cursor = ordonnances_collection.find({"npi": npi}).sort("created_at", -1)

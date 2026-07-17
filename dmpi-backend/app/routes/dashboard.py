@@ -498,10 +498,6 @@ async def _construire_rapport_annuel(db: AsyncSession) -> dict:
     cumul_actuel = await _cumul_periode(db, debut_annee, maintenant)
     cumul_precedent = await _cumul_periode(db, debut_annee_precedente, fin_periode_precedente)
 
-    total_dossiers = await dossiers_medicaux_collection.count_documents({})
-    taux_couverture = round((cumul_actuel["patients_actifs"] / total_dossiers * 100)) if total_dossiers > 0 else 0
-    taux_couverture_precedent = round((cumul_precedent["patients_actifs"] / total_dossiers * 100)) if total_dossiers > 0 else 0
-
     etablissements_actifs = await etablissements_collection.count_documents({"statut": "actif"})
     etablissements_total = await etablissements_collection.count_documents({})
 
@@ -651,7 +647,6 @@ async def _construire_rapport_annuel(db: AsyncSession) -> dict:
             "patients": patients_mois,
             "ordonnances": ordonnances_par_mois.get(key, 0),
             "etablissements": etabs_actifs_mois,
-            "tauxCouverture": round((patients_mois / total_dossiers * 100)) if total_dossiers > 0 else 0,
             "topDiagnostics": diagnostics_par_mois.get(key, []),
             "topEtablissements": etablissements_par_mois.get(key, []),
         })
@@ -662,8 +657,6 @@ async def _construire_rapport_annuel(db: AsyncSession) -> dict:
             "consultations_ytd_variation": _variation_pct(cumul_actuel["consultations"], cumul_precedent["consultations"]),
             "patients_actifs": cumul_actuel["patients_actifs"],
             "patients_actifs_variation": _variation_pct(cumul_actuel["patients_actifs"], cumul_precedent["patients_actifs"]),
-            "taux_couverture": taux_couverture,
-            "taux_couverture_variation_pts": taux_couverture - taux_couverture_precedent,
             "etablissements_actifs": etablissements_actifs,
             "etablissements_total": etablissements_total,
             "ordonnances_emises": cumul_actuel["ordonnances"],

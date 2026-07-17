@@ -10,7 +10,7 @@ from app.audit import enregistrer_log
 
 router = APIRouter(
     prefix="/etablissements",
-    tags=["Etablissements"]
+    tags=["Établissements"]
 )
 
 def format_etablissement(doc: dict) -> dict:
@@ -216,7 +216,7 @@ async def modifier_etablissement(
     )
 
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Etablissement introuvable")
+        raise HTTPException(status_code=404, detail="Établissement introuvable.")
         
     updated = await db["etablissements"].find_one({"_id": ObjectId(etablissement_id)})
     updated["directeur"] = await _obtenir_directeur(db_sql, etablissement_id)
@@ -246,7 +246,7 @@ async def supprimer_etablissement(
     )
     
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Etablissement introuvable")
+        raise HTTPException(status_code=404, detail="Établissement introuvable.")
         
     await enregistrer_log(
         utilisateur_email=current_user.email,
@@ -273,7 +273,7 @@ async def reactiver_etablissement(
     )
     
     if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Etablissement introuvable")
+        raise HTTPException(status_code=404, detail="Établissement introuvable.")
         
     await enregistrer_log(
         utilisateur_email=current_user.email,

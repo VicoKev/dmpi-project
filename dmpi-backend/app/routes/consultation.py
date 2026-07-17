@@ -68,7 +68,7 @@ async def lister_consultations_patient(
         )
         raise HTTPException(
             status_code=400,
-            detail="Le NPI doit être composé de exactement 10 chiffres."
+            detail="Le NPI doit être composé d'exactement 10 chiffres."
         )
 
     cursor = consultations_collection.find({"npi": npi})

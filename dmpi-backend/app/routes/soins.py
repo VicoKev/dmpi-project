@@ -23,7 +23,7 @@ def _valider_npi(npi: str):
     if len(npi) != 10 or not npi.isdigit():
         raise HTTPException(
             status_code=400,
-            detail="Le NPI doit être composé de exactement 10 chiffres."
+            detail="Le NPI doit être composé d'exactement 10 chiffres."
         )
 
 

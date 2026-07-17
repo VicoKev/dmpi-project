@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Request
 import os
+from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from app.context import client_ip
 from app.database_mongo import database as mongo_database
+from app.database_sql import engine as sql_engine
+from app import kafka_producer
 from app.routes.dossier_medical import router as dossier_router
 from app.routes.consultation import router as consultation_router
 from app.routes.ordonnance import router as ordonnance_router
@@ -24,7 +27,7 @@ from app.routes.document_medical import router as document_medical_router
 from app.kafka_producer import demarrer_producer, arreter_producer
 
 app = FastAPI(
-    title="DMPI - Dossier Medical Partage Interoperable du Benin",
+    title="DMPI - Dossier Médical Partagé Interopérable du Bénin",
     description="API Backend pour le projet DMPI - Architecture Polyglotte (SQL + NoSQL/FHIR)",
     version="1.0.0"
 )
@@ -98,3 +101,18 @@ async def check_mongo_connection():
         return {"status": "success", "message": "Connexion à MongoDB réussie !"}
     except Exception as e:
         return {"status": "error", "message": "Échec MongoDB", "details": str(e)}
+
+@app.get("/health/postgres")
+async def check_postgres_connection():
+    try:
+        async with sql_engine.connect() as connection:
+            await connection.execute(text("SELECT 1"))
+        return {"status": "success", "message": "Connexion à PostgreSQL réussie !"}
+    except Exception as e:
+        return {"status": "error", "message": "Échec PostgreSQL", "details": str(e)}
+
+@app.get("/health/kafka")
+async def check_kafka_connection():
+    if kafka_producer.producer is not None:
+        return {"status": "success", "message": "Producteur Kafka actif."}
+    return {"status": "error", "message": "Producteur Kafka indisponible."}

@@ -270,7 +270,7 @@ async def consulter_journal_audit(
     """
     Console d'audit & logs globaux : accès exclusif à l'intégralité du
     registre de traçabilité (append-only). Réservé au Super Administrateur
-    national, pour veiller au respect du secret médical et le volet juridique.
+    national, pour veiller au respect du secret médical et au volet juridique.
     """
     from sqlalchemy.orm import aliased
 
