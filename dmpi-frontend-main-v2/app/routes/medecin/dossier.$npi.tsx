@@ -204,7 +204,8 @@ export default function DossierPatientPage() {
               </h2>
               {prescriptions.length > 0 ? (
                 <PrescriptionList
-                  prescriptions={prescriptions.slice(0, 3)}
+                  prescriptions={prescriptions}
+                  limit={3}
                   peutRenouveler
                   onRenouvele={rafraichirPrescriptions}
                 />

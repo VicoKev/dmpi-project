@@ -18,6 +18,7 @@ interface BackendOrdonnance {
   auteur?: string;
   etablissement_nom?: string | null;
   renouvelee_depuis?: string | null;
+  renouvelee_depuis_index?: number | null;
 }
 
 function mapOrdonnance(
@@ -35,6 +36,7 @@ function mapOrdonnance(
     etablissement: ordo.etablissement_nom ?? "",
     date: ordo.created_at,
     renouveleeDepuis: ordo.renouvelee_depuis ?? null,
+    renouveleeDepuisIndex: ordo.renouvelee_depuis_index ?? null,
     lignes: ordo.traitements.map((m, i) => ({
       id: `lig_${index}_${i}`,
       medicament: m.nom_medicament,
@@ -126,14 +128,22 @@ export function ordonnanceIdDepuisPrescriptionId(prescriptionId: string): string
 
 /**
  * Renouvelle une ordonnance : crée une nouvelle ordonnance ne reprenant que
- * les médicaments marqués "renouvelable" sur l'originale, sans nouvelle
- * consultation. Réservé aux médecins.
+ * le médicament visé (medicamentIndex, sa position dans les traitements de
+ * l'ordonnance d'origine), sans nouvelle consultation. Réservé aux médecins.
+ * Omettre medicamentIndex renouvelle tous les médicaments renouvelables à la
+ * fois (comportement historique, conservé pour compatibilité).
  */
-export async function renouvelerPrescription(prescriptionId: string): Promise<{ ordonnanceId: string; message: string }> {
+export async function renouvelerPrescription(
+  prescriptionId: string,
+  medicamentIndex?: number
+): Promise<{ ordonnanceId: string; message: string }> {
   const ordonnanceId = ordonnanceIdDepuisPrescriptionId(prescriptionId);
   const result = await apiFetch<{ message: string; ordonnance_id: string; npi_patient: string }>(
     `/ordonnances/${ordonnanceId}/renouveler`,
-    { method: "POST" }
+    {
+      method: "POST",
+      body: JSON.stringify(medicamentIndex !== undefined ? { medicament_index: medicamentIndex } : {}),
+    }
   );
   return { ordonnanceId: result.ordonnance_id, message: result.message };
 }

@@ -8,7 +8,7 @@ from app.database_mongo import (
     etablissements_collection,
     prestataires_partenaires_collection,
 )
-from app.schemas.ordonnance import OrdonnanceMongo, OrdonnanceOut
+from app.schemas.ordonnance import OrdonnanceMongo, OrdonnanceOut, RenouvellementRequest
 from app.schemas.prestataire import PharmaciesProchesResponse, ReferenceLocalisation, PharmacieProche
 from app.security import get_current_user, require_role
 from app.models_sql import User
@@ -117,11 +117,16 @@ async def enregistrer_ordonnance(
 @router.post("/{ordonnance_id}/renouveler", status_code=status.HTTP_201_CREATED)
 async def renouveler_ordonnance(
     ordonnance_id: str,
+    body: RenouvellementRequest | None = None,
     current_user: User = Depends(require_role("medecin"))
 ):
     """
-    Crée une nouvelle ordonnance reprenant uniquement les médicaments marqués
-    'renouvelable' sur l'ordonnance d'origine — sans nouvelle consultation.
+    Crée une nouvelle ordonnance reprenant un médicament marqué 'renouvelable'
+    de l'ordonnance d'origine — sans nouvelle consultation. Si
+    `medicament_index` est fourni, seul ce médicament est renouvelé
+    (permet de renouveler un médicament à la fois sans emporter les autres
+    médicaments renouvelables de la même ordonnance) ; sinon, tous les
+    médicaments renouvelables le sont ensemble (comportement historique).
     """
     try:
         object_id = ObjectId(ordonnance_id)
@@ -132,14 +137,23 @@ async def renouveler_ordonnance(
     if not originale:
         raise HTTPException(status_code=404, detail="Ordonnance introuvable.")
 
-    traitements_renouvelables = [
-        t for t in originale.get("traitements", []) if t.get("renouvelable")
-    ]
-    if not traitements_renouvelables:
-        raise HTTPException(
-            status_code=400,
-            detail="Aucun médicament renouvelable sur cette ordonnance."
-        )
+    tous_traitements = originale.get("traitements", [])
+    medicament_index = body.medicament_index if body else None
+
+    if medicament_index is not None:
+        if medicament_index < 0 or medicament_index >= len(tous_traitements):
+            raise HTTPException(status_code=400, detail="Médicament introuvable sur cette ordonnance.")
+        traitement_vise = tous_traitements[medicament_index]
+        if not traitement_vise.get("renouvelable"):
+            raise HTTPException(status_code=400, detail="Ce médicament n'est pas marqué renouvelable.")
+        traitements_renouvelables = [traitement_vise]
+    else:
+        traitements_renouvelables = [t for t in tous_traitements if t.get("renouvelable")]
+        if not traitements_renouvelables:
+            raise HTTPException(
+                status_code=400,
+                detail="Aucun médicament renouvelable sur cette ordonnance."
+            )
 
     nouvelle_ordonnance = {
         "npi": originale["npi"],
@@ -148,6 +162,7 @@ async def renouveler_ordonnance(
         "notes_additionnelles": None,
         "auteur": current_user.email,
         "renouvelee_depuis": ordonnance_id,
+        "renouvelee_depuis_index": medicament_index,
         "created_at": datetime.utcnow(),
     }
     result = await ordonnances_collection.insert_one(nouvelle_ordonnance)

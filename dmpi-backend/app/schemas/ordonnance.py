@@ -14,7 +14,20 @@ class OrdonnanceMongo(BaseModel):
     notes_additionnelles: str | None = None
     auteur: str | None = Field(None, description="Email du médecin prescripteur")
     renouvelee_depuis: str | None = Field(None, description="ID de l'ordonnance d'origine, si créée par renouvellement")
+    renouvelee_depuis_index: int | None = Field(
+        None,
+        description="Position du médicament renouvelé dans les traitements de l'ordonnance d'origine "
+                     "(None = renouvellement groupé historique, portait sur tous les médicaments renouvelables)."
+    )
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class RenouvellementRequest(BaseModel):
+    medicament_index: int | None = Field(
+        None,
+        description="Position du médicament à renouveler dans les traitements de l'ordonnance. "
+                     "Si omis, tous les médicaments renouvelables sont renouvelés ensemble."
+    )
 
 
 class OrdonnanceOut(OrdonnanceMongo):

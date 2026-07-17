@@ -21,6 +21,16 @@ interface CartePharmaciesProchesProps {
   pharmacies: PharmacieProche[];
 }
 
+function urlItineraire(reference: ReferenceLocalisation, pharmacie: PharmacieProche): string {
+  const params = new URLSearchParams({
+    api: "1",
+    origin: `${reference.latitude},${reference.longitude}`,
+    destination: `${pharmacie.latitude},${pharmacie.longitude}`,
+    travelmode: "driving",
+  });
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
 function AjusterCadrage({ points }: { points: [number, number][] }) {
   const map = useMap();
   if (points.length > 1) {
@@ -58,6 +68,28 @@ export default function CartePharmaciesProches({ reference, pharmacies }: CarteP
               {p.distance_km} km · {p.adresse ?? p.commune ?? ""}
               <br />
               {p.telephone}
+              <div style={{ marginTop: 8 }}>
+                <a
+                  href={urlItineraire(reference, p)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 4,
+                    borderRadius: 9999,
+                    border: "2px solid var(--color-primary)",
+                    color: "var(--color-primary)",
+                    fontWeight: 700,
+                    fontSize: 12,
+                    padding: "4px 10px",
+                    textDecoration: "none",
+                  }}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>directions</span>
+                  Itinéraire
+                </a>
+              </div>
             </Popup>
           </Marker>
         ))}

@@ -44,6 +44,10 @@ export interface Prescription {
   dateExpiration?: string;
   /** ID de l'ordonnance d'origine si celle-ci a été créée par renouvellement */
   renouveleeDepuis?: string | null;
+  /** Position, dans les traitements de l'ordonnance d'origine, du médicament
+   * renouvelé (null = renouvellement groupé historique portant sur tous les
+   * médicaments renouvelables de l'ordonnance). */
+  renouveleeDepuisIndex?: number | null;
   lignes: LigneMedicament[];
   noteGlobale?: string;
   statut: "brouillon" | "signee" | "dispensee" | "expiree";

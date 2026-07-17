@@ -25,6 +25,13 @@ interface SelectRechercheProps {
   disabled?: boolean;
   disabledMessage?: string;
   ariaLabel?: string;
+  /**
+   * Autorise à valider le texte recherché tel quel s'il ne correspond à
+   * aucune option (ex: posologie ou dosage — la liste ne peut pas être
+   * exhaustive). Une entrée "Utiliser « ... »" apparaît alors dans le
+   * panneau, sans jamais bloquer la saisie sur les valeurs proposées.
+   */
+  autoriserSaisieLibre?: boolean;
 }
 
 const selectClass = "w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2 flex items-center justify-between gap-2 text-left cursor-pointer";
@@ -43,6 +50,7 @@ export default function SelectRecherche({
   disabled = false,
   disabledMessage,
   ariaLabel,
+  autoriserSaisieLibre = false,
 }: SelectRechercheProps) {
   const [ouvert, setOuvert] = useState(false);
   const [recherche, setRecherche] = useState("");
@@ -50,6 +58,10 @@ export default function SelectRecherche({
   const rechercheRef = useRef<HTMLInputElement>(null);
 
   const selection = options.find((o) => o.value === value) ?? null;
+  // En mode saisie libre, la valeur courante peut ne correspondre à aucune
+  // option connue (ex: une posologie inhabituelle tapée à la main) — on
+  // l'affiche quand même au lieu de retomber sur le placeholder.
+  const texteAffiche = selection?.label ?? (autoriserSaisieLibre && value ? value : null);
 
   useEffect(() => {
     function fermerSiExterieur(e: MouseEvent) {
@@ -86,6 +98,12 @@ export default function SelectRecherche({
     return parGroupe;
   }, [optionsFiltrees]);
 
+  const rechercheLibre = recherche.trim();
+  const proposerSaisieLibre =
+    autoriserSaisieLibre &&
+    rechercheLibre.length > 0 &&
+    !options.some((o) => o.label.toLowerCase() === rechercheLibre.toLowerCase());
+
   if (disabled) {
     return (
       <div className={selectClass} style={{ ...selectStyle, cursor: "not-allowed", opacity: 0.6 }}>
@@ -103,8 +121,8 @@ export default function SelectRecherche({
         className={selectClass}
         style={selectStyle}
       >
-        <span className="truncate" style={{ color: selection ? "var(--color-on-surface)" : "var(--color-outline)" }}>
-          {selection ? selection.label : placeholder}
+        <span className="truncate" style={{ color: texteAffiche ? "var(--color-on-surface)" : "var(--color-outline)" }}>
+          {texteAffiche ?? placeholder}
         </span>
         <span className="material-symbols-outlined text-[18px] shrink-0" style={{ color: "var(--color-outline)" }}>
           {ouvert ? "expand_less" : "expand_more"}
@@ -142,7 +160,22 @@ export default function SelectRecherche({
           </div>
 
           <div className="overflow-y-auto">
-            {optionsFiltrees.length === 0 ? (
+            {proposerSaisieLibre && (
+              <button
+                type="button"
+                onClick={() => { onChange(rechercheLibre); setOuvert(false); }}
+                className="w-full text-left px-4 py-2.5 flex items-center gap-2 hover:bg-[var(--color-surface-container)] transition-colors border-b"
+                style={{ borderColor: "var(--color-outline-variant)" }}
+              >
+                <span className="material-symbols-outlined text-[18px] shrink-0" style={{ color: "var(--color-primary)" }}>
+                  edit
+                </span>
+                <p className="text-body-md font-semibold truncate" style={{ color: "var(--color-primary)" }}>
+                  Utiliser « {rechercheLibre} »
+                </p>
+              </button>
+            )}
+            {optionsFiltrees.length === 0 && !proposerSaisieLibre ? (
               <p className="text-body-md px-4 py-3" style={{ color: "var(--color-on-surface-variant)" }}>
                 Aucun résultat pour « {recherche} ».
               </p>

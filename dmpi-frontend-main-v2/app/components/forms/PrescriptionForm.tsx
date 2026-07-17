@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 
 import Card, { CardHeader } from "../ui/Card";
 import Input from "../ui/Input";
-import Select from "../ui/Select";
+import SelectRecherche from "../ui/SelectRecherche";
 import Textarea from "../ui/Textarea";
 import Button from "../ui/Button";
 
@@ -42,6 +42,60 @@ const FREQUENCE_OPTIONS = Object.entries(FREQUENCE_LABELS).map(([value, label]) 
   value,
   label,
 }));
+
+// Liste fermée et standard des formes pharmaceutiques — évite les fautes de
+// frappe ("comprimer", "gellule"...) sur un champ dont les valeurs possibles
+// sont en réalité limitées et bien connues.
+const FORME_OPTIONS = [
+  "Comprimé",
+  "Comprimé pelliculé",
+  "Comprimé effervescent",
+  "Gélule",
+  "Capsule",
+  "Sirop",
+  "Solution buvable",
+  "Suspension buvable",
+  "Poudre",
+  "Sachet",
+  "Ampoule injectable",
+  "Solution injectable",
+  "Pommade",
+  "Crème",
+  "Gel",
+  "Patch transdermique",
+  "Suppositoire",
+  "Ovule",
+  "Collyre (gouttes ophtalmiques)",
+  "Gouttes auriculaires",
+  "Gouttes nasales",
+  "Spray nasal",
+  "Inhalateur",
+  "Aérosol",
+  "Lotion",
+  "Autre",
+].map((f) => ({ value: f, label: f }));
+
+// Suggestions pour les champs restés en saisie libre (la posologie et le
+// dosage restent trop variables d'un médicament à l'autre pour une liste
+// fermée) — le sélecteur laisse la saisie libre ouverte (autoriserSaisieLibre)
+// tout en réduisant le risque de faute sur les formulations courantes.
+const POSOLOGIE_OPTIONS = [
+  "1/4 comprimé", "1/2 comprimé", "1 comprimé", "2 comprimés", "3 comprimés",
+  "1 gélule", "2 gélules",
+  "1 sachet",
+  "1 cuillère à café (5 ml)", "1 cuillère à soupe (15 ml)", "5 ml", "10 ml", "15 ml",
+  "1 application", "1 injection",
+  "1 goutte", "2 gouttes", "3 gouttes",
+  "1 bouffée", "2 bouffées",
+  "1 suppositoire",
+  "Selon prescription médicale",
+].map((p) => ({ value: p, label: p }));
+
+const DOSAGE_OPTIONS = [
+  "5 mg", "10 mg", "25 mg", "50 mg", "100 mg", "250 mg", "500 mg", "1 g",
+  "5 ml", "10 ml",
+  "0,5 %", "1 %", "2 %",
+].map((d) => ({ value: d, label: d }));
 
 export default function PrescriptionForm({
   patientNpi,
@@ -134,35 +188,59 @@ export default function PrescriptionForm({
               value={ligne.medicament}
               onChange={(e) => updateLigne(ligne.tempId, { medicament: e.target.value })}
             />
-            <Input
-              label="Dosage"
-              required
-              placeholder="Ex: 500 mg"
-              value={ligne.dosage}
-              onChange={(e) => updateLigne(ligne.tempId, { dosage: e.target.value })}
-            />
-            <Input
-              label="Forme"
-              placeholder="Ex: Comprimé, gélule, sirop…"
-              value={ligne.forme ?? ""}
-              onChange={(e) => updateLigne(ligne.tempId, { forme: e.target.value })}
-            />
-            <Input
-              label="Posologie"
-              placeholder="Ex: 1 comprimé"
-              value={ligne.posologie}
-              onChange={(e) => updateLigne(ligne.tempId, { posologie: e.target.value })}
-            />
-            <Select
-              label="Fréquence"
-              options={FREQUENCE_OPTIONS}
-              value={ligne.frequence}
-              onChange={(e) =>
-                updateLigne(ligne.tempId, {
-                  frequence: e.target.value as FrequenceMedicament,
-                })
-              }
-            />
+            <div className="flex flex-col gap-1">
+              <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
+                Dosage<span className="ml-0.5" style={{ color: "var(--color-error)" }}>*</span>
+              </label>
+              <SelectRecherche
+                value={ligne.dosage}
+                onChange={(v) => updateLigne(ligne.tempId, { dosage: v })}
+                options={DOSAGE_OPTIONS}
+                autoriserSaisieLibre
+                placeholder="Ex: 500 mg"
+                rechercherPlaceholder="Rechercher ou saisir un dosage…"
+                ariaLabel="Dosage"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
+                Forme
+              </label>
+              <SelectRecherche
+                value={ligne.forme ?? ""}
+                onChange={(v) => updateLigne(ligne.tempId, { forme: v })}
+                options={FORME_OPTIONS}
+                placeholder="Sélectionner une forme"
+                rechercherPlaceholder="Rechercher une forme…"
+                ariaLabel="Forme"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
+                Posologie
+              </label>
+              <SelectRecherche
+                value={ligne.posologie}
+                onChange={(v) => updateLigne(ligne.tempId, { posologie: v })}
+                options={POSOLOGIE_OPTIONS}
+                autoriserSaisieLibre
+                placeholder="Ex: 1 comprimé"
+                rechercherPlaceholder="Rechercher ou saisir une posologie…"
+                ariaLabel="Posologie"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
+                Fréquence
+              </label>
+              <SelectRecherche
+                value={ligne.frequence}
+                onChange={(v) => updateLigne(ligne.tempId, { frequence: v as FrequenceMedicament })}
+                options={FREQUENCE_OPTIONS}
+                rechercherPlaceholder="Rechercher une fréquence…"
+                ariaLabel="Fréquence"
+              />
+            </div>
             <Input
               label="Durée (jours)"
               type="number"

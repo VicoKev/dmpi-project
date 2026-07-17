@@ -4,11 +4,35 @@
 import { useEffect, useState } from "react";
 import Card, { CardHeader } from "../ui/Card";
 import Button from "../ui/Button";
-import { getPharmaciesProches, type PharmaciesProchesResponse } from "../../services/prescriptionService";
+import {
+  getPharmaciesProches,
+  type PharmaciesProchesResponse,
+  type ReferenceLocalisation,
+  type PharmacieProche,
+} from "../../services/prescriptionService";
 import CartePharmaciesProchesLazy from "./CartePharmaciesProchesLazy";
 
 interface PharmaciesProchesCardProps {
   prescriptionId: string;
+}
+
+/**
+ * Google Maps ouvre un calcul d'itinéraire vers la pharmacie. Si on a une
+ * position de référence (établissement, ou position réelle du patient après
+ * "Utiliser ma position"), on la passe comme point de départ pour que
+ * l'itinéraire corresponde exactement aux distances affichées ; sinon
+ * Google Maps demande la position de l'appareil au moment de l'ouverture.
+ */
+function urlItineraire(reference: ReferenceLocalisation | null, pharmacie: PharmacieProche): string {
+  const params = new URLSearchParams({
+    api: "1",
+    destination: `${pharmacie.latitude},${pharmacie.longitude}`,
+    travelmode: "driving",
+  });
+  if (reference) {
+    params.set("origin", `${reference.latitude},${reference.longitude}`);
+  }
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
 }
 
 export default function PharmaciesProchesCard({ prescriptionId }: PharmaciesProchesCardProps) {
@@ -98,17 +122,29 @@ export default function PharmaciesProchesCard({ prescriptionId }: PharmaciesProc
         <>
           <div className="flex flex-col gap-2 mb-3">
             {donnees.pharmacies.map((p) => (
-              <div key={p.id} className="flex items-center justify-between gap-3 p-3 rounded-xl" style={{ backgroundColor: "var(--color-surface-container-low)" }}>
-                <div className="min-w-0">
-                  <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>{p.nom}</p>
+              <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl" style={{ backgroundColor: "var(--color-surface-container-low)" }}>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>{p.nom}</p>
+                    <span className="text-caption font-semibold px-2 py-0.5 rounded-full shrink-0" style={{ backgroundColor: "var(--color-primary-container)", color: "var(--color-on-primary-container)" }}>
+                      {p.distance_km} km
+                    </span>
+                  </div>
                   <p className="text-caption truncate" style={{ color: "var(--color-on-surface-variant)" }}>
                     {p.adresse ?? p.commune}{p.horaires ? ` · ${p.horaires}` : ""}
                   </p>
                   <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>{p.telephone}</p>
                 </div>
-                <span className="text-body-md font-bold shrink-0" style={{ color: "var(--color-primary)" }}>
-                  {p.distance_km} km
-                </span>
+                <a
+                  href={urlItineraire(donnees.reference, p)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full font-sans font-bold transition-all duration-200 active:scale-95 cursor-pointer hover:bg-[var(--color-surface-container)] border-2 px-4 py-2 text-label-bold shrink-0 self-start sm:self-auto"
+                  style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)", backgroundColor: "transparent" }}
+                >
+                  <span className="material-symbols-outlined text-[16px]">directions</span>
+                  Itinéraire
+                </a>
               </div>
             ))}
           </div>
