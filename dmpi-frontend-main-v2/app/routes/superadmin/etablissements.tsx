@@ -1,5 +1,6 @@
 // Gestion des Etablissements — Espace Super Admin National (données réelles MongoDB)
 import { useState, useEffect, useCallback } from "react";
+import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -212,6 +213,7 @@ export default function SuperAdminEtablissements() {
   const [showForm, setShowForm] = useState(false);
   const [editingEtab, setEditingEtab] = useState<Etablissement | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const askConfirmation = useConfirm();
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -247,7 +249,13 @@ export default function SuperAdminEtablissements() {
   };
 
   const handleDelete = async (etab: Etablissement) => {
-    if (!confirm(`Désactiver l'établissement "${etab.nom}" ?`)) return;
+    const ok = await askConfirmation({
+      title: "Désactiver l'établissement",
+      message: `Désactiver l'établissement "${etab.nom}" ?`,
+      confirmLabel: "Désactiver",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await deleteEtablissement(etab.id);
       setEtablissements(prev => prev.map(e => e.id === etab.id ? { ...e, statut: "inactif" } : e));
@@ -259,7 +267,12 @@ export default function SuperAdminEtablissements() {
   };
 
   const handleReactivate = async (etab: Etablissement) => {
-    if (!confirm(`Réactiver l'établissement "${etab.nom}" ?`)) return;
+    const ok = await askConfirmation({
+      title: "Réactiver l'établissement",
+      message: `Réactiver l'établissement "${etab.nom}" ?`,
+      confirmLabel: "Réactiver",
+    });
+    if (!ok) return;
     try {
       await reactivateEtablissement(etab.id);
       setEtablissements(prev => prev.map(e => e.id === etab.id ? { ...e, statut: "actif" } : e));

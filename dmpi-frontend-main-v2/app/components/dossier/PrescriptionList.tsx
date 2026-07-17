@@ -1,5 +1,6 @@
 // Liste des ordonnances d'un patient
 import { useState } from "react";
+import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../ui/Card";
 import Badge, { StatutBadge } from "../ui/Badge";
 import Button from "../ui/Button";
@@ -32,6 +33,7 @@ export default function PrescriptionList({
 }) {
   const [renouvellementEnCours, setRenouvellementEnCours] = useState<string | null>(null);
   const [erreurParLigne, setErreurParLigne] = useState<Record<string, string>>({});
+  const askConfirmation = useConfirm();
 
   // `p.id` est préfixé ("pres_<idMongo>") côté frontend, mais
   // `renouveleeDepuis` (écrit par le backend) contient l'id Mongo brut — sans
@@ -59,7 +61,12 @@ export default function PrescriptionList({
   const prescriptionsAffichees = limit ? prescriptions.slice(0, limit) : prescriptions;
 
   const handleRenouveler = async (prescriptionId: string, medicamentIndex: number, medicamentNom: string) => {
-    if (!confirm(`Renouveler « ${medicamentNom} » ? Une nouvelle ordonnance sera créée pour ce médicament.`)) return;
+    const ok = await askConfirmation({
+      title: "Renouveler le médicament",
+      message: `Renouveler « ${medicamentNom} » ? Une nouvelle ordonnance sera créée pour ce médicament.`,
+      confirmLabel: "Renouveler",
+    });
+    if (!ok) return;
     const cle = `${prescriptionId}_${medicamentIndex}`;
     setRenouvellementEnCours(cle);
     setErreurParLigne((prev) => {

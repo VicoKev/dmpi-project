@@ -1,6 +1,7 @@
 // Gestion des prestataires partenaires (pharmacies, laboratoires) — Espace Super Admin National
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
+import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -181,6 +182,7 @@ export default function SuperAdminPrestataires() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Prestataire | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const askConfirmation = useConfirm();
 
   const showToast = (message: string, type: "success" | "error" = "success") => {
     setToast({ message, type });
@@ -224,7 +226,13 @@ export default function SuperAdminPrestataires() {
 
   const handleToggleStatut = async (p: Prestataire) => {
     const action = p.statut === "actif" ? "désactiver" : "réactiver";
-    if (!confirm(`Voulez-vous ${action} "${p.nom}" ?`)) return;
+    const ok = await askConfirmation({
+      title: p.statut === "actif" ? "Désactiver le prestataire" : "Réactiver le prestataire",
+      message: `Voulez-vous ${action} "${p.nom}" ?`,
+      confirmLabel: action === "désactiver" ? "Désactiver" : "Réactiver",
+      variant: action === "désactiver" ? "danger" : "default",
+    });
+    if (!ok) return;
     try {
       if (p.statut === "actif") {
         await deactivatePrestataire(p.id);

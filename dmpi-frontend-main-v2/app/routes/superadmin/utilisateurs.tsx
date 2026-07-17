@@ -1,6 +1,7 @@
 // Gestion des Utilisateurs — Espace Super Admin National
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router";
+import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -646,6 +647,7 @@ export default function SuperAdminUtilisateurs() {
   const [search, setSearch] = useState("");
   const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
   const [reactivatingId, setReactivatingId] = useState<number | null>(null);
+  const askConfirmation = useConfirm();
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -753,7 +755,13 @@ export default function SuperAdminUtilisateurs() {
   };
 
   const handleDeactivate = async (user: User) => {
-    if (!confirm(`Désactiver le compte de ${user.prenom} ${user.nom} ? Cette action est réversible.`)) return;
+    const ok = await askConfirmation({
+      title: "Désactiver le compte",
+      message: `Désactiver le compte de ${user.prenom} ${user.nom} ? Cette action est réversible.`,
+      confirmLabel: "Désactiver",
+      variant: "danger",
+    });
+    if (!ok) return;
     setDeactivatingId(user.id);
     try {
       const updated = await deactivateUser(user.id);

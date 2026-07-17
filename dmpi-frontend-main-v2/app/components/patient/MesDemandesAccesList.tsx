@@ -1,5 +1,6 @@
 // Suivi des demandes d'accès portail soumises par le médecin/infirmier connecté
 import { useState, useEffect, useCallback } from "react";
+import { useConfirm } from "../../contexts/ConfirmContext";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import {
@@ -20,6 +21,7 @@ export default function MesDemandesAccesList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<number | null>(null);
+  const askConfirmation = useConfirm();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,7 +40,13 @@ export default function MesDemandesAccesList() {
   }, [load]);
 
   const handleAnnuler = async (demande: DemandeAcces) => {
-    if (!confirm(`Annuler la demande d'accès de ${demande.prenom} ${demande.nom} ?`)) return;
+    const ok = await askConfirmation({
+      title: "Annuler la demande",
+      message: `Annuler la demande d'accès de ${demande.prenom} ${demande.nom} ?`,
+      confirmLabel: "Annuler la demande",
+      variant: "danger",
+    });
+    if (!ok) return;
     setCancelingId(demande.id);
     try {
       const updated = await annulerDemandeAcces(demande.id);
