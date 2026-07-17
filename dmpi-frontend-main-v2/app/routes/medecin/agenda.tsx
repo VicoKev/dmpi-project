@@ -1,18 +1,22 @@
 // Agenda médecin — Planification et gestion des rendez-vous
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
-import { StatutBadge } from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import Spinner from "../../components/ui/Spinner";
 import {
   getRdvByMedecin,
   createRdv,
+  modifierRdv,
   annulerRdv,
+  terminerRdv,
   isRdvPasse,
-  formatRdvDate,
+  estACloturer,
   formatRdvTime,
+  versISOLocal,
+  dateLocaleAujourdhui,
   type RendezVous,
 } from "../../services/rdvService";
 import { getPatientByNpi, validateNpi } from "../../services/patientService";
@@ -24,36 +28,63 @@ const STATUT_CFG = {
   complete: { label: "Effectué", color: "var(--color-outline)", bg: "var(--color-surface-container)", icon: "task_alt" },
 };
 
-// ─── Formulaire création RDV ─────────────────────────────────────────────────
+const CONFIRMATION_PATIENT_CFG = {
+  en_attente: { label: "En attente de réponse du patient", color: "var(--color-on-warning-container)", bg: "var(--color-warning-container)", icon: "hourglass_empty" },
+  confirme: { label: "Présence confirmée par le patient", color: "var(--color-on-success-container)", bg: "var(--color-success-container)", icon: "check_circle" },
+  empechement: { label: "Empêchement signalé par le patient", color: "var(--color-on-error-container)", bg: "var(--color-error-container)", icon: "report" },
+};
 
-interface FormNouveauRdv {
+const DUREE_OPTIONS = [15, 30, 45, 60];
+
+function libelleDuree(minutes: number): string {
+  return minutes === 60 ? "1h" : `${minutes} min`;
+}
+
+const dateAujourdhui = dateLocaleAujourdhui;
+
+/** Combine une date (YYYY-MM-DD) et une heure (HH:MM) en Date locale, ou null si incomplet/invalide. */
+function combinerDateHeure(dateStr: string, heureStr: string): Date | null {
+  if (!dateStr || !heureStr) return null;
+  const d = new Date(`${dateStr}T${heureStr}:00`);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// ─── Formulaire création / reprogrammation RDV ───────────────────────────────
+
+interface FormRdv {
   npiInput: string;
   patient: PatientSearchResult | null;
   searchError: string | null;
   searching: boolean;
   dateRdv: string;
   heureRdv: string;
+  duree: number;
   motif: string;
   notes: string;
   submitting: boolean;
   submitError: string | null;
 }
 
-function NouveauRdvForm({ onCreated }: { onCreated: (rdv: RendezVous) => void }) {
-  const [form, setForm] = useState<FormNouveauRdv>({
+function formVide(): FormRdv {
+  return {
     npiInput: "",
     patient: null,
     searchError: null,
     searching: false,
     dateRdv: "",
     heureRdv: "08:00",
+    duree: 30,
     motif: "",
     notes: "",
     submitting: false,
     submitError: null,
-  });
+  };
+}
 
-  const update = (patch: Partial<FormNouveauRdv>) =>
+function NouveauRdvForm({ onCreated }: { onCreated: () => void }) {
+  const [form, setForm] = useState<FormRdv>(formVide());
+
+  const update = (patch: Partial<FormRdv>) =>
     setForm((p) => ({ ...p, ...patch }));
 
   const rechercherPatient = async () => {
@@ -71,34 +102,26 @@ function NouveauRdvForm({ onCreated }: { onCreated: (rdv: RendezVous) => void })
     }
   };
 
+  const dateHeure = combinerDateHeure(form.dateRdv, form.heureRdv);
+  const dateHeurePassee = dateHeure !== null && dateHeure.getTime() <= Date.now();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.patient || !form.dateRdv || !form.motif.trim()) return;
+    if (!form.patient || !dateHeure || !form.motif.trim() || dateHeurePassee) return;
 
     update({ submitting: true, submitError: null });
     try {
-      const dateIso = `${form.dateRdv}T${form.heureRdv}:00`;
       await createRdv({
         npi_patient: form.patient.npi,
         nom_patient: form.patient.nom,
         prenom_patient: form.patient.prenom,
-        date_rdv: dateIso,
+        date_rdv: versISOLocal(dateHeure),
+        duree_minutes: form.duree,
         motif: form.motif.trim(),
         notes: form.notes.trim() || undefined,
       });
-
-      // Refresh: on refetch depuis l'API pour avoir l'_id
-      update({
-        submitting: false,
-        npiInput: "",
-        patient: null,
-        dateRdv: "",
-        heureRdv: "08:00",
-        motif: "",
-        notes: "",
-      });
-      // Notify parent to refresh list
-      onCreated({} as RendezVous);
+      setForm(formVide());
+      onCreated();
     } catch (err) {
       update({ submitting: false, submitError: (err as Error).message || "Erreur lors de la création." });
     }
@@ -118,7 +141,7 @@ function NouveauRdvForm({ onCreated }: { onCreated: (rdv: RendezVous) => void })
               id="npi-rdv"
               placeholder="10 chiffres"
               value={form.npiInput}
-              onChange={(e) => update({ npiInput: e.target.value, patient: null, searchError: null })}
+              onChange={(e) => update({ npiInput: e.target.value.replace(/\D/g, "").slice(0, 10), patient: null, searchError: null })}
               maxLength={10}
             />
             <Button
@@ -147,14 +170,14 @@ function NouveauRdvForm({ onCreated }: { onCreated: (rdv: RendezVous) => void })
         </div>
 
         {/* Date et heure */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Date</label>
             <Input
               id="date-rdv"
               type="date"
               value={form.dateRdv}
-              min={new Date().toISOString().split("T")[0]}
+              min={dateAujourdhui()}
               onChange={(e) => update({ dateRdv: e.target.value })}
             />
           </div>
@@ -164,8 +187,37 @@ function NouveauRdvForm({ onCreated }: { onCreated: (rdv: RendezVous) => void })
               id="heure-rdv"
               type="time"
               value={form.heureRdv}
+              min={form.dateRdv === dateAujourdhui() ? new Date().toTimeString().slice(0, 5) : undefined}
               onChange={(e) => update({ heureRdv: e.target.value })}
             />
+          </div>
+        </div>
+        {dateHeurePassee && (
+          <p className="text-caption -mt-2 flex items-center gap-1" style={{ color: "var(--color-error)" }}>
+            <span className="material-symbols-outlined text-[14px]">error</span>
+            La date et l'heure doivent être dans le futur.
+          </p>
+        )}
+
+        {/* Durée */}
+        <div className="flex flex-col gap-1">
+          <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Durée</label>
+          <div className="flex gap-2 flex-wrap">
+            {DUREE_OPTIONS.map((d) => (
+              <button
+                key={d}
+                type="button"
+                onClick={() => update({ duree: d })}
+                className="px-4 py-2 rounded-full text-body-md font-semibold border-2 transition-all"
+                style={
+                  form.duree === d
+                    ? { borderColor: "var(--color-primary)", backgroundColor: "var(--color-primary-container)", color: "var(--color-on-primary-container)" }
+                    : { borderColor: "var(--color-outline-variant)", color: "var(--color-on-surface-variant)" }
+                }
+              >
+                {libelleDuree(d)}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -198,30 +250,127 @@ function NouveauRdvForm({ onCreated }: { onCreated: (rdv: RendezVous) => void })
         <Button
           type="submit"
           variant="primary"
-          disabled={form.submitting || !form.patient || !form.dateRdv || !form.motif.trim()}
+          loading={form.submitting}
+          disabled={form.submitting || !form.patient || !dateHeure || !form.motif.trim() || dateHeurePassee}
         >
-          {form.submitting ? "Planification…" : "Planifier le rendez-vous"}
+          Planifier le rendez-vous
         </Button>
       </form>
     </Card>
   );
 }
 
+// ─── Formulaire de reprogrammation (inline, dans la carte du RDV) ───────────
+
+function ReprogrammerForm({ rdv, onDone, onCancel }: { rdv: RendezVous; onDone: () => void; onCancel: () => void }) {
+  const initial = new Date(rdv.date_rdv);
+  const [dateRdv, setDateRdv] = useState(versISOLocal(initial).slice(0, 10));
+  const [heureRdv, setHeureRdv] = useState(initial.toTimeString().slice(0, 5));
+  const [duree, setDuree] = useState(rdv.duree_minutes ?? 30);
+  const [motif, setMotif] = useState(rdv.motif);
+  const [notes, setNotes] = useState(rdv.notes ?? "");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const dateHeure = combinerDateHeure(dateRdv, heureRdv);
+  const dateHeurePassee = dateHeure !== null && dateHeure.getTime() <= Date.now();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!dateHeure || !motif.trim() || dateHeurePassee) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await modifierRdv(rdv._id, {
+        date_rdv: versISOLocal(dateHeure),
+        duree_minutes: duree,
+        motif: motif.trim(),
+        notes: notes.trim() || undefined,
+      });
+      onDone();
+    } catch (err) {
+      setError((err as Error).message || "Erreur lors de la reprogrammation.");
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3 mt-3 pt-3 border-t" style={{ borderColor: "var(--color-outline-variant)" }}>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <Input type="date" label="Date" value={dateRdv} min={dateAujourdhui()} onChange={(e) => setDateRdv(e.target.value)} />
+        <Input type="time" label="Heure" value={heureRdv} onChange={(e) => setHeureRdv(e.target.value)} />
+      </div>
+      {dateHeurePassee && (
+        <p className="text-caption flex items-center gap-1" style={{ color: "var(--color-error)" }}>
+          <span className="material-symbols-outlined text-[14px]">error</span>
+          La date et l'heure doivent être dans le futur.
+        </p>
+      )}
+      <div className="flex gap-2 flex-wrap">
+        {DUREE_OPTIONS.map((d) => (
+          <button
+            key={d}
+            type="button"
+            onClick={() => setDuree(d)}
+            className="px-3 py-1.5 rounded-full text-caption font-semibold border-2 transition-all"
+            style={
+              duree === d
+                ? { borderColor: "var(--color-primary)", backgroundColor: "var(--color-primary-container)", color: "var(--color-on-primary-container)" }
+                : { borderColor: "var(--color-outline-variant)", color: "var(--color-on-surface-variant)" }
+            }
+          >
+            {libelleDuree(d)}
+          </button>
+        ))}
+      </div>
+      <Input label="Motif" value={motif} onChange={(e) => setMotif(e.target.value)} />
+      <Input label="Notes (facultatif)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+      {error && <p className="text-caption" style={{ color: "var(--color-error)" }}>{error}</p>}
+      <div className="flex gap-2 justify-end">
+        <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={submitting}>Annuler</Button>
+        <Button type="submit" size="sm" loading={submitting} disabled={!dateHeure || !motif.trim() || dateHeurePassee}>
+          Enregistrer
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 // ─── Carte RDV ───────────────────────────────────────────────────────────────
 
-function RdvCard({ rdv, onAnnule }: { rdv: RendezVous; onAnnule: (id: string) => void }) {
+function RdvCard({ rdv, onChanged }: { rdv: RendezVous; onChanged: () => void }) {
   const [cancelling, setCancelling] = useState(false);
+  const [terminating, setTerminating] = useState(false);
+  const [reprogrammer, setReprogrammer] = useState(false);
+  const askConfirmation = useConfirm();
   const cfg = STATUT_CFG[rdv.statut];
+  const confirmationCfg = CONFIRMATION_PATIENT_CFG[rdv.confirmation_patient];
   const passe = isRdvPasse(rdv);
 
   const handleAnnuler = async () => {
-    if (!confirm("Confirmer l'annulation de ce rendez-vous ?")) return;
+    const ok = await askConfirmation({
+      title: "Annuler le rendez-vous",
+      message: "Confirmer l'annulation de ce rendez-vous ?",
+      confirmLabel: "Annuler le RDV",
+      variant: "danger",
+    });
+    if (!ok) return;
     setCancelling(true);
     try {
       await annulerRdv(rdv._id);
-      onAnnule(rdv._id);
+      onChanged();
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleTerminer = async () => {
+    setTerminating(true);
+    try {
+      await terminerRdv(rdv._id);
+      onChanged();
+    } finally {
+      setTerminating(false);
     }
   };
 
@@ -251,7 +400,7 @@ function RdvCard({ rdv, onAnnule }: { rdv: RendezVous; onAnnule: (id: string) =>
               {rdv.motif}
             </p>
             <p className="text-caption mt-0.5" style={{ color: "var(--color-on-surface-variant)" }}>
-              {formatRdvTime(rdv.date_rdv)} · {rdv.prenom_patient} {rdv.nom_patient}
+              {formatRdvTime(rdv.date_rdv)} ({rdv.duree_minutes ?? 30} min) · {rdv.prenom_patient} {rdv.nom_patient}
               <span className="ml-1 opacity-60">({rdv.npi_patient})</span>
             </p>
             {rdv.notes && (
@@ -259,30 +408,74 @@ function RdvCard({ rdv, onAnnule }: { rdv: RendezVous; onAnnule: (id: string) =>
                 {rdv.notes}
               </p>
             )}
+            {rdv.statut === "confirme" && !passe && (
+              <div className="mt-1.5">
+                <div
+                  className="flex items-center gap-1.5 w-fit px-2 py-1 rounded-full"
+                  style={{ backgroundColor: confirmationCfg.bg, color: confirmationCfg.color }}
+                >
+                  <span className="material-symbols-outlined text-[12px]">{confirmationCfg.icon}</span>
+                  <span className="text-caption font-semibold">{confirmationCfg.label}</span>
+                </div>
+                {/* Le patient peut préciser s'il faut attendre sa disponibilité
+                    ou reprogrammer directement, plutôt que de le deviner. */}
+                {rdv.confirmation_patient === "empechement" && rdv.message_empechement && (
+                  <p className="text-caption mt-1 italic" style={{ color: "var(--color-on-surface-variant)" }}>
+                    « {rdv.message_empechement} »
+                  </p>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Statut + annulation */}
-        <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 shrink-0">
-          <div
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
-            style={{ backgroundColor: cfg.bg, color: cfg.color }}
-          >
-            <span className="material-symbols-outlined filled text-[14px]">{cfg.icon}</span>
-            <span className="text-caption font-semibold">{cfg.label}</span>
-          </div>
-          {!passe && rdv.statut === "confirme" && (
-            <button
-              onClick={handleAnnuler}
-              disabled={cancelling}
-              className="text-caption underline"
-              style={{ color: "var(--color-error)" }}
+        {/* Statut + actions */}
+        <div className="flex flex-row flex-wrap sm:flex-col items-center sm:items-end gap-2 shrink-0">
+          {rdv.statut !== "confirme" && (
+            <div
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full"
+              style={{ backgroundColor: cfg.bg, color: cfg.color }}
             >
-              {cancelling ? "…" : "Annuler"}
-            </button>
+              <span className="material-symbols-outlined filled text-[14px]">{cfg.icon}</span>
+              <span className="text-caption font-semibold">{cfg.label}</span>
+            </div>
+          )}
+          {rdv.statut === "confirme" && !passe && (
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                icon={reprogrammer ? "close" : "edit_calendar"}
+                onClick={() => setReprogrammer((v) => !v)}
+              >
+                {reprogrammer ? "Fermer" : "Reprogrammer"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                icon="cancel"
+                loading={cancelling}
+                onClick={handleAnnuler}
+              >
+                Annuler
+              </Button>
+            </div>
+          )}
+          {estACloturer(rdv) && (
+            <Button variant="outline" size="sm" icon="task_alt" loading={terminating} onClick={handleTerminer}>
+              Marquer effectué
+            </Button>
           )}
         </div>
       </div>
+
+      {reprogrammer && (
+        <ReprogrammerForm
+          rdv={rdv}
+          onDone={() => { setReprogrammer(false); onChanged(); }}
+          onCancel={() => setReprogrammer(false)}
+        />
+      )}
     </Card>
   );
 }
@@ -294,6 +487,12 @@ export default function MedecinAgenda() {
   const [rdvs, setRdvs] = useState<RendezVous[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (message: string, type: "success" | "error" = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const chargerRdvs = async () => {
     if (!user?.email) return;
@@ -304,15 +503,17 @@ export default function MedecinAgenda() {
 
   useEffect(() => {
     chargerRdvs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
   const handleCreated = () => {
     setShowForm(false);
     chargerRdvs();
+    showToast("Rendez-vous planifié avec succès.");
   };
 
-  const handleAnnule = (id: string) => {
-    setRdvs((prev) => prev.map((r) => r._id === id ? { ...r, statut: "annule" } : r));
+  const handleChanged = () => {
+    chargerRdvs();
   };
 
   const aVenir = rdvs.filter((r) => !isRdvPasse(r) && r.statut === "confirme");
@@ -320,6 +521,19 @@ export default function MedecinAgenda() {
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
+      {toast && (
+        <div
+          className="fixed top-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-xl animate-slide-down text-body-md font-semibold"
+          style={{
+            backgroundColor: toast.type === "success" ? "var(--color-success)" : "var(--color-error)",
+            color: toast.type === "success" ? "var(--color-on-success)" : "var(--color-on-error)",
+          }}
+        >
+          <span className="material-symbols-outlined filled text-[20px]">{toast.type === "success" ? "check_circle" : "error"}</span>
+          {toast.message}
+        </div>
+      )}
+
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -332,12 +546,10 @@ export default function MedecinAgenda() {
         </div>
         <Button
           variant="primary"
+          icon={showForm ? "close" : "add"}
           onClick={() => setShowForm((v) => !v)}
         >
-          <span className="material-symbols-outlined text-[18px]">
-            {showForm ? "close" : "add"}
-          </span>
-          {showForm ? "Annuler" : "Nouveau RDV"}
+          {showForm ? "Fermer" : "Nouveau RDV"}
         </Button>
       </div>
 
@@ -373,7 +585,7 @@ export default function MedecinAgenda() {
                   À venir ({aVenir.length})
                 </h2>
               </div>
-              {aVenir.map((r) => <RdvCard key={r._id} rdv={r} onAnnule={handleAnnule} />)}
+              {aVenir.map((r) => <RdvCard key={r._id} rdv={r} onChanged={handleChanged} />)}
             </div>
           )}
 
@@ -385,7 +597,7 @@ export default function MedecinAgenda() {
                   Historique ({passes.length})
                 </h2>
               </div>
-              {passes.map((r) => <RdvCard key={r._id} rdv={r} onAnnule={handleAnnule} />)}
+              {passes.map((r) => <RdvCard key={r._id} rdv={r} onChanged={handleChanged} />)}
             </div>
           )}
         </div>
