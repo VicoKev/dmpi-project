@@ -5,8 +5,6 @@ export interface CumulAnnuel {
   consultations_ytd_variation: number | null;
   patients_actifs: number;
   patients_actifs_variation: number | null;
-  taux_couverture: number;
-  taux_couverture_variation_pts: number;
   etablissements_actifs: number;
   etablissements_total: number;
   ordonnances_emises: number;
@@ -32,7 +30,6 @@ export interface RapportMensuel {
   patients: number;
   ordonnances: number;
   etablissements: number;
-  tauxCouverture: number;
   topDiagnostics: TopDiagnostic[];
   topEtablissements: TopEtablissementRapport[];
 }

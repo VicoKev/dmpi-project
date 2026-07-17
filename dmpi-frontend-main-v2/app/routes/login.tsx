@@ -87,7 +87,7 @@ export default function Login() {
           <div>
             <h1 className="text-headline-lg text-white mb-2">DMPI Bénin</h1>
             <p className="text-body-md text-[var(--color-on-primary-container)] opacity-90">
-              Dossier Médical Partagé Informatisé
+              Dossier Médical Partagé Interopérable
             </p>
           </div>
         </div>
@@ -139,19 +139,21 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Dev Only : Boutons de remplissage rapide */}
-          <div className="mt-8 pt-6 border-t border-[var(--color-outline-variant)]">
-            <p className="text-caption text-center mb-3" style={{ color: "var(--color-on-surface-variant)" }}>
-              Dev Only - Remplissage rapide
-            </p>
-            <div className="flex flex-wrap justify-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => fillCredentials("medecin")} type="button">Médecin</Button>
-              <Button variant="outline" size="sm" onClick={() => fillCredentials("infirmier")} type="button">Infirmier</Button>
-              <Button variant="outline" size="sm" onClick={() => fillCredentials("patient")} type="button">Patient</Button>
-              <Button variant="outline" size="sm" onClick={() => fillCredentials("admin")} type="button">Admin</Button>
-              <Button variant="outline" size="sm" onClick={() => fillCredentials("superadmin")} type="button">Superadmin</Button>
+          {/* Dev Only : Boutons de remplissage rapide — retirés du bundle de production */}
+          {import.meta.env.DEV && (
+            <div className="mt-8 pt-6 border-t border-[var(--color-outline-variant)]">
+              <p className="text-caption text-center mb-3" style={{ color: "var(--color-on-surface-variant)" }}>
+                Dev Only - Remplissage rapide
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => fillCredentials("medecin")} type="button">Médecin</Button>
+                <Button variant="outline" size="sm" onClick={() => fillCredentials("infirmier")} type="button">Infirmier</Button>
+                <Button variant="outline" size="sm" onClick={() => fillCredentials("patient")} type="button">Patient</Button>
+                <Button variant="outline" size="sm" onClick={() => fillCredentials("admin")} type="button">Admin</Button>
+                <Button variant="outline" size="sm" onClick={() => fillCredentials("superadmin")} type="button">Superadmin</Button>
+              </div>
             </div>
-          </div>
+          )}
         </Card>
       </div>
     </main>

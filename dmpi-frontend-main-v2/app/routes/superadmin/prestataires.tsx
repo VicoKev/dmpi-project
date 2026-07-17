@@ -5,6 +5,7 @@ import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import LocalisationPicker, { type LocalisationValue } from "../../components/etablissement/LocalisationPicker";
+import HorairesPicker from "../../components/ui/HorairesPicker";
 import {
   getPrestataires,
   createPrestataire,
@@ -149,7 +150,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
             <Input label="Email (optionnel)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
 
-          <Input label="Horaires (optionnel)" value={horaires} onChange={(e) => setHoraires(e.target.value)} placeholder="Ex : Lun-Sam 8h-20h" />
+          <HorairesPicker value={horaires} onChange={setHoraires} />
 
           <LocalisationPicker
             value={localisation}

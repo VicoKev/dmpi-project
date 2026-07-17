@@ -47,7 +47,7 @@ const STATUT_CONFIG = {
 };
 
 const ROLE_LABELS: Record<string, string> = {
-  medecin: "Medecins",
+  medecin: "Médecins",
   infirmier: "Infirmiers",
   admin_etablissement: "Admins",
   super_admin: "Super Admins",
@@ -66,11 +66,18 @@ export default function SuperAdminDashboard() {
   const [data, setData] = useState<DashboardNational | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [systemeOperationnel, setSystemeOperationnel] = useState<boolean | null>(null);
 
   useEffect(() => {
     apiFetch<DashboardNational>("/dashboard/national")
       .then((d) => { setData(d); setLoading(false); })
       .catch((err) => { setError((err as Error).message); setLoading(false); });
+  }, []);
+
+  useEffect(() => {
+    apiFetch("/")
+      .then(() => setSystemeOperationnel(true))
+      .catch(() => setSystemeOperationnel(false));
   }, []);
 
   const totalUtilisateurs = data
@@ -79,24 +86,31 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
-      {/* En-tete */}
+      {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-headline-lg" style={{ color: "var(--color-primary)" }}>
-            Supervision nationale — DMPI Benin
+            Supervision nationale — DMPI Bénin
           </h1>
           <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
             {data
-              ? `Donnees en temps reel — generees le ${new Date(data.genere_le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
-              : "Chargement des donnees..."}
+              ? `Données en temps réel — générées le ${new Date(data.genere_le).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}`
+              : "Chargement des données..."}
           </p>
         </div>
         <div
           className="flex items-center gap-2 px-4 py-2 rounded-full text-body-md font-semibold"
-          style={{ backgroundColor: "var(--color-success-container)", color: "var(--color-success)" }}
+          style={
+            systemeOperationnel === false
+              ? { backgroundColor: "var(--color-error-container)", color: "var(--color-error)" }
+              : { backgroundColor: "var(--color-success-container)", color: "var(--color-success)" }
+          }
         >
-          <span className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: "var(--color-success)" }} />
-          Systeme operationnel
+          <span
+            className={systemeOperationnel === null ? "w-2 h-2 rounded-full" : "w-2 h-2 rounded-full animate-pulse"}
+            style={{ backgroundColor: systemeOperationnel === false ? "var(--color-error)" : "var(--color-success)" }}
+          />
+          {systemeOperationnel === null ? "Vérification..." : systemeOperationnel ? "Système opérationnel" : "API injoignable"}
         </div>
       </div>
 
@@ -107,11 +121,11 @@ export default function SuperAdminDashboard() {
           style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}
         >
           <span className="material-symbols-outlined">error</span>
-          <span>Impossible de charger les donnees : {error}</span>
+          <span>Impossible de charger les données : {error}</span>
         </div>
       )}
 
-      {/* Stats cliniques reelles */}
+      {/* Stats cliniques réelles */}
       {loading ? (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -120,10 +134,10 @@ export default function SuperAdminDashboard() {
         </div>
       ) : data && (
         <>
-          {/* KPIs principaux — donnees reelles */}
+          {/* KPIs principaux — données réelles */}
           <div>
             <p className="text-caption font-semibold uppercase tracking-wider mb-2" style={{ color: "var(--color-primary)" }}>
-              Donnees reelles — base de donnees
+              Données réelles — base de données
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
@@ -172,10 +186,10 @@ export default function SuperAdminDashboard() {
             </div>
           </div>
 
-          {/* Repartition par role — donnees reelles */}
+          {/* Répartition par rôle — données réelles */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card>
-              <CardHeader icon="group" title="Comptes par role (PostgreSQL)" />
+              <CardHeader icon="group" title="Comptes par rôle (PostgreSQL)" />
               <div className="flex flex-col gap-3">
                 {Object.entries(data.utilisateurs_par_role).map(([role, count]) => {
                   const cfg = ROLE_ICONS[role] ?? { icon: "person", color: "var(--color-primary)" };
@@ -212,13 +226,13 @@ export default function SuperAdminDashboard() {
               </div>
             </Card>
 
-            {/* Top diagnostics CIM-10 — donnees reelles */}
+            {/* Top diagnostics CIM-10 — données réelles */}
             <Card>
               <CardHeader icon="analytics" title="Top diagnostics CIM-10 (MongoDB)" />
               {data.epidemiologie.top_diagnostics_cim10.length === 0 ? (
                 <div className="flex flex-col items-center gap-2 py-6" style={{ color: "var(--color-on-surface-variant)" }}>
                   <span className="material-symbols-outlined text-4xl opacity-40">analytics</span>
-                  <p className="text-body-md">Aucune consultation enregistree pour l'instant.</p>
+                  <p className="text-body-md">Aucune consultation enregistrée pour l'instant.</p>
                 </div>
               ) : (
                 <div className="flex flex-col gap-3">
@@ -265,10 +279,10 @@ export default function SuperAdminDashboard() {
               <span className="material-symbols-outlined filled text-[24px]">emergency</span>
               <div>
                 <p className="text-body-md font-bold">
-                  {data.urgences.acces_break_the_glass_aujourdhui} acces d'urgence aujourd'hui
+                  {data.urgences.acces_break_the_glass_aujourdhui} accès d'urgence aujourd'hui
                 </p>
                 <p className="text-caption">
-                  {data.urgences.total_acces_break_the_glass} total depuis l'ouverture — consulter le journal d'audit pour le detail.
+                  {data.urgences.total_acces_break_the_glass} total depuis l'ouverture — consulter le journal d'audit pour le détail.
                 </p>
               </div>
             </div>
@@ -276,16 +290,16 @@ export default function SuperAdminDashboard() {
         </>
       )}
 
-      {/* Liste etablissements — donnees reelles */}
+      {/* Liste établissements — données réelles */}
       <Card>
         <div className="flex items-start justify-between mb-4">
-          <CardHeader icon="domain" title="Etablissements connectes" />
+          <CardHeader icon="domain" title="Établissements connectés" />
         </div>
         <div className="overflow-x-auto -mx-4 sm:mx-0">
           <table className="w-full text-body-md min-w-[700px]">
             <thead>
               <tr style={{ borderBottom: "1px solid var(--color-outline-variant)" }}>
-                {["Etablissement", "Type", "Patients", "Consult./mois", "Statut", "Derniere sync"].map((h) => (
+                {["Établissement", "Type", "Patients", "Consult./mois", "Statut", "Dernière sync"].map((h) => (
                   <th
                     key={h}
                     className="text-left px-4 py-3 text-caption font-semibold uppercase tracking-wider"

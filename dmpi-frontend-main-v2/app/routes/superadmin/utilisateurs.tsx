@@ -158,7 +158,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                 Nouvel utilisateur
               </h2>
               <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                Compte configure par le Super Admin
+                Compte configuré par le Super Admin
               </p>
             </div>
           </div>
@@ -190,7 +190,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
           {form.role !== "laboratoire" && (
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Prenom"
+                label="Prénom"
                 value={form.prenom}
                 onChange={(e) => update("prenom", e.target.value)}
                 leadingIcon="badge"
@@ -297,7 +297,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
               }}
             >
               <p className="text-body-md font-semibold mb-2" style={{ color: "var(--color-on-success-container)" }}>
-                Numero Personnel d'Identification (NPI)
+                Numéro Personnel d'Identification (NPI)
               </p>
               <Input
                 label="NPI du patient (10 chiffres)"
@@ -368,7 +368,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
             </div>
           )}
 
-          {/* Etablissement conditionnel */}
+          {/* Établissement conditionnel */}
           {(form.role === "medecin" || form.role === "infirmier" || form.role === "admin_etablissement") && (
             <div
               className="p-4 rounded-2xl border animate-fade-in-up"
@@ -378,7 +378,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
               }}
             >
               <p className="text-body-md font-semibold mb-2" style={{ color: "var(--color-on-primary-container)" }}>
-                Etablissement de rattachement <span style={{ color: "var(--color-error)" }}>*</span>
+                Établissement de rattachement <span style={{ color: "var(--color-error)" }}>*</span>
               </p>
               {etablissements.length === 0 ? (
                 <p className="text-caption" style={{ color: "var(--color-on-primary-container)" }}>
@@ -440,7 +440,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
               Annuler
             </Button>
             <Button fullWidth type="submit" loading={loading} icon="person_add">
-              Creer le compte
+              Créer le compte
             </Button>
           </div>
         </form>
@@ -579,7 +579,7 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
           
           {form.role !== "laboratoire" && (
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Prenom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} required />
+              <Input label="Prénom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} required />
               <Input label="Nom" value={form.nom ?? ""} onChange={(e) => update("nom", e.target.value)} required />
             </div>
           )}
@@ -749,18 +749,18 @@ export default function SuperAdminUtilisateurs() {
     setUsers((prev) => [newUser, ...prev]);
     setShowForm(false);
     clearPrefill();
-    showToast(`Compte cree avec succes pour ${newUser.prenom} ${newUser.nom}.`);
+    showToast(`Compte créé avec succès pour ${newUser.prenom} ${newUser.nom}.`);
   };
 
   const handleDeactivate = async (user: User) => {
-    if (!confirm(`Desactiver le compte de ${user.prenom} ${user.nom} ? Cette action est reversible.`)) return;
+    if (!confirm(`Désactiver le compte de ${user.prenom} ${user.nom} ? Cette action est réversible.`)) return;
     setDeactivatingId(user.id);
     try {
       const updated = await deactivateUser(user.id);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      showToast(`Compte de ${user.prenom} ${user.nom} desactive.`, "success");
+      showToast(`Compte de ${user.prenom} ${user.nom} désactivé.`, "success");
     } catch (err) {
-      showToast((err as Error).message || "Erreur lors de la desactivation.", "error");
+      showToast((err as Error).message || "Erreur lors de la désactivation.", "error");
     } finally {
       setDeactivatingId(null);
     }
@@ -771,9 +771,9 @@ export default function SuperAdminUtilisateurs() {
     try {
       const updated = await reactivateUser(user.id);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
-      showToast(`Compte de ${user.prenom} ${user.nom} reactive.`, "success");
+      showToast(`Compte de ${user.prenom} ${user.nom} réactivé.`, "success");
     } catch (err) {
-      showToast((err as Error).message || "Erreur lors de la reactivation.", "error");
+      showToast((err as Error).message || "Erreur lors de la réactivation.", "error");
     } finally {
       setReactivatingId(null);
     }
@@ -850,7 +850,7 @@ export default function SuperAdminUtilisateurs() {
             Gestion des utilisateurs
           </h1>
           <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
-            {counts.actifs} comptes actifs sur {counts.tous} au total dans le reseau DMPI.
+            {counts.actifs} comptes actifs sur {counts.tous} au total dans le réseau DMPI.
           </p>
         </div>
         <Button icon="person_add" onClick={() => setShowForm(true)}>
@@ -893,7 +893,7 @@ export default function SuperAdminUtilisateurs() {
       {/* Tableau */}
       <Card>
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <CardHeader icon="manage_accounts" title="Repertoire des comptes" />
+          <CardHeader icon="manage_accounts" title="Répertoire des comptes" />
           <div className="sm:ml-auto">
             <Input
               label=""
@@ -923,7 +923,7 @@ export default function SuperAdminUtilisateurs() {
             <span className="material-symbols-outlined">error</span>
             <span>{error}</span>
             <button className="ml-auto underline text-body-md" onClick={loadUsers}>
-              Reessayer
+              Réessayer
             </button>
           </div>
         ) : filtered.length === 0 ? (
@@ -932,14 +932,14 @@ export default function SuperAdminUtilisateurs() {
             style={{ color: "var(--color-on-surface-variant)" }}
           >
             <span className="material-symbols-outlined text-5xl opacity-40">person_search</span>
-            <p className="text-body-md">Aucun utilisateur ne correspond a vos criteres.</p>
+            <p className="text-body-md">Aucun utilisateur ne correspond à vos critères.</p>
           </div>
         ) : (
           <div className="overflow-x-auto -mx-4 sm:mx-0">
             <table className="w-full text-body-md min-w-[700px]">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--color-outline-variant)" }}>
-                  {["Utilisateur", "Role", "Email", "NPI", "Statut", "Inscription", "Actions"].map(
+                  {["Utilisateur", "Rôle", "Email", "NPI", "Statut", "Inscription", "Actions"].map(
                     (h) => (
                       <th
                         key={h}
@@ -1072,7 +1072,7 @@ export default function SuperAdminUtilisateurs() {
                               <span className="material-symbols-outlined text-[14px]">
                                 {isDeactivating ? "progress_activity" : "block"}
                               </span>
-                              {isDeactivating ? "..." : "Desactiver"}
+                              {isDeactivating ? "..." : "Désactiver"}
                             </button>
                           ) : (
                             <button
@@ -1087,7 +1087,7 @@ export default function SuperAdminUtilisateurs() {
                               <span className="material-symbols-outlined text-[14px]">
                                 {reactivatingId === user.id ? "progress_activity" : "check_circle"}
                               </span>
-                              {reactivatingId === user.id ? "..." : "Reactiver"}
+                              {reactivatingId === user.id ? "..." : "Réactiver"}
                             </button>
                           )}
                         </div>

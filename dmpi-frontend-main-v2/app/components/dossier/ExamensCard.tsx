@@ -84,7 +84,7 @@ export default function ExamensCard({ npi }: ExamensCardProps) {
 
       {afficherPrescription && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl" style={{ backgroundColor: "var(--color-surface)" }}>
+          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }}>
             <h2 className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Prescrire un examen</h2>
             <PrescrireExamenForm
               npi={npi}

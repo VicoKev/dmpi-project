@@ -93,7 +93,7 @@ export default function DemanderAccesButton({ npi, nom, prenom, telephoneDefault
           style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
         >
           <div
-            className="w-full max-w-md rounded-3xl p-6 shadow-2xl animate-slide-down"
+            className="w-full max-w-md rounded-3xl p-6 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto"
             style={{ backgroundColor: "var(--color-surface)" }}
           >
             <h2 className="text-headline-sm font-bold mb-1" style={{ color: "var(--color-on-surface)" }}>

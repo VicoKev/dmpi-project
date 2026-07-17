@@ -301,7 +301,7 @@ export default function SuperAdminEtablissements() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
           onClick={() => setSelected(null)}>
-          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl animate-slide-down" style={{ backgroundColor: "var(--color-surface)" }} onClick={e => e.stopPropagation()}>
+          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }} onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: TYPE_CONFIG[selected.type]?.bg }}>
@@ -372,10 +372,10 @@ export default function SuperAdminEtablissements() {
         />
       )}
 
-      {/* En-tete */}
+      {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-headline-lg" style={{ color: "var(--color-primary)" }}>Etablissements de santé</h1>
+          <h1 className="text-headline-lg" style={{ color: "var(--color-primary)" }}>Établissements de santé</h1>
           <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
             {loading ? "Chargement..." : `${totaux.actifs} actifs sur ${etablissements.length} dans le réseau DMPI Bénin.`}
           </p>
@@ -386,7 +386,7 @@ export default function SuperAdminEtablissements() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: "domain",      label: "Etablissements actifs",    value: `${totaux.actifs}/${etablissements.length}`, color: "var(--color-primary)" },
+          { icon: "domain",      label: "Établissements actifs",    value: `${totaux.actifs}/${etablissements.length}`, color: "var(--color-primary)" },
           { icon: "group",       label: "Patients enregistrés",     value: totaux.patients.toLocaleString("fr-FR"),      color: "var(--color-secondary)" },
           { icon: "stethoscope", label: "Médecins",                  value: totaux.medecins,                              color: "var(--color-tertiary)" },
           { icon: "vaccines",    label: "Infirmiers",                value: totaux.infirmiers,                            color: "var(--color-success)" },
@@ -452,7 +452,7 @@ export default function SuperAdminEtablissements() {
             <table className="w-full text-body-md min-w-[900px]">
               <thead>
                 <tr style={{ borderBottom: "1px solid var(--color-outline-variant)" }}>
-                  {["Etablissement", "Type", "Effectifs", "Consult./mois", "Statut", "Sync", "Actions"].map(h => (
+                  {["Établissement", "Type", "Effectifs", "Consult./mois", "Statut", "Sync", "Actions"].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-caption font-semibold uppercase tracking-wider" style={{ color: "var(--color-on-surface-variant)" }}>{h}</th>
                   ))}
                 </tr>

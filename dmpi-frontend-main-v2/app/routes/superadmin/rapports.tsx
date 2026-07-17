@@ -50,8 +50,7 @@ function construireIndicateurs(rapport: RapportAnnuel): Indicateur[] {
   return [
     { label: "Consultations YTD", valeur: c.consultations_ytd.toLocaleString("fr-FR"), variation: variationTexte(c.consultations_ytd_variation), tendance: tendanceHausse(c.consultations_ytd_variation), icon: "medical_services", color: "var(--color-primary)" },
     { label: "Patients actifs", valeur: c.patients_actifs.toLocaleString("fr-FR"), variation: variationTexte(c.patients_actifs_variation), tendance: tendanceHausse(c.patients_actifs_variation), icon: "group", color: "var(--color-secondary)" },
-    { label: "Taux de couverture", valeur: `${c.taux_couverture}%`, variation: variationTexte(c.taux_couverture_variation_pts, " pts"), tendance: tendanceHausse(c.taux_couverture_variation_pts), icon: "public", color: "var(--color-tertiary)" },
-    { label: "Etablissements actifs", valeur: `${c.etablissements_actifs}/${c.etablissements_total}`, variation: "=", tendance: "stable", icon: "domain", color: "var(--color-success)" },
+    { label: "Établissements actifs", valeur: `${c.etablissements_actifs}/${c.etablissements_total}`, variation: "=", tendance: "stable", icon: "domain", color: "var(--color-success)" },
     { label: "Ordonnances emises", valeur: c.ordonnances_emises.toLocaleString("fr-FR"), variation: variationTexte(c.ordonnances_emises_variation), tendance: tendanceHausse(c.ordonnances_emises_variation), icon: "receipt_long", color: "var(--color-primary)" },
   ];
 }
@@ -228,7 +227,7 @@ export default function SuperAdminRapports() {
             Rapports nationaux
           </h1>
           <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
-            Synthese statistique de l'activite medicale sur l'ensemble du reseau DMPI Benin.
+            Synthèse statistique de l'activité médicale sur l'ensemble du réseau DMPI Bénin.
           </p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
@@ -277,7 +276,7 @@ export default function SuperAdminRapports() {
           </div>
         ) : (
           <div className="p-4 rounded-xl text-body-md mb-5" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
-            Impossible de charger les donnees en direct. Verifiez que le backend est demarre.
+            Impossible de charger les données en direct. Vérifiez que le backend est démarré.
           </div>
         )}
 
@@ -412,15 +411,15 @@ export default function SuperAdminRapports() {
 
           {/* Rapport mensuel details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Chiffres cles du mois */}
+            {/* Chiffres clés du mois */}
             <Card>
-              <CardHeader icon="event_note" title={`Chiffres cles — ${rapport.mois}`} />
+              <CardHeader icon="event_note" title={`Chiffres clés — ${rapport.mois}`} />
               <div className="grid grid-cols-2 gap-3">
                 {[
                   { icon: "medical_services", label: "Consultations", value: rapport.consultations.toLocaleString("fr-FR"), color: "var(--color-primary)" },
                   { icon: "group", label: "Patients suivis", value: rapport.patients.toLocaleString("fr-FR"), color: "var(--color-secondary)" },
                   { icon: "receipt_long", label: "Ordonnances", value: rapport.ordonnances.toLocaleString("fr-FR"), color: "var(--color-tertiary)" },
-                  { icon: "domain", label: "Etablissements", value: rapport.etablissements, color: "var(--color-success)" },
+                  { icon: "domain", label: "Établissements", value: rapport.etablissements, color: "var(--color-success)" },
                 ].map((s) => (
                   <div
                     key={s.label}
@@ -439,9 +438,6 @@ export default function SuperAdminRapports() {
                   </div>
                 ))}
               </div>
-              <p className="text-caption mt-3" style={{ color: "var(--color-on-surface-variant)" }}>
-                Taux de couverture : <strong style={{ color: "var(--color-on-surface)" }}>{rapport.tauxCouverture}%</strong>
-              </p>
             </Card>
 
             {/* Top diagnostics */}
@@ -496,7 +492,7 @@ export default function SuperAdminRapports() {
 
           {/* Top etablissements */}
           <Card>
-            <CardHeader icon="leaderboard" title={`Classement etablissements par consultations — ${rapport.mois}`} />
+            <CardHeader icon="leaderboard" title={`Classement établissements par consultations — ${rapport.mois}`} />
             {rapport.topEtablissements.length === 0 ? (
               <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>Aucune consultation rattachée à un établissement ce mois-ci.</p>
             ) : (

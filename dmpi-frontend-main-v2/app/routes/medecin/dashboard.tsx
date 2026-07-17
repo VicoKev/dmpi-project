@@ -9,7 +9,6 @@ import { getTodayConsultations } from "../../services/consultationService";
 import { formatDateFr } from "../../services/patientService";
 import {
   getMesPatientsAssignes,
-  demarrerConsultation,
   terminerPriseEnCharge,
   getMaDisponibilite,
   definirMaDisponibilite,
@@ -91,17 +90,6 @@ function FileAttenteCard() {
     return () => clearInterval(interval);
   }, [load]);
 
-  const handleCommencer = async (entree: EntreeFileAttente) => {
-    setActionId(entree.id);
-    try {
-      await demarrerConsultation(entree.id);
-      navigate(`/medecin/dossier/${entree.npi}/consultation/nouvelle`);
-    } catch (err) {
-      alert((err as Error).message || "Erreur lors de la prise en charge.");
-      setActionId(null);
-    }
-  };
-
   const handleTerminer = async (entree: EntreeFileAttente) => {
     setActionId(entree.id);
     try {
@@ -157,11 +145,7 @@ function FileAttenteCard() {
                 >
                   Dossier
                 </Button>
-                {p.statut === "assigne" ? (
-                  <Button icon="play_arrow" size="sm" loading={actionId === p.id} onClick={() => handleCommencer(p)}>
-                    Commencer
-                  </Button>
-                ) : (
+                {p.statut !== "assigne" && (
                   <Button icon="check_circle" size="sm" loading={actionId === p.id} onClick={() => handleTerminer(p)}>
                     Terminer
                   </Button>
@@ -196,9 +180,9 @@ export default function MedecinDashboard() {
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
-      {/* Image illustrative du Dashboard Medecin */}
+      {/* Image illustrative du Dashboard Médecin */}
       <div className="w-full mb-2 rounded-2xl overflow-hidden shadow-sm">
-        <img src="/images/dashboard_medecin.webp" alt="Dashboard Medecin Illustration" className="w-full h-auto object-cover max-h-[300px]" />
+        <img src="/images/dashboard_medecin.webp" alt="Dashboard Médecin Illustration" className="w-full h-auto object-cover max-h-[300px]" />
       </div>
 
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
