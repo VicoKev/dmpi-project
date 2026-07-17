@@ -1,5 +1,6 @@
-// Gestion des prestataires partenaires (pharmacies) — Espace Super Admin National
+// Gestion des prestataires partenaires (pharmacies, laboratoires) — Espace Super Admin National
 import { useState, useEffect, useCallback } from "react";
+import { Link } from "react-router";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
@@ -10,12 +11,19 @@ import {
   updatePrestataire,
   deactivatePrestataire,
   reactivatePrestataire,
+  TYPE_PRESTATAIRE_OPTIONS,
   type Prestataire,
   type PrestataireCreatePayload,
 } from "../../services/prestataireService";
+import { getUsers } from "../../services/userService";
 
 const LOCALISATION_VIDE: LocalisationValue = {
   ville: "", departement: "", commune: "", arrondissement: "", quartier: "", adresse: "", latitude: null, longitude: null,
+};
+
+const TYPE_LABELS: Record<string, string> = {
+  pharmacie: "Pharmacie",
+  laboratoire: "Laboratoire",
 };
 
 interface PrestataireFormProps {
@@ -26,6 +34,7 @@ interface PrestataireFormProps {
 
 function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps) {
   const [nom, setNom] = useState(initial?.nom ?? "");
+  const [type, setType] = useState<string>(initial?.type ?? "pharmacie");
   const [telephone, setTelephone] = useState(initial?.telephone ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [horaires, setHoraires] = useState(initial?.horaires ?? "");
@@ -56,7 +65,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
     try {
       const payload: PrestataireCreatePayload = {
         nom,
-        types: ["pharmacie"],
+        type,
         departement: localisation.departement,
         commune: localisation.commune || null,
         arrondissement: localisation.arrondissement || null,
@@ -90,7 +99,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
       >
         <div className="flex items-start justify-between mb-6">
           <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
-            {initial ? "Modifier la pharmacie" : "Nouvelle pharmacie partenaire"}
+            {initial ? "Modifier le prestataire" : "Nouveau prestataire partenaire"}
           </h2>
           <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]">
             <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
@@ -104,7 +113,36 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <Input label="Nom de la pharmacie" value={nom} onChange={(e) => setNom(e.target.value)} required />
+          <Input label="Nom du prestataire" value={nom} onChange={(e) => setNom(e.target.value)} required />
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
+              Type de prestataire <span style={{ color: "var(--color-error)" }}>*</span>
+            </label>
+            <div className="flex gap-3">
+              {TYPE_PRESTATAIRE_OPTIONS.map((opt) => (
+                <label
+                  key={opt}
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl border cursor-pointer"
+                  style={{
+                    borderColor: type === opt ? "var(--color-primary)" : "var(--color-outline-variant)",
+                    backgroundColor: type === opt ? "var(--color-primary-container)" : "var(--color-surface-container-lowest)",
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="type-prestataire"
+                    checked={type === opt}
+                    onChange={() => setType(opt)}
+                    className="w-4 h-4"
+                  />
+                  <span className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
+                    {TYPE_LABELS[opt] ?? opt}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Input label="Téléphone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+229 21 XX XX XX" required />
@@ -122,7 +160,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
           <div className="flex gap-3 pt-4">
             <Button variant="outline" fullWidth type="button" onClick={onCancel} disabled={loading}>Annuler</Button>
             <Button fullWidth type="submit" loading={loading} disabled={!localisationValide} icon={initial ? "save" : "add_business"}>
-              {initial ? "Enregistrer" : "Créer la pharmacie"}
+              {initial ? "Enregistrer" : "Créer le prestataire"}
             </Button>
           </div>
         </form>
@@ -133,6 +171,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
 
 export default function SuperAdminPrestataires() {
   const [prestataires, setPrestataires] = useState<Prestataire[]>([]);
+  const [laboratoiresAvecCompte, setLaboratoiresAvecCompte] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -148,7 +187,16 @@ export default function SuperAdminPrestataires() {
     setLoading(true);
     setError(null);
     try {
-      setPrestataires(await getPrestataires());
+      const [prestatairesData, usersData] = await Promise.all([
+        getPrestataires(),
+        // Un échec ici ne doit pas bloquer l'affichage des prestataires — le
+        // bouton "Créer un compte" resterait juste visible par défaut.
+        getUsers().catch(() => []),
+      ]);
+      setPrestataires(prestatairesData);
+      setLaboratoiresAvecCompte(new Set(
+        usersData.filter((u) => u.role === "laboratoire" && u.prestataire_id).map((u) => u.prestataire_id!)
+      ));
     } catch (err) {
       setError((err as Error).message || "Impossible de charger les prestataires.");
     } finally {
@@ -161,13 +209,13 @@ export default function SuperAdminPrestataires() {
   const handleCreated = (p: Prestataire) => {
     setPrestataires((prev) => [p, ...prev]);
     setShowForm(false);
-    showToast(`"${p.nom}" créée avec succès.`);
+    showToast(`"${p.nom}" créé avec succès.`);
   };
 
   const handleUpdated = (p: Prestataire) => {
     setPrestataires((prev) => prev.map((x) => (x.id === p.id ? p : x)));
     setEditing(null);
-    showToast(`"${p.nom}" mise à jour.`);
+    showToast(`"${p.nom}" mis à jour.`);
   };
 
   const handleToggleStatut = async (p: Prestataire) => {
@@ -180,7 +228,7 @@ export default function SuperAdminPrestataires() {
         await reactivatePrestataire(p.id);
       }
       setPrestataires((prev) => prev.map((x) => (x.id === p.id ? { ...x, statut: p.statut === "actif" ? "inactif" : "actif" } : x)));
-      showToast(`"${p.nom}" ${p.statut === "actif" ? "désactivée" : "réactivée"}.`);
+      showToast(`"${p.nom}" ${p.statut === "actif" ? "désactivé" : "réactivé"}.`);
     } catch (err) {
       showToast((err as Error).message || "Erreur.", "error");
     }
@@ -206,16 +254,16 @@ export default function SuperAdminPrestataires() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-headline-lg" style={{ color: "var(--color-primary)" }}>Pharmacies partenaires</h1>
+          <h1 className="text-headline-lg" style={{ color: "var(--color-primary)" }}>Pharmacies & Laboratoires</h1>
           <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
-            Suggérées aux patients à proximité d'une ordonnance. {prestataires.length} enregistrée{prestataires.length !== 1 ? "s" : ""}.
+            Pharmacies suggérées aux patients, laboratoires disponibles pour la prescription d'examens. {prestataires.length} enregistré{prestataires.length !== 1 ? "s" : ""}.
           </p>
         </div>
-        <Button icon="add_business" onClick={() => setShowForm(true)}>Ajouter une pharmacie</Button>
+        <Button icon="add_business" onClick={() => setShowForm(true)}>Ajouter un prestataire</Button>
       </div>
 
       <Card>
-        <CardHeader icon="local_pharmacy" title="Liste des pharmacies partenaires" />
+        <CardHeader icon="storefront" title="Liste des prestataires partenaires" />
         {loading ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
@@ -230,15 +278,23 @@ export default function SuperAdminPrestataires() {
           </div>
         ) : prestataires.length === 0 ? (
           <div className="flex flex-col items-center gap-2 py-12 text-center" style={{ color: "var(--color-on-surface-variant)" }}>
-            <span className="material-symbols-outlined text-5xl opacity-40">local_pharmacy</span>
-            <p className="text-body-md">Aucune pharmacie partenaire. Ajoutez-en une pour activer les suggestions.</p>
+            <span className="material-symbols-outlined text-5xl opacity-40">storefront</span>
+            <p className="text-body-md">Aucun prestataire partenaire. Ajoutez-en un pour activer les suggestions et prescriptions d'examens.</p>
           </div>
         ) : (
           <ul className="flex flex-col gap-3">
             {prestataires.map((p) => (
               <li key={p.id} className="flex flex-wrap items-center justify-between gap-3 p-4 rounded-xl" style={{ backgroundColor: "var(--color-surface-container-low)" }}>
                 <div className="min-w-0">
-                  <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>{p.nom}</p>
+                  <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
+                    {p.nom}
+                    <span
+                      className="text-caption font-semibold px-2 py-0.5 rounded-full ml-2"
+                      style={{ backgroundColor: "var(--color-tertiary-container)", color: "var(--color-on-tertiary-container)" }}
+                    >
+                      {TYPE_LABELS[p.type] ?? p.type}
+                    </span>
+                  </p>
                   <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
                     {p.commune ?? p.departement} · {p.telephone}{p.latitude == null ? " · pas de position sur la carte" : ""}
                   </p>
@@ -253,6 +309,21 @@ export default function SuperAdminPrestataires() {
                   >
                     {p.statut === "actif" ? "Actif" : "Inactif"}
                   </span>
+                  {p.type === "laboratoire" && (
+                    laboratoiresAvecCompte.has(p.id) ? (
+                      <span
+                        className="flex items-center gap-1 text-caption font-semibold px-2.5 py-1 rounded-full"
+                        style={{ backgroundColor: "var(--color-surface-container)", color: "var(--color-on-surface-variant)" }}
+                      >
+                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                        Compte créé
+                      </span>
+                    ) : (
+                      <Link to={`/superadmin/utilisateurs?prestataire_id=${p.id}`}>
+                        <Button variant="outline" size="sm" icon="person_add">Créer un compte</Button>
+                      </Link>
+                    )
+                  )}
                   <Button variant="outline" size="sm" icon="edit" onClick={() => setEditing(p)}>Modifier</Button>
                   <Button
                     variant="outline"

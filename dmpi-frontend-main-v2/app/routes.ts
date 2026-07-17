@@ -42,6 +42,9 @@ export default [
     route("admin/file-attente", "routes/admin/file-attente.tsx"),
     route("admin/demandes-acces", "routes/admin/demandes-acces.tsx"),
 
+    // ─── Espace Laboratoire ───────────────────────────────────────────
+    route("laboratoire", "routes/laboratoire/dashboard.tsx"),
+
     // ─── Espace Super Admin National ──────────────────────────────────
     route("superadmin", "routes/superadmin/dashboard.tsx"),
     route("superadmin/audit", "routes/superadmin/audit.tsx"),

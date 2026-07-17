@@ -3,7 +3,7 @@ import { apiFetch } from "./api";
 export interface Prestataire {
   id: string;
   nom: string;
-  types: string[];
+  type: string;
   departement: string;
   commune?: string | null;
   arrondissement?: string | null;
@@ -24,7 +24,7 @@ export interface Prestataire {
 
 export interface PrestataireCreatePayload {
   nom: string;
-  types: string[];
+  type: string;
   departement: string;
   commune?: string | null;
   arrondissement?: string | null;
@@ -41,7 +41,7 @@ export interface PrestataireCreatePayload {
 
 export interface PrestataireUpdatePayload {
   nom?: string;
-  types?: string[];
+  type?: string;
   departement?: string;
   commune?: string | null;
   arrondissement?: string | null;
@@ -56,7 +56,7 @@ export interface PrestataireUpdatePayload {
   statut?: string;
 }
 
-export const TYPE_PRESTATAIRE_OPTIONS = ["pharmacie"] as const;
+export const TYPE_PRESTATAIRE_OPTIONS = ["pharmacie", "laboratoire"] as const;
 
 export async function getPrestataires(): Promise<Prestataire[]> {
   return apiFetch<Prestataire[]>("/prestataires/");

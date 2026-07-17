@@ -6,7 +6,8 @@ export type UserRole =
   | "infirmier"
   | "patient"
   | "admin_etablissement"
-  | "superadmin_national";
+  | "superadmin_national"
+  | "laboratoire";
 
 export interface AuthUser {
   id: string;
@@ -74,6 +75,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, string[]> = {
     "read:monitoring",
     "read:rapports",
   ],
+  laboratoire: [
+    "read:demandes_examen",
+    "write:document_medical",
+  ],
 };
 
 /** Route de redirection par défaut selon le rôle */
@@ -83,6 +88,7 @@ export const ROLE_DEFAULT_ROUTES: Record<UserRole, string> = {
   patient: "/patient",
   admin_etablissement: "/admin",
   superadmin_national: "/superadmin",
+  laboratoire: "/laboratoire",
 };
 
 export function hasPermission(user: AuthUser | null, permission: string): boolean {

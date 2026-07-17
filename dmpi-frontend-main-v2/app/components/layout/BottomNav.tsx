@@ -35,6 +35,9 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { to: "/superadmin/etablissements", icon: "domain", label: "Établissem." },
     { to: "/superadmin/utilisateurs", icon: "manage_accounts", label: "Utilisateurs" },
   ],
+  laboratoire: [
+    { to: "/laboratoire", icon: "biotech", label: "Demandes" },
+  ],
 };
 
 export default function BottomNav() {

@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Input from "../ui/Input";
+import SelectRecherche from "../ui/SelectRecherche";
 import CarteEtablissementLazy from "./CarteEtablissementLazy";
 import {
   getDepartements,
@@ -33,13 +34,6 @@ interface LocalisationPickerProps {
    * soumission plutôt que de silencieusement garder l'ancienne valeur. */
   onValiditeChange?: (valide: boolean) => void;
 }
-
-const selectClass = "w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2";
-const selectStyle = {
-  borderColor: "var(--color-outline-variant)",
-  backgroundColor: "var(--color-surface-container-lowest)",
-  color: "var(--color-on-surface)",
-};
 
 function LabelChamp({ children, requis }: { children: string; requis: boolean }) {
   return (
@@ -156,57 +150,62 @@ export default function LocalisationPicker({ value, onChange, territoireRequis =
   const latErreur = latTexteInvalide ? "Doit être un nombre." : latHorsPlage ? "Doit être comprise entre -90 et 90." : undefined;
   const lngErreur = lngTexteInvalide ? "Doit être un nombre." : lngHorsPlage ? "Doit être comprise entre -180 et 180." : undefined;
 
+  const optionsDepartements = useMemo(() => departements.map(d => ({ value: d.lib_dep, label: d.lib_dep })), [departements]);
+  const optionsCommunes = useMemo(() => communes.map(c => ({ value: c.lib_com, label: c.lib_com })), [communes]);
+  const optionsArrondissements = useMemo(() => arrondissements.map(a => ({ value: a.lib_arrond, label: a.lib_arrond })), [arrondissements]);
+  const optionsQuartiers = useMemo(() => quartiers.map(q => ({ value: q.lib_quart, label: q.lib_quart })), [quartiers]);
+
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <LabelChamp requis={territoireRequis}>Département</LabelChamp>
-          <select value={value.departement} onChange={e => handleDepartementChange(e.target.value)} className={selectClass} style={selectStyle}>
-            <option value="">Sélectionner…</option>
-            {departements.map(d => <option key={d.id_dep} value={d.lib_dep}>{d.lib_dep}</option>)}
-          </select>
+          <SelectRecherche
+            value={value.departement}
+            onChange={handleDepartementChange}
+            options={optionsDepartements}
+            rechercherPlaceholder="Rechercher un département…"
+            ariaLabel="Département"
+          />
         </div>
         <div className="flex flex-col gap-1.5">
           <LabelChamp requis={territoireRequis}>Commune</LabelChamp>
-          <select
+          <SelectRecherche
             value={value.commune}
-            onChange={e => handleCommuneChange(e.target.value)}
+            onChange={handleCommuneChange}
+            options={optionsCommunes}
             disabled={!departementSel}
-            className={selectClass}
-            style={selectStyle}
-          >
-            <option value="">{departementSel ? "Sélectionner…" : "Choisir un département d'abord"}</option>
-            {communes.map(c => <option key={c.id_com} value={c.lib_com}>{c.lib_com}</option>)}
-          </select>
+            disabledMessage="Choisir un département d'abord"
+            rechercherPlaceholder="Rechercher une commune…"
+            ariaLabel="Commune"
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div className="flex flex-col gap-1.5">
           <LabelChamp requis={territoireRequis}>Arrondissement</LabelChamp>
-          <select
+          <SelectRecherche
             value={value.arrondissement}
-            onChange={e => handleArrondissementChange(e.target.value)}
+            onChange={handleArrondissementChange}
+            options={optionsArrondissements}
             disabled={!communeSel}
-            className={selectClass}
-            style={selectStyle}
-          >
-            <option value="">{communeSel ? "Sélectionner…" : "Choisir une commune d'abord"}</option>
-            {arrondissements.map(a => <option key={a.id_arrond} value={a.lib_arrond}>{a.lib_arrond}</option>)}
-          </select>
+            disabledMessage="Choisir une commune d'abord"
+            rechercherPlaceholder="Rechercher un arrondissement…"
+            ariaLabel="Arrondissement"
+          />
         </div>
         <div className="flex flex-col gap-1.5">
           <LabelChamp requis={territoireRequis}>Quartier</LabelChamp>
-          <select
+          <SelectRecherche
             value={value.quartier}
-            onChange={e => onChange({ quartier: e.target.value })}
+            onChange={(quartier) => onChange({ quartier })}
+            options={optionsQuartiers}
             disabled={!arrondissementSel}
-            className={selectClass}
-            style={selectStyle}
-          >
-            <option value="">{arrondissementSel ? "Sélectionner…" : "Choisir un arrondissement d'abord"}</option>
-            {quartiers.map(q => <option key={q.id_quart} value={q.lib_quart}>{q.lib_quart}</option>)}
-          </select>
+            disabledMessage="Choisir un arrondissement d'abord"
+            rechercherPlaceholder="Rechercher un quartier…"
+            ariaLabel="Quartier"
+          />
         </div>
       </div>
 

@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import SelectRecherche from "../../components/ui/SelectRecherche";
 import {
   getUsers,
   createUser,
@@ -20,6 +21,7 @@ import {
   type UserUpdatePayload,
 } from "../../services/userService";
 import { getEtablissements, type Etablissement } from "../../services/etablissementService";
+import { getPrestataires, type Prestataire } from "../../services/prestataireService";
 import { getDossierPatient } from "../../services/patientService";
 
 // ─── Formulaire de création ──────────────────────────────────────────────────
@@ -41,6 +43,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
     service: "",
     npi_patient: null,
     etablissement_id: null,
+    prestataire_id: null,
     date_naissance: null,
     sexe: "M",
     groupe_sanguin: null,
@@ -49,13 +52,30 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [etablissements, setEtablissements] = useState<Etablissement[]>([]);
+  const [laboratoires, setLaboratoires] = useState<Prestataire[]>([]);
 
   useEffect(() => {
     getEtablissements().then(setEtablissements).catch(() => {});
+    getPrestataires().then((liste) => setLaboratoires(liste.filter((p) => p.type === "laboratoire"))).catch(() => {});
   }, []);
 
   const update = (field: keyof UserCreatePayload, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  // Un laboratoire est une organisation, pas une personne — pas de prénom/nom
+  // à saisir. On dérive ces deux champs (toujours requis en base) du
+  // laboratoire choisi (prénom = son nom, nom = sa commune), plutôt que de
+  // demander à l'admin d'inventer une identité.
+  const laboratoireSelectionne = laboratoires.find((l) => l.id === form.prestataire_id);
+  useEffect(() => {
+    if (form.role !== "laboratoire") return;
+    setForm((prev) => ({
+      ...prev,
+      prenom: laboratoireSelectionne?.nom ?? "",
+      nom: laboratoireSelectionne?.commune ?? laboratoireSelectionne?.departement ?? "",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.role, form.prestataire_id, laboratoireSelectionne?.nom, laboratoireSelectionne?.commune]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,12 +101,18 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
       return;
     }
 
+    if (form.role === "laboratoire" && !form.prestataire_id) {
+      setError("Veuillez sélectionner le laboratoire de rattachement.");
+      return;
+    }
+
     setLoading(true);
     try {
       const payload: UserCreatePayload = {
         ...form,
         npi_patient: form.role === "patient" ? form.npi_patient : null,
         etablissement_id: (form.role === "medecin" || form.role === "infirmier" || form.role === "admin_etablissement") ? form.etablissement_id : null,
+        prestataire_id: form.role === "laboratoire" ? form.prestataire_id : null,
         date_naissance: form.role === "patient" ? form.date_naissance : null,
         sexe: form.role === "patient" ? form.sexe : null,
         specialite: (form.role === "medecin" && form.specialite) ? form.specialite : null,
@@ -160,22 +186,24 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          {/* Identite */}
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Prenom"
-              value={form.prenom}
-              onChange={(e) => update("prenom", e.target.value)}
-              leadingIcon="badge"
-              required
-            />
-            <Input
-              label="Nom"
-              value={form.nom}
-              onChange={(e) => update("nom", e.target.value)}
-              required
-            />
-          </div>
+          {/* Identite — non pertinent pour un laboratoire (organisation, pas une personne) */}
+          {form.role !== "laboratoire" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input
+                label="Prenom"
+                value={form.prenom}
+                onChange={(e) => update("prenom", e.target.value)}
+                leadingIcon="badge"
+                required
+              />
+              <Input
+                label="Nom"
+                value={form.nom}
+                onChange={(e) => update("nom", e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           <Input
             label="Adresse email"
@@ -357,18 +385,46 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                   Aucun établissement disponible. Créez d'abord un établissement.
                 </p>
               ) : (
-                <select
+                <SelectRecherche
                   value={form.etablissement_id ?? ""}
-                  onChange={e => update("etablissement_id", e.target.value)}
-                  className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none"
-                  required
-                >
-                  <option value="">-- Sélectionner un établissement --</option>
-                  {etablissements.filter(e => e.statut === "actif").map(e => (
-                    <option key={e.id} value={e.id}>{e.nom} ({e.ville})</option>
-                  ))}
-                </select>
+                  onChange={(v) => update("etablissement_id", v)}
+                  options={etablissements.filter(e => e.statut === "actif").map(e => ({ value: e.id, label: e.nom, sousLabel: e.ville }))}
+                  rechercherPlaceholder="Rechercher un établissement…"
+                  ariaLabel="Établissement de rattachement"
+                />
               )}
+            </div>
+          )}
+
+          {/* Laboratoire conditionnel */}
+          {form.role === "laboratoire" && (
+            <div
+              className="p-4 rounded-2xl border animate-fade-in-up"
+              style={{
+                borderColor: "#0891B2",
+                backgroundColor: "#CFFAFE",
+              }}
+            >
+              <p className="text-body-md font-semibold mb-2" style={{ color: "#0E7490" }}>
+                Laboratoire de rattachement <span style={{ color: "var(--color-error)" }}>*</span>
+              </p>
+              {laboratoires.length === 0 ? (
+                <p className="text-caption" style={{ color: "#0E7490" }}>
+                  Aucun laboratoire enregistré. Créez d'abord un laboratoire dans "Pharmacies & Laboratoires".
+                </p>
+              ) : (
+                <SelectRecherche
+                  value={form.prestataire_id ?? ""}
+                  onChange={(v) => update("prestataire_id", v)}
+                  options={laboratoires.filter(l => l.statut === "actif").map(l => ({ value: l.id, label: l.nom, sousLabel: l.commune ?? l.departement }))}
+                  rechercherPlaceholder="Rechercher un laboratoire…"
+                  ariaLabel="Laboratoire de rattachement"
+                />
+              )}
+              <p className="text-caption mt-1.5" style={{ color: "#0E7490" }}>
+                Ce compte ne pourra voir et traiter que les demandes d'examen adressées à ce laboratoire.
+                {laboratoireSelectionne && ` Identifié dans l'application comme « ${laboratoireSelectionne.nom} ${laboratoireSelectionne.commune ?? laboratoireSelectionne.departement} ».`}
+              </p>
             </div>
           )}
 
@@ -408,12 +464,33 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
     prenom: user.prenom,
     role: user.role,
     npi_patient: user.npi_patient ?? "",
+    prestataire_id: user.prestataire_id ?? "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [laboratoires, setLaboratoires] = useState<Prestataire[]>([]);
+
+  useEffect(() => {
+    getPrestataires().then((liste) => setLaboratoires(liste.filter((p) => p.type === "laboratoire"))).catch(() => {});
+  }, []);
 
   const update = (field: keyof UserUpdatePayload, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  // Comme à la création : un laboratoire est une organisation, pas une
+  // personne — pas de prénom/nom à modifier manuellement, on les redérive
+  // si l'admin change le laboratoire de rattachement (prénom = son nom,
+  // nom = sa commune).
+  const laboratoireSelectionne = laboratoires.find((l) => l.id === form.prestataire_id);
+  useEffect(() => {
+    if (form.role !== "laboratoire" || !laboratoireSelectionne) return;
+    setForm((prev) => ({
+      ...prev,
+      prenom: laboratoireSelectionne.nom,
+      nom: laboratoireSelectionne.commune ?? laboratoireSelectionne.departement,
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.role, form.prestataire_id, laboratoireSelectionne?.nom, laboratoireSelectionne?.commune]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -429,11 +506,17 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
       return;
     }
 
+    if (form.role === "laboratoire" && !form.prestataire_id) {
+      setError("Veuillez sélectionner le laboratoire de rattachement.");
+      return;
+    }
+
     setLoading(true);
     try {
       const payload: UserUpdatePayload = {
         ...form,
         npi_patient: form.role === "patient" ? form.npi_patient : null,
+        prestataire_id: form.role === "laboratoire" ? form.prestataire_id : null,
       };
       const updated = await updateUser(user.id, payload);
       onSuccess(updated);
@@ -494,10 +577,12 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
             required
           />
           
-          <div className="grid grid-cols-2 gap-3">
-            <Input label="Prenom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} required />
-            <Input label="Nom" value={form.nom ?? ""} onChange={(e) => update("nom", e.target.value)} required />
-          </div>
+          {form.role !== "laboratoire" && (
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Prenom" value={form.prenom ?? ""} onChange={(e) => update("prenom", e.target.value)} required />
+              <Input label="Nom" value={form.nom ?? ""} onChange={(e) => update("nom", e.target.value)} required />
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
@@ -520,6 +605,21 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
                 onChange={(e) => update("npi_patient", e.target.value.replace(/\D/g, "").slice(0, 10))}
                 placeholder="Ex: 1234567890"
                 required
+              />
+            </div>
+          )}
+
+          {form.role === "laboratoire" && (
+            <div className="flex flex-col gap-1.5 mt-2">
+              <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
+                Laboratoire de rattachement <span style={{ color: "var(--color-error)" }}>*</span>
+              </label>
+              <SelectRecherche
+                value={form.prestataire_id ?? ""}
+                onChange={(v) => update("prestataire_id", v)}
+                options={laboratoires.filter(l => l.statut === "actif").map(l => ({ value: l.id, label: l.nom, sousLabel: l.commune ?? l.departement }))}
+                rechercherPlaceholder="Rechercher un laboratoire…"
+                ariaLabel="Laboratoire de rattachement"
               />
             </div>
           )}
@@ -557,6 +657,11 @@ export default function SuperAdminUtilisateurs() {
     groupeSanguin: string | null;
   } | null>(null);
 
+  // Pré-remplissage depuis "Créer un compte" sur une fiche laboratoire
+  // (?prestataire_id=) — pas besoin de précharger quoi que ce soit, la
+  // liste des laboratoires est déjà chargée par CreateUserForm lui-même.
+  const prestataireIdPrefill = searchParams.get("prestataire_id");
+
   const createFormInitialValues = npiPrefill
     ? {
         role: "patient" as const,
@@ -567,7 +672,22 @@ export default function SuperAdminUtilisateurs() {
         sexe: prefillDossier?.sexe ?? "M",
         groupe_sanguin: prefillDossier?.groupeSanguin ?? null,
       }
+    : prestataireIdPrefill
+    ? {
+        role: "laboratoire" as const,
+        prestataire_id: prestataireIdPrefill,
+      }
     : undefined;
+
+  useEffect(() => {
+    if (!prestataireIdPrefill) return;
+    setShowForm(true);
+  }, [prestataireIdPrefill]);
+
+  const clearPrefill = () => {
+    if (npiPrefill) setPrefillDossier(null);
+    if (npiPrefill || prestataireIdPrefill) setSearchParams({});
+  };
 
   useEffect(() => {
     if (!npiPrefill) return;
@@ -628,10 +748,7 @@ export default function SuperAdminUtilisateurs() {
   const handleCreateSuccess = (newUser: User) => {
     setUsers((prev) => [newUser, ...prev]);
     setShowForm(false);
-    if (npiPrefill) {
-      setPrefillDossier(null);
-      setSearchParams({});
-    }
+    clearPrefill();
     showToast(`Compte cree avec succes pour ${newUser.prenom} ${newUser.nom}.`);
   };
 
@@ -711,10 +828,7 @@ export default function SuperAdminUtilisateurs() {
           onSuccess={handleCreateSuccess}
           onCancel={() => {
             setShowForm(false);
-            if (npiPrefill) {
-              setPrefillDossier(null);
-              setSearchParams({});
-            }
+            clearPrefill();
           }}
           initialValues={createFormInitialValues}
         />

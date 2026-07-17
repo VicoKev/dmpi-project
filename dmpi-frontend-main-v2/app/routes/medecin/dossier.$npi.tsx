@@ -291,12 +291,7 @@ export default function DossierPatientPage() {
 
         {activeTab === "examens" && (
           <div className="lg:col-span-2">
-            <Card>
-              <CardHeader icon="biotech" title="Examens & Biologie" />
-              <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
-                Cette fonctionnalité n'est pas encore disponible dans cette version du MVP. Les résultats d'examens et de biologie seront intégrés prochainement.
-              </p>
-            </Card>
+            <ExamensCard npi={npi!} />
           </div>
         )}
 

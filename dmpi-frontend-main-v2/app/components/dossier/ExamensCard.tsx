@@ -1,94 +1,115 @@
-// Carte des examens et résultats (biologie, imagerie...)
+// Carte des examens et documents médicaux (radiographies, scanners,
+// résultats de laboratoire...) — espace médecin : permet de prescrire un
+// nouvel examen et de déposer directement un résultat, en plus de la
+// consultation en lecture (partagée avec l'espace patient via GalerieDocuments).
+import { useCallback, useEffect, useState } from "react";
 import Card, { CardHeader } from "../ui/Card";
-import { StatutBadge } from "../ui/Badge";
+import Badge from "../ui/Badge";
+import Button from "../ui/Button";
+import GalerieDocuments from "../document/GalerieDocuments";
+import PrescrireExamenForm from "../document/PrescrireExamenForm";
+import UploadDocumentForm from "../document/UploadDocumentForm";
+import { getDemandesExamenPatient, type DemandeExamen } from "../../services/demandeExamenService";
+import { getDocumentsPatient, type DocumentMedical } from "../../services/documentMedicalService";
 import { formatDateFr } from "../../services/patientService";
-import type { ResultatExamen } from "../../types/patient";
 
-const TYPE_ICONS: Record<ResultatExamen["type"], string> = {
-  biologie: "biotech",
-  imagerie: "medical_mask",
-  ecg: "monitor_heart",
-  anatomopathologie: "microscope",
-  autre: "description",
-};
+interface ExamensCardProps {
+  npi: string;
+}
 
-export default function ExamensCard({ examens }: { examens: ResultatExamen[] }) {
+export default function ExamensCard({ npi }: ExamensCardProps) {
+  const [demandes, setDemandes] = useState<DemandeExamen[]>([]);
+  const [documents, setDocuments] = useState<DocumentMedical[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [afficherPrescription, setAfficherPrescription] = useState(false);
+  const [demandeAUploader, setDemandeAUploader] = useState<DemandeExamen | "libre" | null>(null);
+
+  const charger = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [demandesData, documentsData] = await Promise.all([
+        getDemandesExamenPatient(npi),
+        getDocumentsPatient(npi),
+      ]);
+      setDemandes(demandesData);
+      setDocuments(documentsData);
+    } catch {
+      // Échec silencieux — la carte affiche simplement une liste vide.
+    } finally {
+      setLoading(false);
+    }
+  }, [npi]);
+
+  useEffect(() => { charger(); }, [charger]);
+
+  const demandesEnAttente = demandes.filter((d) => d.statut === "en_attente");
+
   return (
     <Card>
-      <CardHeader icon="lab_panel" title="Examens & résultats" />
-      {examens.length === 0 ? (
-        <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
-          Aucun examen enregistré.
-        </p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {examens.map((ex) => (
-            <li
-              key={ex.id}
-              className="p-4 rounded-xl"
-              style={{ backgroundColor: "var(--color-surface-container-low)" }}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div className="flex items-start gap-2 min-w-0">
-                  <span
-                    className="material-symbols-outlined text-[20px] mt-0.5"
-                    style={{ color: "var(--color-primary)" }}
-                  >
-                    {TYPE_ICONS[ex.type]}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
-                      {ex.libelle}
-                    </p>
-                    <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                      {formatDateFr(ex.date)}
-                      {ex.laboratoire ? ` · ${ex.laboratoire}` : ""}
-                    </p>
-                  </div>
-                </div>
-                <StatutBadge statut={ex.statut} />
-              </div>
+      <div className="flex items-start justify-between gap-3 flex-wrap mb-2">
+        <CardHeader icon="biotech" title="Examens & documents médicaux" />
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" icon="upload" onClick={() => setDemandeAUploader("libre")}>
+            Déposer un document
+          </Button>
+          <Button size="sm" icon="add" onClick={() => setAfficherPrescription(true)}>
+            Prescrire un examen
+          </Button>
+        </div>
+      </div>
 
-              {ex.valeurs && ex.valeurs.length > 0 && (
-                <div className="mt-3 overflow-x-auto">
-                  <table className="w-full text-caption">
-                    <thead>
-                      <tr style={{ color: "var(--color-on-surface-variant)" }}>
-                        <th className="text-left font-semibold pb-1 pr-3">Paramètre</th>
-                        <th className="text-left font-semibold pb-1 pr-3">Valeur</th>
-                        <th className="text-left font-semibold pb-1">Normale</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {ex.valeurs.map((v, i) => (
-                        <tr key={i}>
-                          <td className="py-1 pr-3">{v.parametre}</td>
-                          <td
-                            className="py-1 pr-3 font-semibold"
-                            style={{
-                              color: v.anormal ? "var(--color-error)" : "var(--color-on-surface)",
-                            }}
-                          >
-                            {v.valeur} {v.unite ?? ""}
-                          </td>
-                          <td className="py-1" style={{ color: "var(--color-on-surface-variant)" }}>
-                            {v.valeurNormale ?? "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              {ex.commentaire && (
-                <p className="text-caption mt-2" style={{ color: "var(--color-on-surface-variant)" }}>
-                  {ex.commentaire}
+      {demandesEnAttente.length > 0 && (
+        <div className="flex flex-col gap-2 mb-4">
+          <p className="text-label-bold uppercase tracking-wide" style={{ color: "var(--color-on-surface-variant)" }}>
+            Examens prescrits, en attente de résultat
+          </p>
+          {demandesEnAttente.map((d) => (
+            <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl" style={{ backgroundColor: "var(--color-warning-container)" }}>
+              <div>
+                <p className="text-body-md font-semibold" style={{ color: "var(--color-on-warning-container)" }}>{d.type_examen}</p>
+                <p className="text-caption" style={{ color: "var(--color-on-warning-container)" }}>
+                  {d.prestataire_nom ?? "Laboratoire"} · prescrit le {formatDateFr(d.created_at)}
                 </p>
-              )}
-            </li>
+              </div>
+              <Badge variant="warning">En attente</Badge>
+              <Button variant="outline" size="sm" icon="upload" onClick={() => setDemandeAUploader(d)}>
+                Déposer le résultat
+              </Button>
+            </div>
           ))}
-        </ul>
+        </div>
+      )}
+
+      <GalerieDocuments documents={documents} loading={loading} onChanged={charger} />
+
+      {afficherPrescription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
+          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl" style={{ backgroundColor: "var(--color-surface)" }}>
+            <h2 className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Prescrire un examen</h2>
+            <PrescrireExamenForm
+              npi={npi}
+              onCreated={() => { setAfficherPrescription(false); charger(); }}
+              onCancel={() => setAfficherPrescription(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {demandeAUploader && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
+          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }}>
+            <h2 className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>
+              {demandeAUploader === "libre" ? "Déposer un document" : "Déposer le résultat"}
+            </h2>
+            <UploadDocumentForm
+              npi={npi}
+              demandeExamenId={demandeAUploader === "libre" ? null : demandeAUploader.id}
+              libelleParDefaut={demandeAUploader === "libre" ? "" : demandeAUploader.type_examen}
+              onUploaded={() => { setDemandeAUploader(null); charger(); }}
+              onCancel={() => setDemandeAUploader(null)}
+            />
+          </div>
+        </div>
       )}
     </Card>
   );

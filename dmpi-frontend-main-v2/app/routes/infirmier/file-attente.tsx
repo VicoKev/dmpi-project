@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import SelectRecherche from "../../components/ui/SelectRecherche";
 import { validateNpi, getDossierPatient } from "../../services/patientService";
 import {
   ajouterFileAttente,
@@ -156,19 +157,19 @@ function NouvellePreConsultationForm({ medecins, onAdded }: { medecins: MedecinD
         </div>
         <div className="flex flex-col gap-1">
           <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Médecin (optionnel)</label>
-          <select
+          <SelectRecherche
             value={medecinEmail}
-            onChange={(e) => setMedecinEmail(e.target.value)}
-            className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-            style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)", color: "var(--color-on-surface)" }}
-          >
-            <option value="">Assigner plus tard</option>
-            {medecins.map((m) => (
-              <option key={m.email} value={m.email} disabled={!m.disponible}>
-                Dr. {m.prenom} {m.nom}{m.specialite ? ` — ${m.specialite}` : ""}{!m.disponible ? " (indisponible)" : ""}
-              </option>
-            ))}
-          </select>
+            onChange={setMedecinEmail}
+            options={medecins.map((m) => ({
+              value: m.email,
+              label: `Dr. ${m.prenom} ${m.nom}${!m.disponible ? " (indisponible)" : ""}`,
+              sousLabel: m.specialite ?? undefined,
+              disabled: !m.disponible,
+            }))}
+            placeholder="Assigner plus tard"
+            rechercherPlaceholder="Rechercher un médecin…"
+            ariaLabel="Médecin"
+          />
         </div>
       </div>
 

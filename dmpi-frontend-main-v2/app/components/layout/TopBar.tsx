@@ -8,6 +8,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   patient: "Patient",
   admin_etablissement: "Admin Établissement",
   superadmin_national: "Super Administrateur",
+  laboratoire: "Laboratoire",
 };
 
 export default function TopBar() {

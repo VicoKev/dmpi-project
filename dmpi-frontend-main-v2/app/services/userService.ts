@@ -18,6 +18,8 @@ export interface User {
   npi_patient?: string | null;
   specialite?: string | null;
   service?: string | null;
+  etablissement_id?: string | null;
+  prestataire_id?: string | null;
 }
 
 export interface UserCreatePayload {
@@ -28,6 +30,7 @@ export interface UserCreatePayload {
   role: string;
   npi_patient?: string | null;
   etablissement_id?: string | null;
+  prestataire_id?: string | null;
   date_naissance?: string | null;
   sexe?: string | null;
   groupe_sanguin?: string | null;
@@ -41,6 +44,7 @@ export const ROLE_LABELS: Record<string, string> = {
   admin_etablissement: "Admin Etablissement",
   super_admin: "Super Admin",
   patient: "Patient",
+  laboratoire: "Laboratoire",
 };
 
 export const ROLE_CONFIG: Record<string, { icon: string; color: string; bg: string }> = {
@@ -49,6 +53,7 @@ export const ROLE_CONFIG: Record<string, { icon: string; color: string; bg: stri
   admin_etablissement: { icon: "admin_panel_settings", color: "var(--color-secondary)", bg: "var(--color-secondary-container)" },
   super_admin: { icon: "shield_person", color: "#8B5CF6", bg: "#EDE9FE" },
   patient: { icon: "person", color: "var(--color-success)", bg: "var(--color-success-container)" },
+  laboratoire: { icon: "biotech", color: "#0891B2", bg: "#CFFAFE" },
 };
 
 export const ROLES_SELECTABLE = [
@@ -57,6 +62,7 @@ export const ROLES_SELECTABLE = [
   { value: "admin_etablissement", label: "Admin Etablissement" },
   { value: "super_admin", label: "Super Admin National" },
   { value: "patient", label: "Patient" },
+  { value: "laboratoire", label: "Laboratoire" },
 ];
 
 export async function getUsers(): Promise<User[]> {
@@ -92,6 +98,8 @@ export interface UserUpdatePayload {
   prenom?: string;
   role?: string;
   npi_patient?: string | null;
+  etablissement_id?: string | null;
+  prestataire_id?: string | null;
 }
 
 export async function updateUser(userId: number, payload: UserUpdatePayload): Promise<User> {

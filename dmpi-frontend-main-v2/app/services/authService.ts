@@ -27,6 +27,7 @@ const ROLE_MAP: Record<string, UserRole> = {
   patient: "patient",
   admin_etablissement: "admin_etablissement",
   super_admin: "superadmin_national",
+  laboratoire: "laboratoire",
 };
 
 function mapBackendRole(backendRole: string): UserRole {

@@ -76,6 +76,79 @@ export async function apiFetch<T = unknown>(
 }
 
 /**
+ * Envoie un formulaire multipart (upload de fichiers) — apiFetch ne convient
+ * pas car il force toujours Content-Type: application/json, ce qui empêche
+ * le navigateur de générer le boundary multipart nécessaire avec FormData.
+ */
+export async function apiUpload<T = unknown>(
+  path: string,
+  formData: FormData,
+  method: "POST" | "PATCH" = "POST"
+): Promise<T> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers,
+    body: formData,
+  });
+
+  if (response.status === 401) {
+    clearToken();
+    throw new AuthError("Session expiree. Veuillez vous reconnecter.", 401);
+  }
+  if (response.status === 403) {
+    throw new AuthError("Acces refuse. Vous n'avez pas les droits necessaires.", 403);
+  }
+  if (!response.ok) {
+    let detail = `Erreur ${response.status}`;
+    try {
+      const body = await response.json();
+      detail = body.detail || detail;
+    } catch {
+      // pas de corps JSON
+    }
+    throw new Error(detail);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+/**
+ * Récupère un fichier protégé (image, vignette, PDF) et retourne une URL
+ * d'objet local utilisable dans <img src> ou <iframe> — ces fichiers exigent
+ * un header Authorization, qu'une simple URL directe ne peut pas porter.
+ * L'appelant doit révoquer l'URL (URL.revokeObjectURL) quand il n'en a plus besoin.
+ */
+export async function apiFetchBlobUrl(path: string): Promise<string> {
+  const token = getStoredToken();
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, { headers });
+
+  if (response.status === 401) {
+    clearToken();
+    throw new AuthError("Session expiree. Veuillez vous reconnecter.", 401);
+  }
+  if (response.status === 403) {
+    throw new AuthError("Acces refuse. Vous n'avez pas les droits necessaires.", 403);
+  }
+  if (!response.ok) {
+    throw new Error(`Erreur ${response.status} lors du chargement du fichier.`);
+  }
+
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+/**
  * Télécharge un fichier binaire (PDF, Excel...) depuis l'API et déclenche le
  * téléchargement navigateur — apiFetch ne convient pas car il parse toujours
  * la réponse en JSON.

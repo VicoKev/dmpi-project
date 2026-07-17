@@ -2,15 +2,72 @@
 // Mobile: cachée (remplacée par BottomNav)
 // Desktop (lg+): fixe à gauche, 256px
 
+import { useEffect, useState, useCallback } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import type { UserRole } from "../../types/auth";
+import { getFileAttenteEtablissement } from "../../services/fileAttenteService";
+import { getDemandesAccesMonEtablissement, getDemandesAcces } from "../../services/demandeAccesService";
+import { getMesDemandesLaboratoire } from "../../services/demandeExamenService";
 
 interface NavItem {
   to: string;
   icon: string;
   iconActive?: string;
   label: string;
+}
+
+// Compteurs "en attente" par tab — uniquement les files d'action réellement
+// bornées (une file d'attente de patients, des demandes à traiter), jamais
+// un total (utilisateurs, patients, documents...) qui pourrait grimper à
+// des milliers voire des millions d'éléments.
+const REFRESH_MS = 30_000;
+const PLAFOND_AFFICHAGE = 99;
+
+async function chargerCompteurs(role: UserRole): Promise<Record<string, number>> {
+  switch (role) {
+    case "infirmier": {
+      const entrees = await getFileAttenteEtablissement();
+      return { "/infirmier/file-attente": entrees.filter((e) => e.statut === "en_attente").length };
+    }
+    case "admin_etablissement": {
+      const [entrees, demandes] = await Promise.all([
+        getFileAttenteEtablissement(),
+        getDemandesAccesMonEtablissement(),
+      ]);
+      return {
+        "/admin/file-attente": entrees.filter((e) => e.statut === "en_attente").length,
+        "/admin/demandes-acces": demandes.filter((d) => d.statut === "en_attente").length,
+      };
+    }
+    case "superadmin_national": {
+      const demandes = await getDemandesAcces("en_attente");
+      return { "/superadmin/demandes-acces": demandes.length };
+    }
+    case "laboratoire": {
+      const demandes = await getMesDemandesLaboratoire();
+      return { "/laboratoire": demandes.filter((d) => d.statut === "en_attente").length };
+    }
+    default:
+      return {};
+  }
+}
+
+function NavCountBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span
+      className="ml-auto shrink-0 inline-flex items-center justify-center rounded-full text-[11px] font-bold px-1.5"
+      style={{
+        minWidth: "20px",
+        height: "20px",
+        backgroundColor: "var(--color-error)",
+        color: "var(--color-on-error)",
+      }}
+    >
+      {count > PLAFOND_AFFICHAGE ? `${PLAFOND_AFFICHAGE}+` : count}
+    </span>
+  );
 }
 
 const NAV_ITEMS: Record<UserRole, NavItem[]> = {
@@ -47,12 +104,15 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   superadmin_national: [
     { to: "/superadmin", icon: "dashboard", label: "Tableau de bord" },
     { to: "/superadmin/etablissements", icon: "domain", label: "Établissements" },
-    { to: "/superadmin/prestataires", icon: "local_pharmacy", label: "Pharmacies partenaires" },
+    { to: "/superadmin/prestataires", icon: "storefront", label: "Pharmacies & Laboratoires" },
     { to: "/superadmin/utilisateurs", icon: "manage_accounts", label: "Utilisateurs" },
     { to: "/superadmin/demandes-acces", icon: "how_to_reg", label: "Demandes d'accès" },
     { to: "/superadmin/audit", icon: "policy", label: "Journal d'audit" },
     { to: "/superadmin/monitoring", icon: "monitoring", label: "Monitoring" },
     { to: "/superadmin/rapports", icon: "analytics", label: "Rapports" },
+  ],
+  laboratoire: [
+    { to: "/laboratoire", icon: "biotech", label: "Demandes d'examen" },
   ],
 };
 
@@ -62,6 +122,7 @@ const ROLE_LABELS: Record<UserRole, string> = {
   patient: "Patient",
   admin_etablissement: "Admin Établissement",
   superadmin_national: "Super Administrateur",
+  laboratoire: "Laboratoire",
 };
 
 const ROLE_ICONS: Record<UserRole, string> = {
@@ -70,11 +131,28 @@ const ROLE_ICONS: Record<UserRole, string> = {
   patient: "person",
   admin_etablissement: "domain",
   superadmin_national: "admin_panel_settings",
+  laboratoire: "biotech",
 };
 
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [compteurs, setCompteurs] = useState<Record<string, number>>({});
+
+  const rafraichirCompteurs = useCallback(async () => {
+    if (!user) return;
+    try {
+      setCompteurs(await chargerCompteurs(user.role));
+    } catch {
+      // Un badge qui ne se met pas à jour n'est pas critique : on ignore l'erreur.
+    }
+  }, [user]);
+
+  useEffect(() => {
+    rafraichirCompteurs();
+    const intervalId = setInterval(rafraichirCompteurs, REFRESH_MS);
+    return () => clearInterval(intervalId);
+  }, [rafraichirCompteurs]);
 
   if (!user) return null;
 
@@ -169,6 +247,7 @@ export default function Sidebar() {
                   {item.icon}
                 </span>
                 <span className="text-body-md font-semibold">{item.label}</span>
+                <NavCountBadge count={compteurs[item.to] ?? 0} />
               </>
             )}
           </NavLink>
