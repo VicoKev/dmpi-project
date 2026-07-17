@@ -14,7 +14,6 @@ import HospitalisationsCard from "../../components/dossier/HospitalisationsCard"
 import ConsultationList from "../../components/dossier/ConsultationList";
 import PrescriptionList from "../../components/dossier/PrescriptionList";
 import ExamensCard from "../../components/dossier/ExamensCard";
-import VaccinationsCard from "../../components/dossier/VaccinationsCard";
 import ConstanteRow from "../../components/dossier/ConstanteRow";
 import DemanderAccesButton from "../../components/patient/DemanderAccesButton";
 
@@ -292,12 +291,6 @@ export default function DossierPatientPage() {
         {activeTab === "examens" && (
           <div className="lg:col-span-2">
             <ExamensCard npi={npi!} />
-          </div>
-        )}
-
-        {activeTab === "vaccinations" && (
-          <div className="lg:col-span-2">
-            <VaccinationsCard vaccinations={dossier.vaccinations} />
           </div>
         )}
       </div>

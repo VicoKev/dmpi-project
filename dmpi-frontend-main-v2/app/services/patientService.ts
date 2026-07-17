@@ -90,7 +90,6 @@ function mapBackendDossier(raw: BackendDossier): DossierPatient {
     allergies: raw.allergies.map(mapAllergie),
     antecedents: raw.antecedents.map(mapAntecedent),
     traitementsEnCours: raw.traitements_en_cours.map(mapTraitement),
-    vaccinations: [],
     hospitalisations: [],
     examens: [],
     tuteur: raw.tuteur

@@ -25,6 +25,7 @@ export default function PrescriptionList({
   const [erreurParOrdonnance, setErreurParOrdonnance] = useState<Record<string, string>>({});
 
   const handleRenouveler = async (id: string) => {
+    if (!confirm("Renouveler cette ordonnance ? Une nouvelle ordonnance identique sera créée pour le patient.")) return;
     setRenouvellementEnCours(id);
     setErreurParOrdonnance((prev) => {
       const { [id]: _retire, ...reste } = prev;

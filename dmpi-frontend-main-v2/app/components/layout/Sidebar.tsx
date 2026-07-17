@@ -85,6 +85,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { to: "/infirmier/patients", icon: "groups", label: "Patients" },
     { to: "/infirmier/constantes", icon: "monitor_heart", label: "Constantes" },
     { to: "/infirmier/traitements", icon: "medication", label: "Traitements" },
+    { to: "/infirmier/historique", icon: "history", label: "Mon historique" },
     { to: "/infirmier/demandes-acces", icon: "how_to_reg", label: "Demandes d'accès" },
   ],
   patient: [

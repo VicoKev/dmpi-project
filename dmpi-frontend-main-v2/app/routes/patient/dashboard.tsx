@@ -158,12 +158,11 @@ export default function PatientDashboard() {
       )}
 
       {/* Statistiques rapides */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {[
           { icon: "medical_services", label: "Consultations", value: consultations.length, color: "var(--color-primary)" },
           { icon: "prescriptions", label: "Ordonnances", value: prescriptions.length, color: "var(--color-secondary)" },
           { icon: "medication", label: "Traitements actifs", value: traitementsEnCours.filter((t) => t.actif).length, color: "var(--color-tertiary)" },
-          { icon: "vaccines", label: "Vaccinations", value: dossier.vaccinations.length, color: "var(--color-success)" },
         ].map((stat) => (
           <div
             key={stat.label}

@@ -52,16 +52,6 @@ export interface Traitement {
   actif: boolean;
 }
 
-export interface Vaccination {
-  id: string;
-  vaccin: string;
-  dateAdministration: string;
-  lot?: string;
-  prochainRappel?: string;
-  administrePar?: string;
-  etablissement?: string;
-}
-
 export interface Hospitalisation {
   id: string;
   motif: string;
@@ -106,7 +96,6 @@ export interface DossierPatient {
   allergies: Allergie[];
   antecedents: Antecedent[];
   traitementsEnCours: Traitement[];
-  vaccinations: Vaccination[];
   hospitalisations: Hospitalisation[];
   examens: ResultatExamen[];
   /** Tuteur / parent — pour mineurs et nouveau-nés sans contact propre */

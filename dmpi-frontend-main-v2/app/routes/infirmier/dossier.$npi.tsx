@@ -9,7 +9,6 @@ import Spinner from "../../components/ui/Spinner";
 import DossierHeader from "../../components/dossier/DossierHeader";
 import AntecedentsCard from "../../components/dossier/AntecedentsCard";
 import TraitementsCard from "../../components/dossier/TraitementsCard";
-import VaccinationsCard from "../../components/dossier/VaccinationsCard";
 import ConstanteRow from "../../components/dossier/ConstanteRow";
 import DemanderAccesButton from "../../components/patient/DemanderAccesButton";
 
@@ -99,12 +98,12 @@ export default function InfirmierDossierPage() {
             prenom={dossier.patient.prenom}
             telephoneDefault={dossier.tuteur?.telephone}
           />
-          <Link to={`/infirmier/constantes`}>
+          <Link to={`/infirmier/constantes?npi=${npi}`}>
             <Button icon="monitor_heart" variant="outline" size="sm">
               Relevé de constantes
             </Button>
           </Link>
-          <Link to={`/infirmier/traitements`}>
+          <Link to={`/infirmier/traitements?npi=${npi}`}>
             <Button icon="medication" size="sm">
               Administrer un traitement
             </Button>
@@ -139,9 +138,6 @@ export default function InfirmierDossierPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <AntecedentsCard antecedents={dossier.antecedents} />
           <TraitementsCard traitements={dossier.traitementsEnCours} />
-          <div className="lg:col-span-2">
-            <VaccinationsCard vaccinations={dossier.vaccinations} />
-          </div>
         </div>
       )}
 
@@ -154,7 +150,7 @@ export default function InfirmierDossierPage() {
                 <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
                   Aucun relevé de constantes enregistré pour ce patient.
                 </p>
-                <Link to="/infirmier/constantes">
+                <Link to={`/infirmier/constantes?npi=${npi}`}>
                   <Button icon="add" variant="outline" size="sm" className="mt-2">Enregistrer des constantes</Button>
                 </Link>
               </div>
@@ -211,7 +207,7 @@ export default function InfirmierDossierPage() {
                 <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
                   Aucune administration de médicament enregistrée pour ce patient.
                 </p>
-                <Link to="/infirmier/traitements">
+                <Link to={`/infirmier/traitements?npi=${npi}`}>
                   <Button icon="add" variant="outline" size="sm" className="mt-2">Enregistrer une administration</Button>
                 </Link>
               </div>

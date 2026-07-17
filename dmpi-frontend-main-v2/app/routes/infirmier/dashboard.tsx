@@ -1,5 +1,5 @@
 // Dashboard Infirmier — DMPI
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
@@ -50,27 +50,33 @@ function StatCard({
   );
 }
 
+const REFRESH_MS = 20_000;
+
 export default function InfirmierDashboard() {
   const { user } = useAuth();
   const [releves, setReleves] = useState<ReleveConstantes[]>([]);
   const [administrations, setAdministrations] = useState<AdministrationMedicament[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const charger = useCallback(async () => {
+    try {
+      const [r, a] = await Promise.all([
+        getTodayRelevesByInfirmier(),
+        getTodayAdministrationsByInfirmier(),
+      ]);
+      setReleves(r);
+      setAdministrations(a);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     if (!user) return;
-    let cancelled = false;
-    Promise.all([
-      getTodayRelevesByInfirmier(user.id),
-      getTodayAdministrationsByInfirmier(user.id),
-    ]).then(([r, a]) => {
-      if (!cancelled) {
-        setReleves(r);
-        setAdministrations(a);
-        setLoading(false);
-      }
-    });
-    return () => { cancelled = true; };
-  }, [user]);
+    charger();
+    const interval = setInterval(charger, REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [user, charger]);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -130,7 +136,7 @@ export default function InfirmierDashboard() {
           <p className="text-body-md mb-4" style={{ color: "var(--color-on-surface-variant)" }}>
             Saisir le NPI à 10 chiffres pour accéder au dossier et enregistrer des constantes.
           </p>
-          <PatientSearch />
+          <PatientSearch redirectBase="/infirmier/dossier" />
         </Card>
 
         {/* Accès rapides */}

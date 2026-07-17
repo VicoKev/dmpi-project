@@ -1,7 +1,7 @@
 // Page Traitements — Espace Infirmier
 // Administration et traçabilité des médicaments prescrits
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -35,6 +35,8 @@ const STATUT_OPTIONS = Object.entries(STATUT_ADMIN_LABELS).map(([value, label]) 
 export default function InfirmierTraitements() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const npiPrefill = searchParams.get("npi");
 
   // Étape 1 : Recherche patient
   const [npiInput, setNpiInput] = useState("");
@@ -53,9 +55,7 @@ export default function InfirmierTraitements() {
   const [formError, setFormError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const npi = npiInput.trim();
+  const rechercherPatient = async (npi: string) => {
     if (!validateNpi(npi)) {
       setSearchError("Le NPI doit contenir exactement 10 chiffres.");
       return;
@@ -77,6 +77,20 @@ export default function InfirmierTraitements() {
       setPatient(result);
       setTraitements(dossier?.traitementsEnCours ?? []);
     }
+  };
+
+  // Arrivée depuis le dossier du patient (bouton "Administrer un
+  // traitement") — le NPI est déjà connu, inutile de le faire ressaisir.
+  useEffect(() => {
+    if (npiPrefill && validateNpi(npiPrefill)) {
+      rechercherPatient(npiPrefill);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [npiPrefill]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await rechercherPatient(npiInput.trim());
   };
 
   const prefillTraitement = (t: { medicament: string; dosage: string }) => {

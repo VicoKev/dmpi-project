@@ -76,12 +76,18 @@ export async function getRelevesByPatient(patientNpi: string): Promise<ReleveCon
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-export async function getRelevesByInfirmier(infirmierId: string): Promise<ReleveConstantes[]> {
-  return [];
+/** Historique complet des relevés de constantes saisis par le professionnel connecté. */
+export async function getRelevesByInfirmier(): Promise<ReleveConstantes[]> {
+  const raws = await apiFetch<BackendConstantes[]>("/soins/constantes/moi");
+  return raws
+    .map((r, i) => mapBackendReleve(r, i))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
-export async function getTodayRelevesByInfirmier(infirmierId: string): Promise<ReleveConstantes[]> {
-  return [];
+export async function getTodayRelevesByInfirmier(): Promise<ReleveConstantes[]> {
+  const tous = await getRelevesByInfirmier();
+  const aujourdHui = new Date().toDateString();
+  return tous.filter((r) => new Date(r.date).toDateString() === aujourdHui);
 }
 
 export async function createReleve(

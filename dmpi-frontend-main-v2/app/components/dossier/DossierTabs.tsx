@@ -6,8 +6,7 @@ export type DossierTabKey =
   | "consultations"
   | "constantes"
   | "ordonnances"
-  | "examens"
-  | "vaccinations";
+  | "examens";
 
 interface Tab {
   key: DossierTabKey;
@@ -21,7 +20,6 @@ const TABS: Tab[] = [
   { key: "constantes", label: "Constantes", icon: "monitor_heart" },
   { key: "ordonnances", label: "Ordonnances", icon: "prescriptions" },
   { key: "examens", label: "Examens", icon: "lab_panel" },
-  { key: "vaccinations", label: "Vaccinations", icon: "vaccines" },
 ];
 
 interface DossierTabsProps {

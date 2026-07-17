@@ -27,6 +27,7 @@ export default [
     route("infirmier/dossier/:npi", "routes/infirmier/dossier.$npi.tsx"),
     route("infirmier/demandes-acces", "routes/infirmier/demandes-acces.tsx"),
     route("infirmier/file-attente", "routes/infirmier/file-attente.tsx"),
+    route("infirmier/historique", "routes/infirmier/historique.tsx"),
 
     // ─── Espace Patient ───────────────────────────────────────────────
     route("patient", "routes/patient/dashboard.tsx"),

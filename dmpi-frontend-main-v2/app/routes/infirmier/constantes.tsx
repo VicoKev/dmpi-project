@@ -1,7 +1,7 @@
 // Page Constantes vitales — Espace Infirmier
 // Recherche un patient par NPI, puis affiche le formulaire d'enregistrement des constantes
-import { useState } from "react";
-import { useNavigate } from "react-router";
+import { useEffect, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
@@ -16,6 +16,8 @@ import type { Constantes } from "../../types/consultation";
 export default function InfirmierConstantes() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const npiPrefill = searchParams.get("npi");
   const [npiInput, setNpiInput] = useState("");
   const [searching, setSearching] = useState(false);
   const [patient, setPatient] = useState<PatientSearchResult | null>(null);
@@ -23,9 +25,7 @@ export default function InfirmierConstantes() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const npi = npiInput.trim();
+  const rechercherPatient = async (npi: string) => {
     if (!validateNpi(npi)) {
       setSearchError("Le NPI doit contenir exactement 10 chiffres.");
       return;
@@ -41,6 +41,20 @@ export default function InfirmierConstantes() {
     } else {
       setPatient(result);
     }
+  };
+
+  // Arrivée depuis le dossier du patient (bouton "Relevé de constantes") —
+  // le NPI est déjà connu, inutile de le faire ressaisir.
+  useEffect(() => {
+    if (npiPrefill && validateNpi(npiPrefill)) {
+      rechercherPatient(npiPrefill);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [npiPrefill]);
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await rechercherPatient(npiInput.trim());
   };
 
   const handleSubmit = async (constantes: Constantes, notes: string) => {
