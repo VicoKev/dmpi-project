@@ -21,7 +21,7 @@ import {
 import { getUsers } from "../../services/userService";
 
 const LOCALISATION_VIDE: LocalisationValue = {
-  ville: "", departement: "", commune: "", arrondissement: "", quartier: "", adresse: "", latitude: null, longitude: null,
+  departement: "", commune: "", arrondissement: "", quartier: "", adresse: "", latitude: null, longitude: null,
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -43,7 +43,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
   const [horaires, setHoraires] = useState(initial?.horaires ?? "");
   const [localisation, setLocalisation] = useState<LocalisationValue>(
     initial ? {
-      ville: "", departement: initial.departement,
+      departement: initial.departement,
       commune: initial.commune ?? "", arrondissement: initial.arrondissement ?? "",
       quartier: initial.quartier ?? "", adresse: initial.adresse ?? "",
       latitude: initial.latitude ?? null, longitude: initial.longitude ?? null,

@@ -404,7 +404,7 @@ async def dashboard_national(
         etablissements_stats.append({
             "id": etab_id,
             "nom": etab.get("nom", ""),
-            "ville": etab.get("ville", ""),
+            "commune": etab.get("commune", ""),
             "departement": etab.get("departement", ""),
             "type": etab.get("type", "CHU"),
             "statut": etab.get("statut", "actif"),

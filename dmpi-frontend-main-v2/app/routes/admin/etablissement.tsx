@@ -21,7 +21,7 @@ const STATUT_CONFIG: Record<string, { label: string; color: string; bg: string }
 };
 
 const LOCALISATION_VIDE: LocalisationValue = {
-  ville: "", departement: "", commune: "", arrondissement: "", quartier: "", adresse: "", latitude: null, longitude: null,
+  departement: "", commune: "", arrondissement: "", quartier: "", adresse: "", latitude: null, longitude: null,
 };
 
 export default function AdminMonEtablissement() {
@@ -42,7 +42,6 @@ export default function AdminMonEtablissement() {
       .then((e) => {
         setEtablissement(e);
         setLocalisation({
-          ville: e.ville,
           departement: e.departement,
           commune: e.commune ?? "",
           arrondissement: e.arrondissement ?? "",
@@ -74,7 +73,6 @@ export default function AdminMonEtablissement() {
     setSaving(true);
     try {
       const updated = await updateMonEtablissement({
-        ville: localisation.ville,
         departement: localisation.departement,
         commune: localisation.commune,
         arrondissement: localisation.arrondissement,

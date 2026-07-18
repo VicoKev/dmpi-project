@@ -48,7 +48,7 @@ def utc_now() -> datetime:
 ETABLISSEMENTS = [
     {
         "nom": "CNHU-HKM Cotonou",
-        "ville": "Cotonou",
+        "commune": "Cotonou",
         "departement": "Littoral",
         "type": "CHU",
         "statut": "actif",
@@ -68,7 +68,7 @@ ETABLISSEMENTS = [
     },
     {
         "nom": "CHD du Borgou",
-        "ville": "Parakou",
+        "commune": "Parakou",
         "departement": "Borgou",
         "type": "CHD",
         "statut": "actif",
@@ -88,7 +88,7 @@ ETABLISSEMENTS = [
     },
     {
         "nom": "Centre de Santé de Commune de Natitingou",
-        "ville": "Natitingou",
+        "commune": "Natitingou",
         "departement": "Atacora",
         "type": "CSC",
         "statut": "actif",
@@ -108,7 +108,7 @@ ETABLISSEMENTS = [
     },
     {
         "nom": "Clinique Louis Pasteur",
-        "ville": "Cotonou",
+        "commune": "Cotonou",
         "departement": "Littoral",
         "type": "Clinique",
         "statut": "actif",

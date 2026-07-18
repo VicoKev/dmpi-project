@@ -14,7 +14,6 @@ import {
 } from "../../services/territoireService";
 
 export interface LocalisationValue {
-  ville: string;
   departement: string;
   commune: string;
   arrondissement: string;

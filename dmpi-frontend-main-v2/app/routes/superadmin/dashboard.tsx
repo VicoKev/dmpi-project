@@ -23,7 +23,7 @@ interface DashboardNational {
   etablissements: {
     id: string;
     nom: string;
-    ville: string;
+    commune: string;
     departement: string;
     type: "CHU" | "CHD" | "CSC" | "Clinique";
     statut: "actif" | "maintenance" | "inactif";
@@ -322,7 +322,7 @@ export default function SuperAdminDashboard() {
                     <td className="px-4 py-3">
                       <p className="font-semibold" style={{ color: "var(--color-on-surface)" }}>{e.nom}</p>
                       <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                        {e.ville} · {e.departement}
+                        {e.commune} · {e.departement}
                       </p>
                     </td>
                     <td className="px-4 py-3">

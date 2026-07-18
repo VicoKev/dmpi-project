@@ -52,7 +52,7 @@ function formatSync(isoDate: string): string {
 // ─── Formulaire création/édition ──────────────────────────────────────────────
 
 const EMPTY_FORM: EtablissementCreatePayload = {
-  nom: "", ville: "", departement: "", commune: "", arrondissement: "", quartier: "",
+  nom: "", departement: "", commune: "", arrondissement: "", quartier: "",
   adresse: "", latitude: null, longitude: null,
   type: "CHU", statut: "actif",
   telephone: "", dmpiVersion: "2.1.4",
@@ -68,7 +68,7 @@ interface EtablissementFormProps {
 function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormProps) {
   const [form, setForm] = useState<EtablissementCreatePayload>(
     initial ? {
-      nom: initial.nom, ville: initial.ville, departement: initial.departement,
+      nom: initial.nom, departement: initial.departement,
       commune: initial.commune ?? "", arrondissement: initial.arrondissement ?? "", quartier: initial.quartier ?? "",
       adresse: initial.adresse ?? "", latitude: initial.latitude ?? null, longitude: initial.longitude ?? null,
       type: initial.type, statut: initial.statut,
@@ -153,11 +153,8 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <Input label="Nom de l'établissement" value={form.nom} onChange={e => update("nom", e.target.value)} required />
 
-          <Input label="Ville" value={form.ville} onChange={e => update("ville", e.target.value)} required />
-
           <LocalisationPicker
             value={{
-              ville: form.ville,
               departement: form.departement,
               commune: form.commune ?? "",
               arrondissement: form.arrondissement ?? "",
@@ -292,7 +289,7 @@ export default function SuperAdminEtablissements() {
     const matchType = filterType === "tous" || e.type === filterType;
     const matchStatut = filterStatut === "tous" || e.statut === filterStatut;
     const q = search.toLowerCase();
-    const matchSearch = !q || e.nom.toLowerCase().includes(q) || e.ville.toLowerCase().includes(q) || e.departement.toLowerCase().includes(q) || (e.directeur ?? "").toLowerCase().includes(q);
+    const matchSearch = !q || e.nom.toLowerCase().includes(q) || (e.commune ?? "").toLowerCase().includes(q) || e.departement.toLowerCase().includes(q) || (e.directeur ?? "").toLowerCase().includes(q);
     return matchType && matchStatut && matchSearch;
   });
 
@@ -334,7 +331,7 @@ export default function SuperAdminEtablissements() {
                 </div>
                 <div>
                   <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>{selected.nom}</h2>
-                  <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>{selected.ville} · {selected.departement} · v{selected.dmpiVersion}</p>
+                  <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>{selected.commune} · {selected.departement} · v{selected.dmpiVersion}</p>
                 </div>
               </div>
               <button onClick={() => setSelected(null)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]" style={{ color: "var(--color-on-surface-variant)" }}>
@@ -427,7 +424,7 @@ export default function SuperAdminEtablissements() {
       {/* Filtres */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
-          <Input label="" placeholder="Rechercher par nom, ville, directeur..." value={search} onChange={e => setSearch(e.target.value)} leadingIcon="search" />
+          <Input label="" placeholder="Rechercher par nom, commune, directeur..." value={search} onChange={e => setSearch(e.target.value)} leadingIcon="search" />
         </div>
         <div className="flex gap-2 flex-wrap">
           {(["tous", "actif", "maintenance", "inactif"] as const).map(s => (
@@ -490,7 +487,7 @@ export default function SuperAdminEtablissements() {
                     <tr key={e.id} className="border-b transition-colors hover:bg-[var(--color-surface-container-low)]" style={{ borderColor: "var(--color-outline-variant)" }}>
                       <td className="px-4 py-3">
                         <p className="font-semibold" style={{ color: "var(--color-on-surface)" }}>{e.nom}</p>
-                        <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>{e.ville} · {e.departement}</p>
+                        <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>{e.commune} · {e.departement}</p>
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-caption font-semibold px-2.5 py-1 rounded-full flex items-center gap-1 w-fit" style={{ backgroundColor: typeCfg.bg, color: typeCfg.color }}>

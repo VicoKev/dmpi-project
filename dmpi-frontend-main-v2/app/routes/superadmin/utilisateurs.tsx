@@ -375,7 +375,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                 <SelectRecherche
                   value={form.etablissement_id ?? ""}
                   onChange={(v) => update("etablissement_id", v)}
-                  options={etablissements.filter(e => e.statut === "actif").map(e => ({ value: e.id, label: e.nom, sousLabel: e.ville }))}
+                  options={etablissements.filter(e => e.statut === "actif").map(e => ({ value: e.id, label: e.nom, sousLabel: e.commune ?? e.departement }))}
                   rechercherPlaceholder="Rechercher un établissement…"
                   ariaLabel="Établissement de rattachement"
                 />
