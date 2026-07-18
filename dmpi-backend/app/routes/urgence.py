@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.database_mongo import dossiers_medicaux_collection
 from app.schemas.dossier_medical import FicheUrgence
-from app.security import get_current_user
+from app.security import require_role
 from app.models_sql import User
 from app.audit import enregistrer_log
 
@@ -14,7 +14,7 @@ router = APIRouter(
 @router.get("/{npi}", response_model=FicheUrgence)
 async def acces_urgence(
     npi: str,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role("medecin", "infirmier"))
 ):
     """
     Protocole "Break the Glass" : accès exceptionnel et immédiat
@@ -52,5 +52,8 @@ async def acces_urgence(
         groupe_sanguin=dossier.get("groupe_sanguin"),
         allergies=dossier.get("allergies", []),
         antecedents=dossier.get("antecedents", []),
-        traitements_en_cours=dossier.get("traitements_en_cours", [])
+        # Seuls les traitements toujours actifs ont leur place dans une vue
+        # d'urgence — afficher un traitement arrêté laisserait croire au
+        # médecin de garde que le patient le prend encore.
+        traitements_en_cours=[t for t in dossier.get("traitements_en_cours", []) if t.get("actif", True)]
     )

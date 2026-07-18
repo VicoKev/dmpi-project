@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.database_mongo import dossiers_medicaux_collection
-from app.schemas.dossier_medical import DossierMedicalMongo, DossierMedicalUpdate
-from app.security import get_current_user, require_role
+from app.schemas.dossier_medical import DossierMedicalMongo, DossierMedicalUpdate, ArreterTraitementRequest
+from app.security import get_current_user, require_role, verifier_acces_dossier_patient
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
@@ -66,6 +66,8 @@ async def obtenir_dossier_medical(
     npi: str,
     current_user: User = Depends(get_current_user)
 ):
+    await verifier_acces_dossier_patient(current_user, npi)
+
     if len(npi) != 10 or not npi.isdigit():
         raise HTTPException(
             status_code=400,
@@ -99,7 +101,7 @@ async def obtenir_dossier_medical(
 async def mettre_a_jour_dossier(
     npi: str,
     dossier_update: DossierMedicalUpdate,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role("medecin", "infirmier"))
 ):
     """
     Met à jour un dossier médical existant.
@@ -138,6 +140,51 @@ async def mettre_a_jour_dossier(
         "auteur": current_user.email,
         "horodatage": datetime.utcnow().isoformat()
     })
+
+    dossier_maj = await dossiers_medicaux_collection.find_one({"npi": npi})
+    return dossier_maj
+
+
+@router.patch("/{npi}/traitements/{index}/arreter", response_model=DossierMedicalMongo)
+async def arreter_traitement(
+    npi: str,
+    index: int,
+    body: ArreterTraitementRequest | None = None,
+    current_user: User = Depends(require_role("medecin"))
+):
+    """
+    Arrête un traitement en cours — décision clinique réservée au médecin.
+    Le traitement reste dans la liste (actif=False) plutôt que d'être
+    supprimé, pour préserver l'historique médicamenteux du patient.
+    """
+    dossier = await dossiers_medicaux_collection.find_one({"npi": npi})
+    if not dossier:
+        raise HTTPException(status_code=404, detail=f"Aucun dossier médical trouvé pour le NPI : {npi}")
+
+    traitements = dossier.get("traitements_en_cours", [])
+    if index < 0 or index >= len(traitements):
+        raise HTTPException(status_code=400, detail="Traitement introuvable à cet index.")
+    if not traitements[index].get("actif", True):
+        raise HTTPException(status_code=400, detail="Ce traitement est déjà arrêté.")
+
+    motif = body.motif.strip() if body and body.motif else None
+
+    await dossiers_medicaux_collection.update_one(
+        {"npi": npi},
+        {"$set": {
+            f"traitements_en_cours.{index}.actif": False,
+            f"traitements_en_cours.{index}.date_arret": datetime.utcnow(),
+            f"traitements_en_cours.{index}.motif_arret": motif,
+            "updated_at": datetime.utcnow(),
+        }}
+    )
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="ARRET_TRAITEMENT",
+        statut_action="SUCCES",
+        npi_concerne=npi
+    )
 
     dossier_maj = await dossiers_medicaux_collection.find_one({"npi": npi})
     return dossier_maj
