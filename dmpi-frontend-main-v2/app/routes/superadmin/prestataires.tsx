@@ -56,8 +56,8 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!localisation.departement) {
-      setError("Veuillez sélectionner un département.");
+    if (!localisation.departement || !localisation.commune || !localisation.arrondissement || !localisation.quartier) {
+      setError("Veuillez sélectionner un département, une commune, un arrondissement et un quartier.");
       return;
     }
     if (!localisationValide) {
@@ -160,6 +160,7 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
           <LocalisationPicker
             value={localisation}
             onChange={(patch) => setLocalisation((prev) => ({ ...prev, ...patch }))}
+            territoireRequis
             onValiditeChange={setLocalisationValide}
           />
 

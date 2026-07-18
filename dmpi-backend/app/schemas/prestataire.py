@@ -40,7 +40,12 @@ class PrestataireBase(BaseModel):
 
 
 class PrestataireCreate(PrestataireBase):
-    pass
+    # Requis à la création uniquement — PrestataireBase les garde optionnels
+    # car il est aussi hérité par PrestataireOut, qui doit pouvoir sérialiser
+    # les prestataires existants créés avant cette contrainte.
+    commune: str
+    arrondissement: str
+    quartier: str
 
 
 class PrestataireUpdate(BaseModel):
