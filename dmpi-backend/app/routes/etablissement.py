@@ -3,10 +3,15 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 from datetime import datetime
 from app.database_mongo import get_mongo_db
-from app.schemas.etablissement import EtablissementCreate, EtablissementUpdate, EtablissementUpdateSelfService, EtablissementOut
+from app.schemas.etablissement import (
+    EtablissementCreate, EtablissementUpdate, EtablissementUpdateSelfService, EtablissementOut,
+    EtablissementProche, EtablissementsProchesResponse,
+)
+from app.schemas.prestataire import ReferenceLocalisation
 from app.models_sql import User
 from app.security import require_role, get_current_user
 from app.audit import enregistrer_log
+from app.geo_utils import distance_km
 
 router = APIRouter(
     prefix="/etablissements",
@@ -122,8 +127,52 @@ async def lister_etablissements(
         e["directeur"] = ", ".join(directeurs.get(e_id, [])) or None
         
         result_list.append(format_etablissement(e))
-        
+
     return result_list
+
+
+@router.get("/proches", response_model=EtablissementsProchesResponse)
+async def etablissements_proches(
+    latitude: float,
+    longitude: float,
+    limite: int = 5,
+    db_mongo: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Établissements de santé actifs les plus proches d'une position donnée —
+    un premier indice pour un patient qui cherche où se rendre rapidement.
+    Ne remplace pas un appel aux secours en cas d'urgence vitale, et la
+    proximité ne dit rien du plateau technique disponible sur place.
+    """
+    reference = ReferenceLocalisation(latitude=latitude, longitude=longitude, source="position_utilisateur")
+
+    cursor = db_mongo["etablissements"].find({
+        "statut": "actif",
+        "latitude": {"$ne": None},
+        "longitude": {"$ne": None},
+    })
+    etablissements_bruts = await cursor.to_list(length=None)
+
+    candidats = [
+        EtablissementProche(
+            id=str(e["_id"]),
+            nom=e["nom"],
+            type=e["type"],
+            departement=e["departement"],
+            commune=e.get("commune"),
+            adresse=e.get("adresse"),
+            telephone=e["telephone"],
+            latitude=e["latitude"],
+            longitude=e["longitude"],
+            distance_km=round(distance_km(latitude, longitude, e["latitude"], e["longitude"]), 1),
+        )
+        for e in etablissements_bruts
+    ]
+    candidats.sort(key=lambda c: c.distance_km)
+
+    return EtablissementsProchesResponse(reference=reference, etablissements=candidats[:limite])
+
 
 @router.post("/", response_model=EtablissementOut, status_code=status.HTTP_201_CREATED)
 async def creer_etablissement(

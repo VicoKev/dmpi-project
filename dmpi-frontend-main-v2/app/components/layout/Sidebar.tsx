@@ -94,6 +94,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { to: "/patient/ordonnances", icon: "prescriptions", label: "Mes ordonnances" },
     { to: "/patient/resultats", icon: "lab_panel", label: "Mes résultats" },
     { to: "/patient/rendez-vous", icon: "calendar_month", label: "Mes rendez-vous" },
+    { to: "/patient/etablissements-proches", icon: "local_hospital", label: "Établissements proches" },
   ],
   admin_etablissement: [
     { to: "/admin", icon: "dashboard", label: "Tableau de bord" },

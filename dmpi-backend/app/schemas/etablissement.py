@@ -1,10 +1,10 @@
 from pydantic import BaseModel, Field
 from typing import Optional
 from datetime import datetime
+from app.schemas.prestataire import ReferenceLocalisation
 
 class EtablissementBase(BaseModel):
     nom: str
-    ville: str
     departement: str
     commune: str | None = None
     arrondissement: str | None = None
@@ -33,7 +33,6 @@ class EtablissementCreate(EtablissementBase):
 
 class EtablissementUpdate(BaseModel):
     nom: Optional[str] = None
-    ville: Optional[str] = None
     departement: Optional[str] = None
     commune: Optional[str] = None
     arrondissement: Optional[str] = None
@@ -50,13 +49,30 @@ class EtablissementUpdate(BaseModel):
     infirmiers: Optional[int] = None
     consultationsMois: Optional[int] = None
 
+class EtablissementProche(BaseModel):
+    id: str
+    nom: str
+    type: str
+    departement: str
+    commune: str | None = None
+    adresse: str | None = None
+    telephone: str
+    latitude: float
+    longitude: float
+    distance_km: float
+
+
+class EtablissementsProchesResponse(BaseModel):
+    reference: ReferenceLocalisation | None
+    etablissements: list[EtablissementProche]
+
+
 class EtablissementUpdateSelfService(BaseModel):
     """
     Champs qu'un admin_etablissement peut modifier sur son propre établissement
     (via /etablissements/moi) — uniquement les coordonnées et la localisation,
     pas le nom, le type, le statut ni les compteurs (gouvernance du super_admin).
     """
-    ville: Optional[str] = None
     departement: Optional[str] = None
     commune: Optional[str] = None
     arrondissement: Optional[str] = None

@@ -1,9 +1,9 @@
 import { apiFetch } from "./api";
+import type { ReferenceLocalisation } from "./prescriptionService";
 
 export interface Etablissement {
   id: string;
   nom: string;
-  ville: string;
   departement: string;
   commune?: string | null;
   arrondissement?: string | null;
@@ -25,7 +25,6 @@ export interface Etablissement {
 
 export interface EtablissementCreatePayload {
   nom: string;
-  ville: string;
   departement: string;
   commune?: string | null;
   arrondissement?: string | null;
@@ -45,7 +44,6 @@ export interface EtablissementCreatePayload {
 
 export interface EtablissementUpdatePayload {
   nom?: string;
-  ville?: string;
   departement?: string;
   commune?: string | null;
   arrondissement?: string | null;
@@ -64,7 +62,6 @@ export interface EtablissementUpdatePayload {
 }
 
 export interface EtablissementUpdateSelfServicePayload {
-  ville?: string;
   departement?: string;
   commune?: string | null;
   arrondissement?: string | null;
@@ -80,6 +77,36 @@ export const STATUT_OPTIONS = ["actif", "maintenance", "inactif"] as const;
 
 export async function getEtablissements(): Promise<Etablissement[]> {
   return apiFetch<Etablissement[]>("/etablissements/");
+}
+
+export interface EtablissementProche {
+  id: string;
+  nom: string;
+  type: "CHU" | "CHD" | "CSC" | "Clinique" | "Maternite";
+  departement: string;
+  commune?: string | null;
+  adresse?: string | null;
+  telephone: string;
+  latitude: number;
+  longitude: number;
+  distance_km: number;
+}
+
+export interface EtablissementsProchesResponse {
+  reference: ReferenceLocalisation | null;
+  etablissements: EtablissementProche[];
+}
+
+/** Établissements de santé actifs les plus proches d'une position donnée —
+ * un premier indice pour un patient qui cherche où se rendre rapidement,
+ * pas une garantie de plateau technique adapté à son besoin. */
+export async function getEtablissementsProches(position: { latitude: number; longitude: number }, limite = 5): Promise<EtablissementsProchesResponse> {
+  const params = new URLSearchParams({
+    latitude: String(position.latitude),
+    longitude: String(position.longitude),
+    limite: String(limite),
+  });
+  return apiFetch<EtablissementsProchesResponse>(`/etablissements/proches?${params.toString()}`);
 }
 
 export async function createEtablissement(payload: EtablissementCreatePayload): Promise<Etablissement> {

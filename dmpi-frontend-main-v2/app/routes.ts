@@ -35,6 +35,7 @@ export default [
     route("patient/ordonnances", "routes/patient/ordonnances.tsx"),
     route("patient/resultats", "routes/patient/resultats.tsx"),
     route("patient/rendez-vous", "routes/patient/rendez-vous.tsx"),
+    route("patient/etablissements-proches", "routes/patient/etablissements-proches.tsx"),
 
     // ─── Espace Admin Établissement ───────────────────────────────────
     route("admin", "routes/admin/dashboard.tsx"),
