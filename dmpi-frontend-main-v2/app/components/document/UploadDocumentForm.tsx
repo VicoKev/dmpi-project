@@ -6,6 +6,7 @@
 // erreur de saisie, et peut remplacer le(s) fichier(s) si besoin.
 import { useState } from "react";
 import Input from "../ui/Input";
+import Select from "../ui/Select";
 import Button from "../ui/Button";
 import ZoneDepotFichiers from "./ZoneDepotFichiers";
 import {
@@ -112,17 +113,12 @@ export default function UploadDocumentForm({
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Type de document</label>
-          <select
-            value={type}
-            onChange={(e) => setType(e.target.value as TypeDocumentMedical)}
-            className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-            style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)", color: "var(--color-on-surface)" }}
-          >
-            {TYPES.map((t) => <option key={t} value={t}>{TYPE_DOCUMENT_LABELS[t]}</option>)}
-          </select>
-        </div>
+        <Select
+          label="Type de document"
+          value={type}
+          onChange={(e) => setType(e.target.value as TypeDocumentMedical)}
+          options={TYPES.map((t) => ({ value: t, label: TYPE_DOCUMENT_LABELS[t] }))}
+        />
         <Input
           label="Date de réalisation"
           type="date"

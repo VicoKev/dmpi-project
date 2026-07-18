@@ -5,6 +5,7 @@ import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import Spinner from "../../components/ui/Spinner";
+import Select from "../../components/ui/Select";
 import {
   getDossierPatient,
   updateDossierPatient,
@@ -108,7 +109,7 @@ export default function EditDossierPatient() {
   };
 
   if (loading) return <div className="flex justify-center p-8"><Spinner /></div>;
-  if (error) return <div className="text-red-500 p-4">{error}</div>;
+  if (error) return <div className="p-4" style={{ color: "var(--color-error)" }}>{error}</div>;
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up max-w-4xl mx-auto mb-10">
@@ -129,36 +130,32 @@ export default function EditDossierPatient() {
               value={dateNaissance}
               onChange={(e) => setDateNaissance(e.target.value)}
             />
-            <div className="flex flex-col gap-1.5">
-              <label className="text-body-sm font-semibold text-[var(--color-on-surface)]">Sexe</label>
-              <select
-                value={sexe}
-                onChange={(e) => setSexe(e.target.value)}
-                className="w-full p-2.5 rounded-xl border focus:outline-none focus:ring-2 bg-[var(--color-surface)] border-[var(--color-outline-variant)]"
-              >
-                <option value="M">Masculin</option>
-                <option value="F">Féminin</option>
-                <option value="Autre">Autre</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-body-sm font-semibold text-[var(--color-on-surface)]">Groupe Sanguin</label>
-              <select
-                value={groupeSanguin}
-                onChange={(e) => setGroupeSanguin(e.target.value)}
-                className="w-full p-2.5 rounded-xl border focus:outline-none focus:ring-2 bg-[var(--color-surface)] border-[var(--color-outline-variant)]"
-              >
-                <option value="">Non renseigné</option>
-                <option value="A+">A+</option>
-                <option value="A-">A-</option>
-                <option value="B+">B+</option>
-                <option value="B-">B-</option>
-                <option value="AB+">AB+</option>
-                <option value="AB-">AB-</option>
-                <option value="O+">O+</option>
-                <option value="O-">O-</option>
-              </select>
-            </div>
+            <Select
+              label="Sexe"
+              value={sexe}
+              onChange={(e) => setSexe(e.target.value)}
+              options={[
+                { value: "M", label: "Masculin" },
+                { value: "F", label: "Féminin" },
+                { value: "Autre", label: "Autre" },
+              ]}
+            />
+            <Select
+              label="Groupe Sanguin"
+              value={groupeSanguin}
+              onChange={(e) => setGroupeSanguin(e.target.value)}
+              options={[
+                { value: "", label: "Non renseigné" },
+                { value: "A+", label: "A+" },
+                { value: "A-", label: "A-" },
+                { value: "B+", label: "B+" },
+                { value: "B-", label: "B-" },
+                { value: "AB+", label: "AB+" },
+                { value: "AB-", label: "AB-" },
+                { value: "O+", label: "O+" },
+                { value: "O-", label: "O-" },
+              ]}
+            />
           </div>
         </Card>
 
@@ -184,18 +181,18 @@ export default function EditDossierPatient() {
                       required
                     />
                   </div>
-                  <div className="flex-1 flex flex-col gap-1.5">
-                    <label className="text-body-sm font-semibold text-[var(--color-on-surface)]">Sévérité</label>
-                    <select
+                  <div className="flex-1">
+                    <Select
+                      label="Sévérité"
                       value={alg.severite}
                       onChange={(e) => handleUpdateAllergie(index, "severite", e.target.value)}
-                      className="w-full p-2.5 rounded-xl border focus:outline-none focus:ring-2 bg-[var(--color-surface)] border-[var(--color-outline-variant)]"
-                    >
-                      <option value="legere">Légère</option>
-                      <option value="moderee">Modérée</option>
-                      <option value="severe">Sévère</option>
-                      <option value="anaphylaxie">Anaphylaxie</option>
-                    </select>
+                      options={[
+                        { value: "legere", label: "Légère" },
+                        { value: "moderee", label: "Modérée" },
+                        { value: "severe", label: "Sévère" },
+                        { value: "anaphylaxie", label: "Anaphylaxie" },
+                      ]}
+                    />
                   </div>
                   <div className="flex-1">
                     <Input

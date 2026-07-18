@@ -6,6 +6,7 @@ import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import SelectRecherche from "../../components/ui/SelectRecherche";
+import Select from "../../components/ui/Select";
 import {
   getUsers,
   createUser,
@@ -320,51 +321,35 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                   onChange={(e) => update("date_naissance", e.target.value)}
                   required
                 />
-                <div className="flex flex-col gap-1">
-                  <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
-                    Sexe <span style={{ color: "var(--color-error)" }}>*</span>
-                  </label>
-                  <select
-                    value={form.sexe ?? "M"}
-                    onChange={(e) => update("sexe", e.target.value)}
-                    className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-                    style={{
-                      borderColor: "var(--color-outline-variant)",
-                      backgroundColor: "var(--color-surface-container-lowest)",
-                      color: "var(--color-on-surface)",
-                    }}
-                    required
-                  >
-                    <option value="M">Masculin</option>
-                    <option value="F">Féminin</option>
-                    <option value="Autre">Autre</option>
-                  </select>
-                </div>
+                <Select
+                  label="Sexe"
+                  required
+                  value={form.sexe ?? "M"}
+                  onChange={(e) => update("sexe", e.target.value)}
+                  options={[
+                    { value: "M", label: "Masculin" },
+                    { value: "F", label: "Féminin" },
+                    { value: "Autre", label: "Autre" },
+                  ]}
+                />
               </div>
-              <div className="mt-3 flex flex-col gap-1">
-                <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
-                  Groupe sanguin
-                </label>
-                <select
+              <div className="mt-3">
+                <Select
+                  label="Groupe sanguin"
                   value={form.groupe_sanguin ?? ""}
                   onChange={(e) => update("groupe_sanguin", e.target.value)}
-                  className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-                  style={{
-                    borderColor: "var(--color-outline-variant)",
-                    backgroundColor: "var(--color-surface-container-lowest)",
-                    color: "var(--color-on-surface)",
-                  }}
-                >
-                  <option value="">Non renseigné</option>
-                  <option value="A+">A+</option>
-                  <option value="A-">A-</option>
-                  <option value="B+">B+</option>
-                  <option value="B-">B-</option>
-                  <option value="AB+">AB+</option>
-                  <option value="AB-">AB-</option>
-                  <option value="O+">O+</option>
-                  <option value="O-">O-</option>
-                </select>
+                  options={[
+                    { value: "", label: "Non renseigné" },
+                    { value: "A+", label: "A+" },
+                    { value: "A-", label: "A-" },
+                    { value: "B+", label: "B+" },
+                    { value: "B-", label: "B-" },
+                    { value: "AB+", label: "AB+" },
+                    { value: "AB-", label: "AB-" },
+                    { value: "O+", label: "O+" },
+                    { value: "O-", label: "O-" },
+                  ]}
+                />
               </div>
             </div>
           )}
@@ -402,15 +387,15 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
             <div
               className="p-4 rounded-2xl border animate-fade-in-up"
               style={{
-                borderColor: "#0891B2",
-                backgroundColor: "#CFFAFE",
+                borderColor: "var(--color-tertiary)",
+                backgroundColor: "var(--color-tertiary-container)",
               }}
             >
-              <p className="text-body-md font-semibold mb-2" style={{ color: "#0E7490" }}>
+              <p className="text-body-md font-semibold mb-2" style={{ color: "var(--color-on-tertiary-container)" }}>
                 Laboratoire de rattachement <span style={{ color: "var(--color-error)" }}>*</span>
               </p>
               {laboratoires.length === 0 ? (
-                <p className="text-caption" style={{ color: "#0E7490" }}>
+                <p className="text-caption" style={{ color: "var(--color-on-tertiary-container)" }}>
                   Aucun laboratoire enregistré. Créez d'abord un laboratoire dans "Pharmacies & Laboratoires".
                 </p>
               ) : (
@@ -422,7 +407,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
                   ariaLabel="Laboratoire de rattachement"
                 />
               )}
-              <p className="text-caption mt-1.5" style={{ color: "#0E7490" }}>
+              <p className="text-caption mt-1.5" style={{ color: "var(--color-on-tertiary-container)" }}>
                 Ce compte ne pourra voir et traiter que les demandes d'examen adressées à ce laboratoire.
                 {laboratoireSelectionne && ` Identifié dans l'application comme « ${laboratoireSelectionne.nom} ${laboratoireSelectionne.commune ?? laboratoireSelectionne.departement} ».`}
               </p>
@@ -585,18 +570,12 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
             </div>
           )}
 
-          <div className="flex flex-col gap-1.5">
-            <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
-              Role
-            </label>
-            <select
-              value={form.role}
-              onChange={(e) => update("role", e.target.value)}
-              className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2"
-            >
-              {ROLES_SELECTABLE.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-            </select>
-          </div>
+          <Select
+            label="Role"
+            value={form.role}
+            onChange={(e) => update("role", e.target.value)}
+            options={ROLES_SELECTABLE.map(r => ({ value: r.value, label: r.label }))}
+          />
 
           {form.role === "patient" && (
             <div className="flex flex-col gap-1.5 mt-2">
@@ -1059,44 +1038,30 @@ export default function SuperAdminUtilisateurs() {
                       {/* Actions */}
                       <td className="px-4 py-3">
                         <div className="flex gap-2">
-                          <button
-                            onClick={() => setEditingUser(user)}
-                            className="flex flex-col items-center justify-center p-2 rounded-xl transition-colors hover:bg-[var(--color-surface-container)]"
-                            title="Modifier"
-                          >
-                            <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--color-primary)" }}>edit</span>
-                          </button>
+                          <Button variant="outline" size="sm" icon="edit" onClick={() => setEditingUser(user)}>
+                            Modifier
+                          </Button>
 
                           {user.est_actif ? (
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              icon="block"
+                              loading={isDeactivating}
                               onClick={() => handleDeactivate(user)}
-                              disabled={isDeactivating}
-                              className="flex items-center gap-1.5 text-caption font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 disabled:opacity-40"
-                              style={{
-                                backgroundColor: "var(--color-error-container)",
-                                color: "var(--color-on-error-container)",
-                              }}
                             >
-                              <span className="material-symbols-outlined text-[14px]">
-                                {isDeactivating ? "progress_activity" : "block"}
-                              </span>
-                              {isDeactivating ? "..." : "Désactiver"}
-                            </button>
+                              Désactiver
+                            </Button>
                           ) : (
-                            <button
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              icon="check_circle"
+                              loading={reactivatingId === user.id}
                               onClick={() => handleReactivate(user)}
-                              disabled={reactivatingId === user.id}
-                              className="flex items-center gap-1.5 text-caption font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80 disabled:opacity-40"
-                              style={{
-                                backgroundColor: "var(--color-success-container)",
-                                color: "var(--color-on-success-container)",
-                              }}
                             >
-                              <span className="material-symbols-outlined text-[14px]">
-                                {reactivatingId === user.id ? "progress_activity" : "check_circle"}
-                              </span>
-                              {reactivatingId === user.id ? "..." : "Réactiver"}
-                            </button>
+                              Réactiver
+                            </Button>
                           )}
                         </div>
                       </td>

@@ -58,7 +58,7 @@ const ROLE_ICONS: Record<string, { icon: string; color: string }> = {
   medecin: { icon: "stethoscope", color: "var(--color-primary)" },
   infirmier: { icon: "vaccines", color: "var(--color-tertiary)" },
   admin_etablissement: { icon: "admin_panel_settings", color: "var(--color-secondary)" },
-  super_admin: { icon: "shield_person", color: "#8B5CF6" },
+  super_admin: { icon: "shield_person", color: "var(--color-warning)" },
   patient: { icon: "person", color: "var(--color-on-success-container)" },
 };
 

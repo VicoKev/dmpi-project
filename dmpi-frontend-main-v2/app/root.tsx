@@ -11,6 +11,7 @@ import type { Route } from "./+types/root";
 import "./app.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ConfirmProvider } from "./contexts/ConfirmContext";
+import { ToastProvider } from "./contexts/ToastContext";
 
 export const links: Route.LinksFunction = () => [
   // Preconnect
@@ -50,9 +51,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <AuthProvider>
-      <ConfirmProvider>
-        <Outlet />
-      </ConfirmProvider>
+      <ToastProvider>
+        <ConfirmProvider>
+          <Outlet />
+        </ConfirmProvider>
+      </ToastProvider>
     </AuthProvider>
   );
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
+import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
 import {
   getEtablissements,
@@ -25,7 +26,7 @@ const TYPE_CONFIG: Record<string, { color: string; bg: string; icon: string }> =
   CHD:      { color: "var(--color-secondary)", bg: "var(--color-secondary-container)", icon: "emergency" },
   CSC:      { color: "var(--color-on-tertiary-container)",  bg: "var(--color-tertiary-container)",  icon: "home_health" },
   Clinique: { color: "var(--color-on-success-container)",   bg: "var(--color-success-container)",   icon: "healing" },
-  Maternite:{ color: "#EC4899", bg: "#FCE7F3",                                         icon: "pediatrics" },
+  Maternite:{ color: "var(--color-on-warning-container)",   bg: "var(--color-warning-container)",   icon: "pediatrics" },
 };
 
 const STATUT_CONFIG: Record<string, { label: string; color: string; bg: string; dot: boolean }> = {
@@ -170,18 +171,18 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Type</label>
-              <select value={form.type} onChange={e => update("type", e.target.value)} className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none">
-                {TYPE_OPTIONS.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>Statut</label>
-              <select value={form.statut} onChange={e => update("statut", e.target.value)} className="w-full p-3 rounded-xl border border-gray-300 focus:outline-none">
-                {STATUT_OPTIONS.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
-              </select>
-            </div>
+            <Select
+              label="Type"
+              value={form.type}
+              onChange={e => update("type", e.target.value)}
+              options={TYPE_OPTIONS.map(t => ({ value: t, label: t }))}
+            />
+            <Select
+              label="Statut"
+              value={form.statut}
+              onChange={e => update("statut", e.target.value)}
+              options={STATUT_OPTIONS.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}
+            />
           </div>
 
           <div className="grid grid-cols-1 gap-3">
@@ -498,10 +499,9 @@ export default function SuperAdminEtablissements() {
                       </td>
                       <td className="px-4 py-3 text-caption" style={{ color: "var(--color-on-surface-variant)" }}>{formatSync(e.derniereSync)}</td>
                       <td className="px-4 py-3">
-                        <button onClick={() => setSelected(e)} className="flex items-center gap-1 text-caption font-semibold px-3 py-1.5 rounded-full transition-all hover:opacity-80"
-                          style={{ backgroundColor: "var(--color-surface-container)", color: "var(--color-primary)" }}>
-                          <span className="material-symbols-outlined text-[14px]">info</span>Détails
-                        </button>
+                        <Button variant="ghost" size="sm" icon="info" onClick={() => setSelected(e)}>
+                          Détails
+                        </Button>
                       </td>
                     </tr>
                   );

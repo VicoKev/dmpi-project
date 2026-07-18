@@ -1,6 +1,7 @@
 // Suivi des demandes d'accès portail soumises par le médecin/infirmier connecté
 import { useState, useEffect, useCallback } from "react";
 import { useConfirm } from "../../contexts/ConfirmContext";
+import { useToast } from "../../contexts/ToastContext";
 import Card from "../ui/Card";
 import Button from "../ui/Button";
 import {
@@ -22,6 +23,7 @@ export default function MesDemandesAccesList() {
   const [error, setError] = useState<string | null>(null);
   const [cancelingId, setCancelingId] = useState<number | null>(null);
   const askConfirmation = useConfirm();
+  const showToast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -52,7 +54,7 @@ export default function MesDemandesAccesList() {
       const updated = await annulerDemandeAcces(demande.id);
       setDemandes((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
     } catch (err) {
-      alert((err as Error).message || "Erreur lors de l'annulation.");
+      showToast((err as Error).message || "Erreur lors de l'annulation.", "error");
     } finally {
       setCancelingId(null);
     }

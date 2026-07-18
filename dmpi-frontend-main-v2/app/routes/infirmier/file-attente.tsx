@@ -1,10 +1,13 @@
 // File d'attente de pré-consultation — Espace Infirmier
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router";
+import { useToast } from "../../contexts/ToastContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import Select from "../../components/ui/Select";
 import SelectRecherche from "../../components/ui/SelectRecherche";
+import Textarea from "../../components/ui/Textarea";
 import { validateNpi, getDossierPatient } from "../../services/patientService";
 import {
   ajouterFileAttente,
@@ -124,37 +127,24 @@ function NouvellePreConsultationForm({ medecins, onAdded }: { medecins: MedecinD
         required
       />
 
-      <div className="flex flex-col gap-1">
-        <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
-          Motif de la visite
-        </label>
-        <textarea
-          value={motif}
-          onChange={(e) => setMotif(e.target.value)}
-          rows={2}
-          placeholder="Ex : fièvre depuis 3 jours, toux..."
-          className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-          style={{
-            borderColor: "var(--color-outline-variant)",
-            backgroundColor: "var(--color-surface-container-lowest)",
-            color: "var(--color-on-surface)",
-          }}
-        />
-      </div>
+      <Textarea
+        label="Motif de la visite"
+        value={motif}
+        onChange={(e) => setMotif(e.target.value)}
+        rows={2}
+        placeholder="Ex : fièvre depuis 3 jours, toux..."
+      />
 
       <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col gap-1">
-          <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Priorité</label>
-          <select
-            value={priorite}
-            onChange={(e) => setPriorite(e.target.value as "normale" | "urgente")}
-            className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-            style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)", color: "var(--color-on-surface)" }}
-          >
-            <option value="normale">Normale</option>
-            <option value="urgente">Urgente</option>
-          </select>
-        </div>
+        <Select
+          label="Priorité"
+          value={priorite}
+          onChange={(e) => setPriorite(e.target.value as "normale" | "urgente")}
+          options={[
+            { value: "normale", label: "Normale" },
+            { value: "urgente", label: "Urgente" },
+          ]}
+        />
         <div className="flex flex-col gap-1">
           <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Médecin (optionnel)</label>
           <SelectRecherche
@@ -186,6 +176,7 @@ export default function InfirmierFileAttente() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [assigningId, setAssigningId] = useState<string | null>(null);
+  const showToast = useToast();
 
   const load = useCallback(async () => {
     try {
@@ -213,7 +204,7 @@ export default function InfirmierFileAttente() {
       await assignerMedecin(entree.id, medecinEmail);
       await load();
     } catch (err) {
-      alert((err as Error).message || "Erreur lors de l'assignation.");
+      showToast((err as Error).message || "Erreur lors de l'assignation.", "error");
     } finally {
       setAssigningId(null);
     }
@@ -284,20 +275,19 @@ export default function InfirmierFileAttente() {
                       </div>
                     </div>
                     {e.statut === "en_attente" ? (
-                      <select
+                      <Select
                         value=""
                         onChange={(ev) => handleAssigner(e, ev.target.value)}
                         disabled={assigningId === e.id}
-                        className="w-full py-2 px-3 rounded-lg border text-body-md focus:outline-none focus:ring-2"
-                        style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)", color: "var(--color-on-surface)" }}
-                      >
-                        <option value="">{assigningId === e.id ? "Assignation…" : "Assigner à un médecin"}</option>
-                        {medecins.map((m) => (
-                          <option key={m.email} value={m.email} disabled={!m.disponible}>
-                            Dr. {m.prenom} {m.nom}{!m.disponible ? " (indisponible)" : ""}
-                          </option>
-                        ))}
-                      </select>
+                        options={[
+                          { value: "", label: assigningId === e.id ? "Assignation…" : "Assigner à un médecin", disabled: true },
+                          ...medecins.map((m) => ({
+                            value: m.email,
+                            label: `Dr. ${m.prenom} ${m.nom}${!m.disponible ? " (indisponible)" : ""}`,
+                            disabled: !m.disponible,
+                          })),
+                        ]}
+                      />
                     ) : (
                       <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
                         Dr. {medecin ? `${medecin.prenom} ${medecin.nom}` : e.medecin_email}

@@ -135,7 +135,7 @@ export default function AdminSupervision() {
                   return (
                     <tr
                       key={u.id}
-                      className="border-b hover:bg-black/5 transition-colors"
+                      className="border-b hover:bg-[var(--color-surface-container-low)] transition-colors"
                       style={{ borderColor: "var(--color-outline-variant)" }}
                     >
                       <td className="py-3 px-4">

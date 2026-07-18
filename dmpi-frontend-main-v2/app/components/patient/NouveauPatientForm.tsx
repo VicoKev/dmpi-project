@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import Input from "../ui/Input";
+import Select from "../ui/Select";
 import Button from "../ui/Button";
 import { createDossierPatient } from "../../services/patientService";
 import { createDemandeAcces } from "../../services/demandeAccesService";
@@ -121,35 +122,27 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
           value={dateNaissance}
           onChange={(e) => setDateNaissance(e.target.value)}
         />
-        <div className="flex flex-col gap-1">
-          <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Sexe</label>
-          <select
-            value={sexe}
-            onChange={(e) => setSexe(e.target.value)}
-            className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-            style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)" }}
-          >
-            <option value="M">Masculin</option>
-            <option value="F">Féminin</option>
-            <option value="Autre">Autre</option>
-          </select>
-        </div>
+        <Select
+          label="Sexe"
+          value={sexe}
+          onChange={(e) => setSexe(e.target.value)}
+          options={[
+            { value: "M", label: "Masculin" },
+            { value: "F", label: "Féminin" },
+            { value: "Autre", label: "Autre" },
+          ]}
+        />
       </div>
 
-      <div className="flex flex-col gap-1">
-        <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Groupe sanguin (optionnel)</label>
-        <select
-          value={groupeSanguin}
-          onChange={(e) => setGroupeSanguin(e.target.value)}
-          className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-          style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)" }}
-        >
-          <option value="">Non renseigné</option>
-          {GROUPES_SANGUINS.map((g) => (
-            <option key={g} value={g}>{g}</option>
-          ))}
-        </select>
-      </div>
+      <Select
+        label="Groupe sanguin (optionnel)"
+        value={groupeSanguin}
+        onChange={(e) => setGroupeSanguin(e.target.value)}
+        options={[
+          { value: "", label: "Non renseigné" },
+          ...GROUPES_SANGUINS.map((g) => ({ value: g, label: g })),
+        ]}
+      />
 
       {/* Tuteur — pour mineurs et nouveau-nés sans contact propre */}
       <div
@@ -161,20 +154,15 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input label="Nom du tuteur" value={tuteurNom} onChange={(e) => setTuteurNom(e.target.value)} placeholder="Ex: Mariam Kouassi" />
-          <div className="flex flex-col gap-1">
-            <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>Lien de parenté</label>
-            <select
-              value={lienParente}
-              onChange={(e) => setLienParente(e.target.value)}
-              className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-              style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-lowest)" }}
-            >
-              <option value="">Sélectionner...</option>
-              {LIENS_PARENTE.map((l) => (
-                <option key={l} value={l}>{l}</option>
-              ))}
-            </select>
-          </div>
+          <Select
+            label="Lien de parenté"
+            value={lienParente}
+            onChange={(e) => setLienParente(e.target.value)}
+            options={[
+              { value: "", label: "Sélectionner...", disabled: true },
+              ...LIENS_PARENTE.map((l) => ({ value: l, label: l })),
+            ]}
+          />
         </div>
       </div>
 
@@ -185,6 +173,7 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
           checked={demandeAccesSouhaitee}
           onChange={(e) => setDemandeAccesSouhaitee(e.target.checked)}
           className="mt-1"
+          style={{ accentColor: "var(--color-primary)" }}
         />
         <span>
           <span className="text-body-md font-semibold block" style={{ color: "var(--color-on-surface)" }}>

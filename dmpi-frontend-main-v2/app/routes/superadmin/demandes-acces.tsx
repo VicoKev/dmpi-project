@@ -1,8 +1,10 @@
 // Demandes d'accès portail patient — Espace Super Admin National
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router";
+import { useToast } from "../../contexts/ToastContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import Textarea from "../../components/ui/Textarea";
 import {
   getDemandesAcces,
   rejeterDemandeAcces,
@@ -17,6 +19,7 @@ export default function SuperAdminDemandesAcces() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectingDemande, setRejectingDemande] = useState<DemandeAcces | null>(null);
   const [motifRejet, setMotifRejet] = useState("");
+  const showToast = useToast();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -56,7 +59,7 @@ export default function SuperAdminDemandesAcces() {
       setDemandes((prev) => prev.filter((d) => d.id !== rejectingDemande.id));
       setRejectingDemande(null);
     } catch (err) {
-      alert((err as Error).message || "Erreur lors du rejet.");
+      showToast((err as Error).message || "Erreur lors du rejet.", "error");
     } finally {
       setRejectingId(null);
     }
@@ -152,25 +155,15 @@ export default function SuperAdminDemandesAcces() {
               {rejectingDemande.prenom} {rejectingDemande.nom} — NPI {rejectingDemande.npi}
             </p>
 
-            <div className="flex flex-col gap-1 mb-1">
-              <label className="text-label-bold" style={{ color: "var(--color-on-surface-variant)" }}>
-                Motif du rejet (optionnel)
-              </label>
-              <textarea
+            <div className="mb-1">
+              <Textarea
+                label="Motif du rejet (optionnel)"
                 value={motifRejet}
                 onChange={(e) => setMotifRejet(e.target.value)}
                 rows={3}
                 placeholder="Ex : numéro de téléphone invalide, à vérifier avec le patient..."
-                className="w-full py-3 px-4 rounded-xl border focus:outline-none focus:ring-2"
-                style={{
-                  borderColor: "var(--color-outline-variant)",
-                  backgroundColor: "var(--color-surface-container-lowest)",
-                  color: "var(--color-on-surface)",
-                }}
+                hint="Visible par le médecin/infirmier à l'origine de la demande."
               />
-              <p className="text-caption mb-4" style={{ color: "var(--color-on-surface-variant)" }}>
-                Visible par le médecin/infirmier à l'origine de la demande.
-              </p>
             </div>
 
             <div className="flex gap-3">

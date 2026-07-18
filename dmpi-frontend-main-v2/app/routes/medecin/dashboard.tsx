@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
+import { useToast } from "../../contexts/ToastContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import { StatutBadge } from "../../components/ui/Badge";
@@ -21,6 +22,7 @@ const REFRESH_MS = 20_000;
 function DisponibiliteToggle() {
   const [disponible, setDisponible] = useState<boolean | null>(null);
   const [saving, setSaving] = useState(false);
+  const showToast = useToast();
 
   useEffect(() => {
     getMaDisponibilite()
@@ -35,7 +37,7 @@ function DisponibiliteToggle() {
       const next = await definirMaDisponibilite(!disponible);
       setDisponible(next);
     } catch (err) {
-      alert((err as Error).message || "Erreur lors de la mise à jour de la disponibilité.");
+      showToast((err as Error).message || "Erreur lors de la mise à jour de la disponibilité.", "error");
     } finally {
       setSaving(false);
     }
@@ -73,6 +75,7 @@ function FileAttenteCard() {
   const [patients, setPatients] = useState<EntreeFileAttente[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
+  const showToast = useToast();
 
   const load = useCallback(async () => {
     try {
@@ -96,7 +99,7 @@ function FileAttenteCard() {
       await terminerPriseEnCharge(entree.id);
       await load();
     } catch (err) {
-      alert((err as Error).message || "Erreur lors de la clôture.");
+      showToast((err as Error).message || "Erreur lors de la clôture.", "error");
     } finally {
       setActionId(null);
     }

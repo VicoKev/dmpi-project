@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
+import Textarea from "../ui/Textarea";
 import { formatDateFr } from "../../services/patientService";
 import {
   obtenirUrlFichier,
@@ -117,14 +118,13 @@ function InterpretationSection({ document: doc, peutInterpreter, onChanged }: { 
           <span className="material-symbols-outlined text-[18px]" style={{ color: "var(--color-primary)" }}>stethoscope</span>
           <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>Interprétation médecin</p>
         </div>
-        <textarea
+        <Textarea
           value={texte}
           onChange={(e) => setTexte(e.target.value)}
           rows={3}
           placeholder="Expliquez le résultat au dossier du patient..."
           autoFocus
-          className="w-full p-2.5 rounded-lg text-body-md resize-none focus:outline-none focus:ring-2"
-          style={{ backgroundColor: "var(--color-surface-container-lowest)", color: "var(--color-on-surface)", border: "1px solid var(--color-outline-variant)" }}
+          className="gap-0!"
         />
         {error && <p className="text-caption" style={{ color: "var(--color-error)" }}>{error}</p>}
         <div className="flex gap-2">

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import Card, { CardHeader } from "../ui/Card";
 import Input from "../ui/Input";
 import Button from "../ui/Button";
+import Textarea from "../ui/Textarea";
 import type { Constantes } from "../../types/consultation";
 
 interface ConstantesFormProps {
@@ -210,16 +211,11 @@ export default function ConstantesForm({
 
       <Card>
         <CardHeader icon="notes" title="Notes infirmières" />
-        <textarea
-          className="w-full rounded-xl p-3 text-body-md resize-y min-h-[80px] border"
+        <Textarea
           placeholder="Observations particulières, comportement du patient, contexte…"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          style={{
-            borderColor: "var(--color-outline-variant)",
-            backgroundColor: "var(--color-surface-container-lowest)",
-            color: "var(--color-on-surface)",
-          }}
+          rows={4}
         />
       </Card>
 

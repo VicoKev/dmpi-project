@@ -139,7 +139,7 @@ export default function PharmaciesProchesCard({ prescriptionId }: PharmaciesProc
                   href={urlItineraire(donnees.reference, p)}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-full font-sans font-bold transition-all duration-200 active:scale-95 cursor-pointer hover:bg-[var(--color-surface-container)] border-2 px-4 py-2 text-label-bold shrink-0 self-start sm:self-auto"
+                  className="inline-flex items-center justify-center gap-1.5 rounded-full font-sans font-bold transition-all duration-200 active:scale-95 cursor-pointer hover:bg-[var(--color-surface-container-low)] border-2 px-4 py-2 text-label-bold shrink-0 self-start sm:self-auto"
                   style={{ borderColor: "var(--color-primary)", color: "var(--color-primary)", backgroundColor: "transparent" }}
                 >
                   <span className="material-symbols-outlined text-[16px]">directions</span>
