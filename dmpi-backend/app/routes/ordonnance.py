@@ -77,11 +77,13 @@ async def enregistrer_ordonnance(
     # Mettre à jour les traitements en cours dans le dossier médical
     if ordonnance.traitements:
         nouveaux_traitements = []
-        for t in ordonnance.traitements:
+        for index, t in enumerate(ordonnance.traitements):
             nouveaux_traitements.append({
                 "nom_medicament": t.nom_medicament,
                 "posologie": t.posologie,
-                "indication": f"Prescrit le {datetime.utcnow().strftime('%d/%m/%Y')} (durée: {t.duree})"
+                "indication": f"Prescrit le {datetime.utcnow().strftime('%d/%m/%Y')} (durée: {t.duree})",
+                "ordonnance_id": str(result.inserted_id),
+                "ligne_index": index,
             })
 
         await dossiers_medicaux_collection.update_one(
@@ -171,9 +173,11 @@ async def renouveler_ordonnance(
         {
             "nom_medicament": t["nom_medicament"],
             "posologie": t["posologie"],
-            "indication": f"Renouvelé le {datetime.utcnow().strftime('%d/%m/%Y')} (durée: {t['duree']})"
+            "indication": f"Renouvelé le {datetime.utcnow().strftime('%d/%m/%Y')} (durée: {t['duree']})",
+            "ordonnance_id": str(result.inserted_id),
+            "ligne_index": index,
         }
-        for t in traitements_renouvelables
+        for index, t in enumerate(traitements_renouvelables)
     ]
     await dossiers_medicaux_collection.update_one(
         {"npi": originale["npi"]},

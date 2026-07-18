@@ -27,6 +27,11 @@ class TraitementEnCours(BaseModel):
     actif: bool = True
     date_arret: datetime | None = None
     motif_arret: str | None = None
+    # Lien vers la ligne d'ordonnance à l'origine de cette entrée — absent sur
+    # les entrées créées avant l'introduction de ce champ, auquel cas
+    # l'appariement se fait par nom de médicament côté frontend.
+    ordonnance_id: str | None = None
+    ligne_index: int | None = None
 
 
 class ArreterTraitementRequest(BaseModel):
