@@ -2,15 +2,49 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
-import { StatutBadge } from "../../components/ui/Badge";
+import Badge, { StatutBadge } from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
-import { getPrescriptionsByPatient } from "../../services/prescriptionService";
-import { formatDateFr } from "../../services/patientService";
+import { getPrescriptionsByPatient, ordonnanceIdDepuisPrescriptionId } from "../../services/prescriptionService";
+import { getDossierPatient, formatDateFr } from "../../services/patientService";
 import type { Prescription } from "../../types/prescription";
 import { FREQUENCE_LABELS } from "../../types/prescription";
+import type { Traitement } from "../../types/patient";
 import PharmaciesProchesCard from "../../components/prescription/PharmaciesProchesCard";
 
-function PrescriptionCard({ prescription: p }: { prescription: Prescription }) {
+function normaliserMedicament(nom: string): string {
+  return nom.trim().toLowerCase();
+}
+
+/**
+ * Fait correspondre une ligne d'ordonnance à son entrée dans
+ * traitements_en_cours. Priorité au lien précis (ordonnanceId + ligneIndex),
+ * enregistré pour toute ordonnance créée depuis l'introduction de ce champ.
+ * À défaut (ordonnances plus anciennes, sans lien enregistré), repli sur un
+ * rapprochement par nom de médicament — en ne considérant que les entrées
+ * elles-mêmes sans lien précis, pour ne pas voler la correspondance d'une
+ * autre ligne déjà identifiée avec certitude.
+ */
+function trouverTraitementCorrespondant(
+  ordonnanceIdBrut: string,
+  ligneIndex: number,
+  medicament: string,
+  traitements: Traitement[]
+): Traitement | undefined {
+  const precis = traitements.find(
+    (t) => t.ordonnanceId === ordonnanceIdBrut && t.ligneIndex === ligneIndex
+  );
+  if (precis) return precis;
+
+  const cible = normaliserMedicament(medicament);
+  const correspondances = traitements.filter(
+    (t) => !t.ordonnanceId && normaliserMedicament(t.medicament) === cible
+  );
+  if (correspondances.length === 0) return undefined;
+  return correspondances.find((t) => t.actif) ?? correspondances[correspondances.length - 1];
+}
+
+function PrescriptionCard({ prescription: p, traitementsEnCours }: { prescription: Prescription; traitementsEnCours: Traitement[] }) {
+  const ordonnanceIdBrut = ordonnanceIdDepuisPrescriptionId(p.id);
   const [open, setOpen] = useState(false);
 
   return (
@@ -49,13 +83,15 @@ function PrescriptionCard({ prescription: p }: { prescription: Prescription }) {
       {/* Détail dépliable */}
       {open && (
         <div className="mt-4 flex flex-col gap-3 animate-fade-in">
-          {p.lignes.map((ligne) => (
+          {p.lignes.map((ligne, ligneIndex) => {
+            const traitement = trouverTraitementCorrespondant(ordonnanceIdBrut, ligneIndex, ligne.medicament, traitementsEnCours);
+            return (
             <div
               key={ligne.id}
               className="p-3 rounded-xl flex flex-col gap-1"
               style={{ backgroundColor: "var(--color-surface-container-low)" }}
             >
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span
                   className="material-symbols-outlined filled text-[18px]"
                   style={{ color: "var(--color-secondary)" }}
@@ -76,7 +112,16 @@ function PrescriptionCard({ prescription: p }: { prescription: Prescription }) {
                     Renouvelable
                   </span>
                 )}
+                {traitement?.actif === false && (
+                  <Badge variant="neutral" icon="block" size="sm">Arrêté</Badge>
+                )}
               </div>
+              {traitement?.actif === false && (
+                <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+                  Traitement arrêté{traitement.dateFin ? ` le ${formatDateFr(traitement.dateFin)}` : ""}
+                  {traitement.motifArret ? ` — ${traitement.motifArret}` : ""}
+                </p>
+              )}
               {ligne.forme && (
                 <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
                   Forme : {ligne.forme}
@@ -93,7 +138,8 @@ function PrescriptionCard({ prescription: p }: { prescription: Prescription }) {
                 </p>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {p.noteGlobale && (
             <div
@@ -119,13 +165,21 @@ export default function PatientOrdonnances() {
   const { user } = useAuth();
   const npi = user?.patientNpi;
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [traitementsEnCours, setTraitementsEnCours] = useState<Traitement[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!npi) { setLoading(false); return; }
     let cancelled = false;
-    getPrescriptionsByPatient(npi).then((res) => {
-      if (!cancelled) { setPrescriptions(res); setLoading(false); }
+    Promise.all([
+      getPrescriptionsByPatient(npi),
+      getDossierPatient(npi),
+    ]).then(([res, dossier]) => {
+      if (!cancelled) {
+        setPrescriptions(res);
+        setTraitementsEnCours(dossier?.traitementsEnCours ?? []);
+        setLoading(false);
+      }
     });
     return () => { cancelled = true; };
   }, [npi]);
@@ -162,7 +216,7 @@ export default function PatientOrdonnances() {
       ) : (
         <div className="flex flex-col gap-4">
           {prescriptions.map((p) => (
-            <PrescriptionCard key={p.id} prescription={p} />
+            <PrescriptionCard key={p.id} prescription={p} traitementsEnCours={traitementsEnCours} />
           ))}
         </div>
       )}

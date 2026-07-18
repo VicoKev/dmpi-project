@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import { AllergieBadge } from "../../components/ui/Badge";
+import TraitementsCard from "../../components/dossier/TraitementsCard";
 import Spinner from "../../components/ui/Spinner";
 import { getDossierPatient, calculerAge, formatDateFr } from "../../services/patientService";
 import { getConsultationsByPatient } from "../../services/consultationService";
@@ -298,33 +299,8 @@ export default function PatientDashboard() {
       </div>
 
       {/* Traitements en cours */}
-      {traitementsEnCours.filter((t) => t.actif).length > 0 && (
-        <Card>
-          <CardHeader icon="medication" title="Mes traitements en cours" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {traitementsEnCours
-              .filter((t) => t.actif)
-              .map((t) => (
-                <div
-                  key={t.id}
-                  className="flex flex-col gap-1 p-3 rounded-xl"
-                  style={{ backgroundColor: "var(--color-surface-container-low)" }}
-                >
-                  <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>
-                    {t.medicament}
-                  </p>
-                  <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                    {t.dosage} · {t.frequence}
-                  </p>
-                  {t.prescripteur && (
-                    <p className="text-caption" style={{ color: "var(--color-outline)" }}>
-                      Prescrit par {t.prescripteur}
-                    </p>
-                  )}
-                </div>
-              ))}
-          </div>
-        </Card>
+      {traitementsEnCours.length > 0 && (
+        <TraitementsCard traitements={traitementsEnCours} titre="Mes traitements" />
       )}
     </div>
   );

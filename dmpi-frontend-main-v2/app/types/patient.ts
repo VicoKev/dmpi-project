@@ -53,6 +53,9 @@ export interface Traitement {
   motifArret?: string;
   prescripteur?: string;
   actif: boolean;
+  /** Lien précis vers la ligne d'ordonnance à l'origine de cette entrée — absent sur les traitements créés avant ce champ. */
+  ordonnanceId?: string;
+  ligneIndex?: number;
 }
 
 export interface Hospitalisation {

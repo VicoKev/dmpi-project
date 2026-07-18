@@ -21,6 +21,8 @@ interface BackendTraitement {
   actif?: boolean;
   date_arret?: string | null;
   motif_arret?: string | null;
+  ordonnance_id?: string | null;
+  ligne_index?: number | null;
 }
 
 interface BackendTuteur {
@@ -75,6 +77,8 @@ function mapTraitement(t: BackendTraitement, index: number): Traitement {
     dateFin: t.date_arret ?? undefined,
     motifArret: t.motif_arret ?? undefined,
     actif: t.actif ?? true,
+    ordonnanceId: t.ordonnance_id ?? undefined,
+    ligneIndex: t.ligne_index ?? undefined,
   };
 }
 

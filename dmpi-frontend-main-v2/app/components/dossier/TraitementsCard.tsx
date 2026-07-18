@@ -10,10 +10,12 @@ import type { Traitement } from "../../types/patient";
 export default function TraitementsCard({
   traitements,
   onArreter,
+  titre = "Traitements en cours",
 }: {
   traitements: Traitement[];
   /** Fourni uniquement côté médecin — arrêter un traitement est une décision clinique. */
   onArreter?: (index: number, motif?: string) => Promise<void> | void;
+  titre?: string;
 }) {
   const [indexEnArret, setIndexEnArret] = useState<number | null>(null);
   const [motif, setMotif] = useState("");
@@ -42,7 +44,7 @@ export default function TraitementsCard({
 
   return (
     <Card>
-      <CardHeader icon="medication" title="Traitements en cours" />
+      <CardHeader icon="medication" title={titre} />
       {actifs.length === 0 ? (
         <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
           Aucun traitement en cours.
