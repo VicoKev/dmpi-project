@@ -9,6 +9,10 @@ export interface DemandeExamen {
   motif: string | null;
   medecin_email: string;
   statut: "en_attente" | "traitee" | "annulee";
+  /** Signal non bloquant du laboratoire — la demande reste "en_attente" et
+   * peut toujours recevoir un résultat plus tard si la situation se résout. */
+  probleme_signale: boolean;
+  motif_probleme: string | null;
   created_at: string;
 }
 
@@ -40,4 +44,16 @@ export async function getDemandesExamenPatient(npi: string): Promise<DemandeExam
 
 export async function getMesDemandesLaboratoire(): Promise<DemandeExamen[]> {
   return apiFetch<DemandeExamen[]>("/demandes-examen/mes-demandes");
+}
+
+/** Examens prescrits par le médecin connecté, tous patients confondus. */
+export async function getMesPrescriptionsExamen(): Promise<DemandeExamen[]> {
+  return apiFetch<DemandeExamen[]>("/demandes-examen/mes-prescriptions");
+}
+
+export async function signalerProblemeExamen(demandeId: string, motif?: string): Promise<DemandeExamen> {
+  return apiFetch<DemandeExamen>(`/demandes-examen/${demandeId}/signaler-probleme`, {
+    method: "PATCH",
+    body: JSON.stringify({ motif: motif?.trim() || undefined }),
+  });
 }

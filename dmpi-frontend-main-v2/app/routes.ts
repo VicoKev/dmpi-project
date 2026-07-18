@@ -11,6 +11,7 @@ export default [
     route("medecin/patients/nouveau", "routes/medecin/patients.nouveau.tsx"),
     route("medecin/consultations", "routes/medecin/consultations.tsx"),
     route("medecin/ordonnances", "routes/medecin/ordonnances.tsx"),
+    route("medecin/examens", "routes/medecin/examens.tsx"),
     route("medecin/agenda", "routes/medecin/agenda.tsx"),
     route("medecin/dossier/:npi", "routes/medecin/dossier.$npi.tsx"),
     route("medecin/dossier/:npi/modifier", "routes/medecin/dossier.$npi.modifier.tsx"),

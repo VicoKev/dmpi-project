@@ -76,6 +76,7 @@ const NAV_ITEMS: Record<UserRole, NavItem[]> = {
     { to: "/medecin/patients", icon: "groups", label: "Patients" },
     { to: "/medecin/consultations", icon: "medical_services", label: "Consultations" },
     { to: "/medecin/ordonnances", icon: "prescriptions", label: "Ordonnances" },
+    { to: "/medecin/examens", icon: "biotech", label: "Examens" },
     { to: "/medecin/agenda", icon: "calendar_month", label: "Agenda" },
     { to: "/medecin/demandes-acces", icon: "how_to_reg", label: "Demandes d'accès" },
   ],
