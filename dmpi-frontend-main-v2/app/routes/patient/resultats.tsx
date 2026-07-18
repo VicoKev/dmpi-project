@@ -53,14 +53,30 @@ export default function PatientResultats() {
               <CardHeader icon="hourglass_empty" title={`Examens en attente de résultat (${demandesEnAttente.length})`} />
               <div className="flex flex-col gap-2">
                 {demandesEnAttente.map((d) => (
-                  <div key={d.id} className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl" style={{ backgroundColor: "var(--color-warning-container)" }}>
+                  <div
+                    key={d.id}
+                    className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl"
+                    style={{ backgroundColor: d.probleme_signale ? "var(--color-error-container)" : "var(--color-warning-container)" }}
+                  >
                     <div>
-                      <p className="text-body-md font-semibold" style={{ color: "var(--color-on-warning-container)" }}>{d.type_examen}</p>
-                      <p className="text-caption" style={{ color: "var(--color-on-warning-container)" }}>
+                      <p
+                        className="text-body-md font-semibold"
+                        style={{ color: d.probleme_signale ? "var(--color-on-error-container)" : "var(--color-on-warning-container)" }}
+                      >
+                        {d.type_examen}
+                      </p>
+                      <p className="text-caption" style={{ color: d.probleme_signale ? "var(--color-on-error-container)" : "var(--color-on-warning-container)" }}>
                         {d.prestataire_nom ?? "Laboratoire"} · prescrit le {formatDateFr(d.created_at)}
                       </p>
+                      {d.probleme_signale && (
+                        <p className="text-caption font-semibold" style={{ color: "var(--color-on-error-container)" }}>
+                          ⚠ Le laboratoire a signalé un problème — il pourrait vous recontacter.
+                        </p>
+                      )}
                     </div>
-                    <Badge variant="warning">En attente</Badge>
+                    <Badge variant={d.probleme_signale ? "error" : "warning"} icon={d.probleme_signale ? "report" : undefined}>
+                      {d.probleme_signale ? "Problème" : "En attente"}
+                    </Badge>
                   </div>
                 ))}
               </div>
