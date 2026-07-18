@@ -6,9 +6,12 @@ import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
+import Select from "../../components/ui/Select";
+import Textarea from "../../components/ui/Textarea";
 import Spinner from "../../components/ui/Spinner";
 import {
   createAdministration,
+  getTodayAdministrationsByPatient,
   VOIE_LABELS,
   STATUT_ADMIN_LABELS,
   type CreateAdministrationPayload,
@@ -32,6 +35,20 @@ const STATUT_OPTIONS = Object.entries(STATUT_ADMIN_LABELS).map(([value, label]) 
   label,
 }));
 
+function normaliserNomMedicament(nom: string): string {
+  return nom.trim().toLowerCase();
+}
+
+const STATUT_AUJOURDHUI_CFG: Record<AdministrationMedicament["statut"], { label: string; color: string; bg: string; icon: string }> = {
+  administre: { label: "Déjà administré", color: "var(--color-on-success-container)", bg: "var(--color-success-container)", icon: "check_circle" },
+  refuse: { label: "Refusé", color: "var(--color-on-error-container)", bg: "var(--color-error-container)", icon: "block" },
+  reporte: { label: "Reporté", color: "var(--color-on-warning-container)", bg: "var(--color-warning-container)", icon: "schedule" },
+};
+
+function formatHeure(dateIso: string): string {
+  return new Date(dateIso).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
 export default function InfirmierTraitements() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -43,6 +60,7 @@ export default function InfirmierTraitements() {
   const [searching, setSearching] = useState(false);
   const [patient, setPatient] = useState<PatientSearchResult | null>(null);
   const [traitements, setTraitements] = useState<{ id: string; medicament: string; dosage: string; frequence: string }[]>([]);
+  const [adminsAujourdhui, setAdminsAujourdhui] = useState<AdministrationMedicament[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   // Étape 2 : Formulaire administration
@@ -65,9 +83,10 @@ export default function InfirmierTraitements() {
     setPatient(null);
     setSuccess(false);
 
-    const [result, dossier] = await Promise.all([
+    const [result, dossier, adminsJour] = await Promise.all([
       getPatientByNpi(npi),
       getDossierPatient(npi),
+      getTodayAdministrationsByPatient(npi).catch(() => []),
     ]);
 
     setSearching(false);
@@ -75,8 +94,17 @@ export default function InfirmierTraitements() {
       setSearchError(`Aucun patient trouvé pour le NPI ${npi}.`);
     } else {
       setPatient(result);
-      setTraitements(dossier?.traitementsEnCours ?? []);
+      // Un traitement arrêté ne doit plus être proposé en préremplissage.
+      setTraitements((dossier?.traitementsEnCours ?? []).filter((t) => t.actif));
+      setAdminsAujourdhui(adminsJour);
     }
+  };
+
+  /** Dernière administration du jour pour ce médicament, s'il y en a une —
+   * pour repérer un risque de double dose avant d'en enregistrer une nouvelle. */
+  const dernierAdminAujourdhui = (medicament: string): AdministrationMedicament | undefined => {
+    const cible = normaliserNomMedicament(medicament);
+    return adminsAujourdhui.find((a) => normaliserNomMedicament(a.medicament) === cible);
   };
 
   // Arrivée depuis le dossier du patient (bouton "Administrer un
@@ -119,12 +147,15 @@ export default function InfirmierTraitements() {
     };
 
     try {
-      await createAdministration(
+      const creee = await createAdministration(
         payload,
         user.id,
         `Inf. ${user.prenom} ${user.nom}`,
         user.etablissement ?? "Établissement inconnu"
       );
+      // Mise à jour optimiste : l'indicateur "déjà administré aujourd'hui"
+      // doit refléter cette administration sans attendre un rechargement.
+      setAdminsAujourdhui((prev) => [creee, ...prev]);
       setSuccess(true);
     } catch (err: any) {
       console.error("Erreur création administration:", err);
@@ -217,23 +248,37 @@ export default function InfirmierTraitements() {
           {traitements.length > 0 && (
             <Card>
               <CardHeader icon="medication" title="Traitements en cours — Cliquer pour sélectionner" />
-              <div className="flex flex-wrap gap-2">
-                {traitements.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => prefillTraitement(t)}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl text-body-md transition-all hover:scale-[1.02]"
-                    style={{
-                      backgroundColor: "var(--color-primary-container)",
-                      color: "var(--color-on-primary-container)",
-                    }}
-                  >
-                    <span className="material-symbols-outlined filled text-[16px]">medication</span>
-                    <span className="font-semibold">{t.medicament}</span>
-                    <span className="text-caption opacity-75">{t.dosage}</span>
-                  </button>
-                ))}
+              <div className="flex flex-wrap gap-2 items-start">
+                {traitements.map((t) => {
+                  const dernier = dernierAdminAujourdhui(t.medicament);
+                  const cfgAujourdhui = dernier ? STATUT_AUJOURDHUI_CFG[dernier.statut] : null;
+                  return (
+                    <div key={t.id} className="flex flex-col gap-1">
+                      <button
+                        type="button"
+                        onClick={() => prefillTraitement(t)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-body-md transition-all hover:scale-[1.02]"
+                        style={{
+                          backgroundColor: "var(--color-primary-container)",
+                          color: "var(--color-on-primary-container)",
+                        }}
+                      >
+                        <span className="material-symbols-outlined filled text-[16px]">medication</span>
+                        <span className="font-semibold">{t.medicament}</span>
+                        <span className="text-caption opacity-75">{t.dosage}</span>
+                      </button>
+                      {cfgAujourdhui && dernier && (
+                        <span
+                          className="text-caption font-semibold flex items-center gap-1 px-2 py-0.5 rounded-full w-fit"
+                          style={{ backgroundColor: cfgAujourdhui.bg, color: cfgAujourdhui.color }}
+                        >
+                          <span className="material-symbols-outlined text-[12px]">{cfgAujourdhui.icon}</span>
+                          {cfgAujourdhui.label} à {formatHeure(dernier.date)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </Card>
           )}
@@ -261,63 +306,27 @@ export default function InfirmierTraitements() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col gap-1">
-                  <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
-                    Voie d'administration
-                  </label>
-                  <select
-                    value={voie}
-                    onChange={(e) => setVoie(e.target.value as AdministrationMedicament["voieAdministration"])}
-                    className="rounded-xl px-3 py-2.5 text-body-md border"
-                    style={{
-                      borderColor: "var(--color-outline-variant)",
-                      backgroundColor: "var(--color-surface-container-lowest)",
-                      color: "var(--color-on-surface)",
-                    }}
-                  >
-                    {VOIE_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col gap-1">
-                  <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
-                    Statut
-                  </label>
-                  <select
-                    value={statut}
-                    onChange={(e) => setStatut(e.target.value as AdministrationMedicament["statut"])}
-                    className="rounded-xl px-3 py-2.5 text-body-md border"
-                    style={{
-                      borderColor: "var(--color-outline-variant)",
-                      backgroundColor: "var(--color-surface-container-lowest)",
-                      color: "var(--color-on-surface)",
-                    }}
-                  >
-                    {STATUT_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
-                  Notes (optionnel)
-                </label>
-                <textarea
-                  className="w-full rounded-xl p-3 text-body-md resize-y min-h-[70px] border"
-                  placeholder="Réaction du patient, contexte particulier…"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  style={{
-                    borderColor: "var(--color-outline-variant)",
-                    backgroundColor: "var(--color-surface-container-lowest)",
-                    color: "var(--color-on-surface)",
-                  }}
+                <Select
+                  label="Voie d'administration"
+                  value={voie}
+                  onChange={(e) => setVoie(e.target.value as AdministrationMedicament["voieAdministration"])}
+                  options={VOIE_OPTIONS}
+                />
+                <Select
+                  label="Statut"
+                  value={statut}
+                  onChange={(e) => setStatut(e.target.value as AdministrationMedicament["statut"])}
+                  options={STATUT_OPTIONS}
                 />
               </div>
+
+              <Textarea
+                label="Notes (optionnel)"
+                placeholder="Réaction du patient, contexte particulier…"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
 
               {formError && (
                 <p className="text-body-md" style={{ color: "var(--color-error)" }}>{formError}</p>

@@ -2,6 +2,7 @@
 // Affichage complet et sans restriction des données médicales (contexte d'urgence)
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
+import { useToast } from "../../contexts/ToastContext";
 
 import Button from "../../components/ui/Button";
 import Card, { CardHeader } from "../../components/ui/Card";
@@ -17,7 +18,7 @@ import ExamensCard from "../../components/dossier/ExamensCard";
 import ConstanteRow from "../../components/dossier/ConstanteRow";
 import DemanderAccesButton from "../../components/patient/DemanderAccesButton";
 
-import { getDossierPatient } from "../../services/patientService";
+import { getDossierPatient, arreterTraitement } from "../../services/patientService";
 import { getConsultationsByPatient } from "../../services/consultationService";
 import { getPrescriptionsByPatient } from "../../services/prescriptionService";
 import { getRelevesByPatient, type ReleveConstantes } from "../../services/constanstesService";
@@ -40,6 +41,7 @@ export default function DossierPatientPage() {
   const [notFound, setNotFound] = useState(false);
   const [assignationEnAttente, setAssignationEnAttente] = useState<EntreeFileAttente | null>(null);
   const [demarrageEnCours, setDemarrageEnCours] = useState(false);
+  const showToast = useToast();
 
   useEffect(() => {
     if (!npi) return;
@@ -88,7 +90,7 @@ export default function DossierPatientPage() {
       await demarrerConsultation(assignationEnAttente.id);
       navigate(`/medecin/dossier/${npi}/consultation/nouvelle`);
     } catch (err) {
-      alert((err as Error).message || "Erreur lors de la prise en charge.");
+      showToast((err as Error).message || "Erreur lors de la prise en charge.", "error");
       setDemarrageEnCours(false);
     }
   };
@@ -97,6 +99,17 @@ export default function DossierPatientPage() {
     if (!npi) return;
     getPrescriptionsByPatient(npi).then(setPrescriptions);
   }, [npi]);
+
+  const handleArreterTraitement = async (index: number, motif?: string) => {
+    if (!npi) return;
+    try {
+      const dossierMaj = await arreterTraitement(npi, index, motif);
+      if (dossierMaj) setDossier(dossierMaj);
+      showToast("Traitement arrêté.");
+    } catch (err) {
+      showToast((err as Error).message || "Erreur lors de l'arrêt du traitement.", "error");
+    }
+  };
 
   if (loading) {
     return (
@@ -187,7 +200,7 @@ export default function DossierPatientPage() {
         {activeTab === "synthese" && (
           <>
             <AntecedentsCard antecedents={dossier.antecedents} />
-            <TraitementsCard traitements={dossier.traitementsEnCours} />
+            <TraitementsCard traitements={dossier.traitementsEnCours} onArreter={handleArreterTraitement} />
             <div className="lg:col-span-2">
               <h2 className="text-title-lg font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>
                 Dernières consultations

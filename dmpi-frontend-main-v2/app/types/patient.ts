@@ -42,12 +42,15 @@ export interface Antecedent {
 
 export interface Traitement {
   id: string;
+  /** Position dans le tableau traitements_en_cours côté backend — nécessaire pour cibler l'arrêt d'un traitement précis. */
+  index: number;
   medicament: string;
   dosage: string;
   frequence: string;
   duree?: string;
   dateDebut: string;
   dateFin?: string;
+  motifArret?: string;
   prescripteur?: string;
   actif: boolean;
 }

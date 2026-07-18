@@ -85,6 +85,15 @@ export async function getAdministrationsByPatient(
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 }
 
+/** Administrations du jour pour un patient — pour repérer, avant d'en
+ * ajouter une nouvelle, ce qui a déjà été donné aujourd'hui (risque de
+ * double dose entre équipes). */
+export async function getTodayAdministrationsByPatient(patientNpi: string): Promise<AdministrationMedicament[]> {
+  const toutes = await getAdministrationsByPatient(patientNpi);
+  const aujourdHui = new Date().toDateString();
+  return toutes.filter((a) => new Date(a.date).toDateString() === aujourdHui);
+}
+
 /** Historique complet des administrations validées par le professionnel connecté. */
 export async function getAdministrationsByInfirmier(): Promise<AdministrationMedicament[]> {
   const raws = await apiFetch<BackendAdministration[]>("/soins/administrations/moi");

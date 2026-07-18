@@ -18,6 +18,9 @@ interface BackendTraitement {
   nom_medicament: string;
   posologie: string;
   indication?: string;
+  actif?: boolean;
+  date_arret?: string | null;
+  motif_arret?: string | null;
 }
 
 interface BackendTuteur {
@@ -64,11 +67,14 @@ function mapAntecedent(desc: string, index: number): Antecedent {
 function mapTraitement(t: BackendTraitement, index: number): Traitement {
   return {
     id: `trt_${index}`,
+    index,
     medicament: t.nom_medicament,
     dosage: t.posologie,
     frequence: t.indication ?? "Selon prescription",
     dateDebut: new Date().toISOString().split("T")[0],
-    actif: true,
+    dateFin: t.date_arret ?? undefined,
+    motifArret: t.motif_arret ?? undefined,
+    actif: t.actif ?? true,
   };
 }
 
@@ -163,6 +169,17 @@ export async function updateDossierPatient(npi: string, payload: UpdateDossierPa
   } catch (err: unknown) {
     throw err;
   }
+}
+
+/** Arrête un traitement en cours — réservé au médecin. Le traitement reste
+ * visible dans l'historique du dossier, seulement marqué inactif. */
+export async function arreterTraitement(npi: string, index: number, motif?: string): Promise<DossierPatient | null> {
+  const raw = await apiFetch<BackendDossier>(`/dossiers/${npi.trim()}/traitements/${index}/arreter`, {
+    method: "PATCH",
+    body: JSON.stringify({ motif: motif?.trim() || undefined }),
+  });
+  if (!raw) return null;
+  return mapBackendDossier(raw);
 }
 
 export interface CreateDossierPayload {
