@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.database_mongo import consultations_collection
 from app.schemas.consultation import ConsultationMongo
-from app.security import get_current_user, require_role
+from app.security import get_current_user, require_role, verifier_acces_dossier_patient, verifier_acces_activite_medecin
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
@@ -59,6 +59,8 @@ async def lister_consultations_patient(
     Récupère tout l'historique des consultations d'un patient spécifique.
     Protégé et journalisé.
     """
+    await verifier_acces_dossier_patient(current_user, npi)
+
     if len(npi) != 10 or not npi.isdigit():
         await enregistrer_log(
             utilisateur_email=current_user.email,
@@ -92,6 +94,8 @@ async def lister_consultations_medecin(
     """
     Récupère toutes les consultations enregistrées par un médecin spécifique (agenda).
     """
+    await verifier_acces_activite_medecin(current_user, email)
+
     cursor = consultations_collection.find({"releve_par": email})
     consultations = await cursor.to_list(length=200)
 

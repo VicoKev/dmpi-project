@@ -5,7 +5,7 @@ from app.database_mongo import (
     consultations_collection,
 )
 from app.schemas.soins import ConstantesVitales, AdministrationTraitement
-from app.security import get_current_user, require_role
+from app.security import get_current_user, require_role, verifier_acces_dossier_patient
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
@@ -72,6 +72,7 @@ async def lister_constantes_patient(
     """
     Historique des constantes vitales d'un patient, du plus récent au plus ancien.
     """
+    await verifier_acces_dossier_patient(current_user, npi)
     _valider_npi(npi)
 
     cursor = constantes_vitales_collection.find({"npi": npi}).sort("created_at", -1)
@@ -170,6 +171,7 @@ async def lister_administrations_patient(
     """
     Historique des administrations de traitements validées pour un patient.
     """
+    await verifier_acces_dossier_patient(current_user, npi)
     _valider_npi(npi)
 
     cursor = administrations_collection.find({"npi": npi}).sort("horodatage", -1)

@@ -5,7 +5,7 @@ from datetime import datetime
 from app.database_mongo import get_mongo_db
 from app.schemas.etablissement import EtablissementCreate, EtablissementUpdate, EtablissementUpdateSelfService, EtablissementOut
 from app.models_sql import User
-from app.security import require_role
+from app.security import require_role, get_current_user
 from app.audit import enregistrer_log
 
 router = APIRouter(
@@ -37,7 +37,8 @@ async def _obtenir_directeur(db_sql: AsyncSession, etablissement_id: str) -> str
 @router.get("/", response_model=list[EtablissementOut])
 async def lister_etablissements(
     db_mongo: AsyncIOMotorDatabase = Depends(get_mongo_db),
-    db_sql: AsyncSession = Depends(get_sql_db)
+    db_sql: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(get_current_user)
 ):
     """Liste tous les établissements de santé."""
     etablissements = await db_mongo["etablissements"].find().to_list(1000)

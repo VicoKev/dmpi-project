@@ -89,3 +89,33 @@ def require_role(*roles_autorises: str):
             )
         return current_user
     return role_checker
+
+
+async def verifier_acces_dossier_patient(current_user: User, npi: str) -> None:
+    """
+    Autorise l'accès en lecture aux données cliniques d'un patient identifié
+    par NPI (consultations, ordonnances, constantes, rendez-vous...).
+    Médecin/infirmier : accès libre (contexte clinique, pas de notion
+    d'équipe de soins dans le modèle actuel). Patient : uniquement son propre
+    dossier. Tout autre rôle (laboratoire, administratif) : refusé.
+    """
+    if current_user.role == "patient":
+        if current_user.npi_patient != npi:
+            raise HTTPException(status_code=403, detail="Accès non autorisé à ce dossier.")
+        return
+    if current_user.role in ("medecin", "infirmier"):
+        return
+    raise HTTPException(status_code=403, detail="Accès non autorisé à ce dossier.")
+
+
+async def verifier_acces_activite_medecin(current_user: User, email: str) -> None:
+    """
+    Autorise la consultation de l'activité propre à un médecin (ses
+    rendez-vous, consultations, ordonnances émises) : réservé au médecin
+    concerné lui-même, ou à un rôle d'administration pour supervision.
+    """
+    if current_user.email == email:
+        return
+    if current_user.role in ("admin_etablissement", "super_admin"):
+        return
+    raise HTTPException(status_code=403, detail="Accès non autorisé à cette activité.")

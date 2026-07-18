@@ -10,7 +10,7 @@ from app.database_mongo import (
 )
 from app.schemas.ordonnance import OrdonnanceMongo, OrdonnanceOut, RenouvellementRequest
 from app.schemas.prestataire import PharmaciesProchesResponse, ReferenceLocalisation, PharmacieProche
-from app.security import get_current_user, require_role
+from app.security import get_current_user, require_role, verifier_acces_dossier_patient, verifier_acces_activite_medecin
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
@@ -68,7 +68,7 @@ async def _enrichir_ordonnances(db_sql: AsyncSession, ordonnances: list[dict]) -
 @router.post("/", status_code=status.HTTP_201_CREATED)
 async def enregistrer_ordonnance(
     ordonnance: OrdonnanceMongo,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(require_role("medecin"))
 ):
     ordonnance.auteur = current_user.email
     ordonnance_dict = ordonnance.model_dump()
@@ -212,6 +212,8 @@ async def lister_ordonnances_patient(
     db_sql: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(get_current_user)
 ):
+    await verifier_acces_dossier_patient(current_user, npi)
+
     if len(npi) != 10 or not npi.isdigit():
         await enregistrer_log(
             utilisateur_email=current_user.email,
@@ -246,6 +248,8 @@ async def lister_ordonnances_medecin(
     """
     Récupère toutes les ordonnances créées par un médecin.
     """
+    await verifier_acces_activite_medecin(current_user, email)
+
     cursor = ordonnances_collection.find({"auteur": email}).sort("created_at", -1)
     ordonnances = await cursor.to_list(length=200)
     ordonnances = await _enrichir_ordonnances(db_sql, ordonnances)

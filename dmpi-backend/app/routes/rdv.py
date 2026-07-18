@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.database_mongo import rendez_vous_collection, dossiers_medicaux_collection
-from app.security import get_current_user, require_role
+from app.security import get_current_user, require_role, verifier_acces_dossier_patient, verifier_acces_activite_medecin
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.schemas.rdv import RendezVousCreate, RendezVousUpdate, SignalerEmpechementRequest
@@ -108,6 +108,8 @@ async def rdv_par_patient(
     current_user: User = Depends(get_current_user)
 ):
     """Tous les RDV d'un patient (triés par date)."""
+    await verifier_acces_dossier_patient(current_user, npi)
+
     cursor = rendez_vous_collection.find({"npi_patient": npi}).sort("date_rdv", 1)
     rdvs = await cursor.to_list(length=100)
     return [_serialize(r) for r in rdvs]
@@ -119,6 +121,8 @@ async def rdv_par_medecin(
     current_user: User = Depends(get_current_user)
 ):
     """Tous les RDV planifiés par un médecin (triés par date)."""
+    await verifier_acces_activite_medecin(current_user, email)
+
     cursor = rendez_vous_collection.find({"medecin_email": email}).sort("date_rdv", 1)
     rdvs = await cursor.to_list(length=200)
     return [_serialize(r) for r in rdvs]

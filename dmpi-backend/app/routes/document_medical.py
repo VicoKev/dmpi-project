@@ -6,7 +6,7 @@ from datetime import datetime
 
 from app.database_mongo import documents_medicaux_collection, demandes_examen_collection
 from app.schemas.document_medical import DocumentMedicalOut, TYPES_DOCUMENT_VALIDES, InterpretationUpdate
-from app.security import get_current_user, require_role
+from app.security import get_current_user, require_role, verifier_acces_dossier_patient
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.stockage_fichiers import sauvegarder_fichier, chemin_absolu, supprimer_fichier
@@ -24,16 +24,6 @@ def _formater(doc: dict) -> dict:
         f["id"] = f["chemin_stockage"]
         f["a_une_vignette"] = f.get("vignette_chemin") is not None
     return doc
-
-
-async def _verifier_acces_lecture(current_user: User, npi: str) -> None:
-    if current_user.role == "patient":
-        if current_user.npi_patient != npi:
-            raise HTTPException(status_code=403, detail="Accès non autorisé à ce dossier.")
-        return
-    if current_user.role in ("medecin", "infirmier"):
-        return
-    raise HTTPException(status_code=403, detail="Accès non autorisé.")
 
 
 @router.post("/", response_model=DocumentMedicalOut, status_code=status.HTTP_201_CREATED)
@@ -255,7 +245,7 @@ async def lister_documents_patient(
     current_user: User = Depends(get_current_user)
 ):
     """Médecin/infirmier : accès libre (contexte clinique). Patient : uniquement son propre NPI."""
-    await _verifier_acces_lecture(current_user, npi)
+    await verifier_acces_dossier_patient(current_user, npi)
 
     cursor = documents_medicaux_collection.find({"npi": npi, "statut": "disponible"}).sort("created_at", -1)
     documents = await cursor.to_list(length=200)
@@ -283,7 +273,7 @@ async def telecharger_fichier(
     if not document:
         raise HTTPException(status_code=404, detail="Document introuvable.")
 
-    await _verifier_acces_lecture(current_user, document["npi"])
+    await verifier_acces_dossier_patient(current_user, document["npi"])
 
     fichier = next((f for f in document.get("fichiers", []) if f["chemin_stockage"] == fichier_id), None)
     if not fichier:
