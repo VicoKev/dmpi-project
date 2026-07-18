@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -24,6 +24,9 @@ def _formater(doc: dict) -> dict:
 
 @router.get("/", response_model=list[PrestataireOut])
 async def lister_prestataires(
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     db: AsyncIOMotorDatabase = Depends(get_mongo_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -32,8 +35,19 @@ async def lister_prestataires(
     Lecture ouverte à tout compte authentifié : un médecin doit pouvoir
     parcourir l'annuaire des laboratoires partenaires pour y prescrire un
     examen. Création/modification/suppression restent réservées au super admin.
+
+    skip/limit optionnels : sans eux, comportement historique (liste
+    complète), nécessaire aux sélecteurs ailleurs dans l'app. Total réel
+    toujours renvoyé via l'en-tête X-Total-Count.
     """
-    prestataires = await db["prestataires_partenaires"].find().sort("nom", 1).to_list(1000)
+    total = await db["prestataires_partenaires"].count_documents({})
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = db["prestataires_partenaires"].find().sort("nom", 1).skip(skip)
+    if limit is not None:
+        prestataires = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        prestataires = await cursor.to_list(1000)
     return [_formater(p) for p in prestataires]
 
 

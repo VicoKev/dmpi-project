@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from app.database_sql import get_sql_db
 from app.models_sql import User, AuditLog, DemandeAccesPatient
 from app.schemas.user import UserCreate, UserOut
@@ -112,14 +112,28 @@ async def creer_utilisateur(
 
 @router.get("/users", response_model=list[UserOut])
 async def lister_utilisateurs(
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     db: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(require_role("super_admin"))
 ):
     """
     Liste tous les comptes utilisateurs du réseau DMPI.
     Réservé au Super Administrateur national.
+
+    skip/limit sont optionnels : sans eux, comportement historique (liste
+    complète) — nécessaire aux sélecteurs ailleurs dans l'app qui ont besoin
+    de la liste entière. Le total réel est toujours renvoyé via l'en-tête
+    X-Total-Count pour permettre une pagination côté interface.
     """
-    result = await db.execute(select(User))
+    total = await db.scalar(select(func.count()).select_from(User))
+    response.headers["X-Total-Count"] = str(total or 0)
+
+    requete = select(User)
+    if limit is not None:
+        requete = requete.offset(skip).limit(min(limit, 200))
+    result = await db.execute(requete)
     return result.scalars().all()
 
 

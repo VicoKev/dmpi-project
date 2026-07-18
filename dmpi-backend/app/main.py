@@ -41,6 +41,10 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    # Sans ceci, le navigateur reçoit bien X-Total-Count mais le masque à
+    # fetch() côté JS — seule une liste restreinte de headers est exposée
+    # par défaut en CORS, il faut l'y ajouter explicitement.
+    expose_headers=["X-Total-Count"],
 )
 
 @app.middleware("http")

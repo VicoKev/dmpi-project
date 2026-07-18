@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 from datetime import datetime
@@ -36,13 +36,28 @@ async def _obtenir_directeur(db_sql: AsyncSession, etablissement_id: str) -> str
 
 @router.get("/", response_model=list[EtablissementOut])
 async def lister_etablissements(
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     db_mongo: AsyncIOMotorDatabase = Depends(get_mongo_db),
     db_sql: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Liste tous les établissements de santé."""
-    etablissements = await db_mongo["etablissements"].find().to_list(1000)
-    
+    """
+    Liste tous les établissements de santé. skip/limit optionnels : sans
+    eux, comportement historique (liste complète), nécessaire aux
+    sélecteurs ailleurs dans l'app. Total réel toujours renvoyé via
+    l'en-tête X-Total-Count.
+    """
+    total = await db_mongo["etablissements"].count_documents({})
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = db_mongo["etablissements"].find().skip(skip)
+    if limit is not None:
+        etablissements = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        etablissements = await cursor.to_list(1000)
+
     # Effectifs (PostgreSQL)
     stmt = select(User.etablissement_id, User.role, func.count()).where(User.etablissement_id.is_not(None)).group_by(User.etablissement_id, User.role)
     result = await db_sql.execute(stmt)
