@@ -626,7 +626,7 @@ def make_prestataires() -> list[dict]:
         {
             "nom": "Pharmacie Jonquet",
             "type": "pharmacie",
-            "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Jonquet",
+            "departement": "Littoral", "commune": "Cotonou", "arrondissement": "5Eme Arrondissement", "quartier": "Jonquet",
             "adresse": "Rue du Gouverneur Bayol, Cotonou",
             "latitude": 6.3625, "longitude": 2.4005,
             "telephone": "+229 21-31-45-12", "email": None,
@@ -639,7 +639,7 @@ def make_prestataires() -> list[dict]:
         {
             "nom": "Pharmacie du Phare",
             "type": "pharmacie",
-            "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Le Phare",
+            "departement": "Littoral", "commune": "Cotonou", "arrondissement": "12Eme Arrondissement", "quartier": "Le Phare",
             "adresse": "Boulevard Saint-Michel, Cotonou",
             "latitude": 6.3550, "longitude": 2.4300,
             "telephone": "+229 21-30-88-40", "email": None,
@@ -652,7 +652,7 @@ def make_prestataires() -> list[dict]:
         {
             "nom": "Pharmacie Centrale de Parakou",
             "type": "pharmacie",
-            "departement": "Borgou", "commune": "Parakou", "arrondissement": None, "quartier": "Centre-ville",
+            "departement": "Borgou", "commune": "Parakou", "arrondissement": "1Er Arrondissement", "quartier": "Centre-ville",
             "adresse": "Avenue de la Gare, Parakou",
             "latitude": 9.3410, "longitude": 2.6280,
             "telephone": "+229 23-61-14-02", "email": None,
@@ -665,7 +665,7 @@ def make_prestataires() -> list[dict]:
         {
             "nom": "Pharmacie de l'Atacora",
             "type": "pharmacie",
-            "departement": "Atacora", "commune": "Natitingou", "arrondissement": None, "quartier": "Centre-ville",
+            "departement": "Atacora", "commune": "Natitingou", "arrondissement": "Natitingou I", "quartier": "Centre-ville",
             "adresse": "Route Nationale, Natitingou",
             "latitude": 10.3100, "longitude": 1.3830,
             "telephone": "+229 23-82-05-77", "email": None,
@@ -678,7 +678,7 @@ def make_prestataires() -> list[dict]:
         {
             "nom": "Laboratoire Bio-Analyses Cotonou",
             "type": "laboratoire",
-            "departement": "Littoral", "commune": "Cotonou", "arrondissement": None, "quartier": "Akpakpa",
+            "departement": "Littoral", "commune": "Cotonou", "arrondissement": "4Eme Arrondissement", "quartier": "Akpakpa",
             "adresse": "Carrefour Akpakpa, Cotonou",
             "latitude": 6.3667, "longitude": 2.4472,
             "telephone": "+229 21-33-20-08", "email": "contact@bioanalyses-cotonou.bj",
@@ -691,7 +691,7 @@ def make_prestataires() -> list[dict]:
         {
             "nom": "Laboratoire National de Référence",
             "type": "laboratoire",
-            "departement": "Borgou", "commune": "Parakou", "arrondissement": None, "quartier": "Centre-ville",
+            "departement": "Borgou", "commune": "Parakou", "arrondissement": "1Er Arrondissement", "quartier": "Centre-ville",
             "adresse": "Avenue Bio Guerra, Parakou",
             "latitude": 9.3395, "longitude": 2.6255,
             "telephone": "+229 23-61-22-90", "email": "contact@labo-national.bj",
