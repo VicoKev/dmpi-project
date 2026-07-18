@@ -5,6 +5,7 @@ import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
+import Pagination from "../../components/ui/Pagination";
 import {
   getEtablissements,
   createEtablissement,
@@ -203,6 +204,8 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
+const TAILLE_PAGE = 20;
+
 export default function SuperAdminEtablissements() {
   const [etablissements, setEtablissements] = useState<Etablissement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -210,6 +213,7 @@ export default function SuperAdminEtablissements() {
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState<string>("tous");
   const [filterStatut, setFilterStatut] = useState<string>("tous");
+  const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Etablissement | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editingEtab, setEditingEtab] = useState<Etablissement | null>(null);
@@ -291,6 +295,13 @@ export default function SuperAdminEtablissements() {
     const matchSearch = !q || e.nom.toLowerCase().includes(q) || e.ville.toLowerCase().includes(q) || e.departement.toLowerCase().includes(q) || (e.directeur ?? "").toLowerCase().includes(q);
     return matchType && matchStatut && matchSearch;
   });
+
+  // Revenir à la première page à chaque changement de filtre/recherche —
+  // sinon une page devenue hors limites afficherait une liste vide à tort.
+  useEffect(() => { setPage(1); }, [filterType, filterStatut, search]);
+
+  const totalPagesFiltre = Math.max(1, Math.ceil(filtered.length / TAILLE_PAGE));
+  const pageAffichee = filtered.slice((page - 1) * TAILLE_PAGE, page * TAILLE_PAGE);
 
   const totaux = {
     actifs: etablissements.filter(e => e.statut === "actif").length,
@@ -472,7 +483,7 @@ export default function SuperAdminEtablissements() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map(e => {
+                {pageAffichee.map(e => {
                   const typeCfg = TYPE_CONFIG[e.type] ?? TYPE_CONFIG["CHU"];
                   const statutCfg = STATUT_CONFIG[e.statut] ?? STATUT_CONFIG["inactif"];
                   return (
@@ -510,6 +521,7 @@ export default function SuperAdminEtablissements() {
             </table>
           </div>
         )}
+        <Pagination page={page} totalPages={totalPagesFiltre} onPageChange={setPage} totalItems={filtered.length} />
       </Card>
     </div>
   );

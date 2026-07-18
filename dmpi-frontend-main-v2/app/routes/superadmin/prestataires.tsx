@@ -5,10 +5,11 @@ import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
+import Pagination from "../../components/ui/Pagination";
 import LocalisationPicker, { type LocalisationValue } from "../../components/etablissement/LocalisationPicker";
 import HorairesPicker from "../../components/ui/HorairesPicker";
 import {
-  getPrestataires,
+  getPrestatairesPagine,
   createPrestataire,
   updatePrestataire,
   deactivatePrestataire,
@@ -174,8 +175,12 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
   );
 }
 
+const TAILLE_PAGE = 20;
+
 export default function SuperAdminPrestataires() {
   const [prestataires, setPrestataires] = useState<Prestataire[]>([]);
+  const [totalItems, setTotalItems] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const [laboratoiresAvecCompte, setLaboratoiresAvecCompte] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -194,12 +199,13 @@ export default function SuperAdminPrestataires() {
     setError(null);
     try {
       const [prestatairesData, usersData] = await Promise.all([
-        getPrestataires(),
+        getPrestatairesPagine((page - 1) * TAILLE_PAGE, TAILLE_PAGE),
         // Un échec ici ne doit pas bloquer l'affichage des prestataires — le
         // bouton "Créer un compte" resterait juste visible par défaut.
         getUsers().catch(() => []),
       ]);
-      setPrestataires(prestatairesData);
+      setPrestataires(prestatairesData.items);
+      setTotalItems(prestatairesData.total);
       setLaboratoiresAvecCompte(new Set(
         usersData.filter((u) => u.role === "laboratoire" && u.prestataire_id).map((u) => u.prestataire_id!)
       ));
@@ -208,7 +214,7 @@ export default function SuperAdminPrestataires() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -268,7 +274,7 @@ export default function SuperAdminPrestataires() {
         <div>
           <h1 className="text-headline-lg" style={{ color: "var(--color-primary)" }}>Pharmacies & Laboratoires</h1>
           <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
-            Pharmacies suggérées aux patients, laboratoires disponibles pour la prescription d'examens. {prestataires.length} enregistré{prestataires.length !== 1 ? "s" : ""}.
+            Pharmacies suggérées aux patients, laboratoires disponibles pour la prescription d'examens. {totalItems ?? prestataires.length} enregistré{(totalItems ?? prestataires.length) !== 1 ? "s" : ""}.
           </p>
         </div>
         <Button icon="add_business" onClick={() => setShowForm(true)}>Ajouter un prestataire</Button>
@@ -350,6 +356,12 @@ export default function SuperAdminPrestataires() {
             ))}
           </ul>
         )}
+        <Pagination
+          page={page}
+          totalPages={Math.max(1, Math.ceil((totalItems ?? 0) / TAILLE_PAGE))}
+          onPageChange={setPage}
+          totalItems={totalItems}
+        />
       </Card>
     </div>
   );

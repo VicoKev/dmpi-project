@@ -75,6 +75,57 @@ export async function apiFetch<T = unknown>(
   return response.json() as Promise<T>;
 }
 
+export interface ReponsePaginee<T> {
+  items: T[];
+  /** null si le serveur n'a pas renvoyé X-Total-Count. */
+  total: number | null;
+}
+
+/**
+ * Comme apiFetch, mais lit aussi l'en-tête X-Total-Count renvoyé par les
+ * endpoints de liste paginables — nécessaire pour afficher "page X sur Y"
+ * sans avoir à changer la forme du corps JSON (qui reste un simple tableau,
+ * pour ne pas casser les appelants existants qui veulent la liste complète).
+ */
+export async function apiFetchPagine<T = unknown>(
+  path: string,
+  options: RequestInit = {}
+): Promise<ReponsePaginee<T>> {
+  const token = getStoredToken();
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(options.headers as Record<string, string>),
+  };
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  if (response.status === 401) {
+    clearToken();
+    throw new AuthError("Session expiree. Veuillez vous reconnecter.", 401);
+  }
+  if (response.status === 403) {
+    throw new AuthError("Acces refuse. Vous n'avez pas les droits necessaires.", 403);
+  }
+  if (!response.ok) {
+    let detail = `Erreur ${response.status}`;
+    try {
+      const body = await response.json();
+      detail = body.detail || detail;
+    } catch {
+      // pas de corps JSON
+    }
+    throw new Error(detail);
+  }
+
+  const totalHeader = response.headers.get("X-Total-Count");
+  const items = (await response.json()) as T[];
+  return { items, total: totalHeader !== null ? parseInt(totalHeader, 10) : null };
+}
+
 /**
  * Envoie un formulaire multipart (upload de fichiers) — apiFetch ne convient
  * pas car il force toujours Content-Type: application/json, ce qui empêche

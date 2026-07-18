@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, apiFetchPagine, type ReponsePaginee } from "./api";
 
 export interface Prestataire {
   id: string;
@@ -60,6 +60,12 @@ export const TYPE_PRESTATAIRE_OPTIONS = ["pharmacie", "laboratoire"] as const;
 
 export async function getPrestataires(): Promise<Prestataire[]> {
   return apiFetch<Prestataire[]>("/prestataires/");
+}
+
+/** Page de prestataires — pour la liste super admin, dont le nombre grandit
+ * avec chaque nouvelle pharmacie ou laboratoire partenaire. */
+export async function getPrestatairesPagine(skip: number, limit: number): Promise<ReponsePaginee<Prestataire>> {
+  return apiFetchPagine<Prestataire>(`/prestataires/?skip=${skip}&limit=${limit}`);
 }
 
 export async function createPrestataire(payload: PrestataireCreatePayload): Promise<Prestataire> {

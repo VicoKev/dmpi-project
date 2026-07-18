@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router";
 import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import Pagination from "../../components/ui/Pagination";
 import Input from "../../components/ui/Input";
 import SelectRecherche from "../../components/ui/SelectRecherche";
 import Select from "../../components/ui/Select";
@@ -616,6 +617,8 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
 
 // ─── Page principale ─────────────────────────────────────────────────────────
 
+const TAILLE_PAGE = 20;
+
 export default function SuperAdminUtilisateurs() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [users, setUsers] = useState<User[]>([]);
@@ -624,6 +627,7 @@ export default function SuperAdminUtilisateurs() {
   const [showForm, setShowForm] = useState(false);
   const [filterRole, setFilterRole] = useState<string>("tous");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [deactivatingId, setDeactivatingId] = useState<number | null>(null);
   const [reactivatingId, setReactivatingId] = useState<number | null>(null);
   const askConfirmation = useConfirm();
@@ -783,6 +787,15 @@ export default function SuperAdminUtilisateurs() {
     return matchesRole && matchesSearch;
   });
 
+  // Un nouveau filtre/recherche peut rendre la page courante hors limites
+  // (ex: page 3 alors qu'il ne reste qu'un seul résultat) — on revient à la
+  // première page à chaque changement plutôt que d'afficher une liste vide
+  // à tort.
+  useEffect(() => { setPage(1); }, [filterRole, search]);
+
+  const totalPagesFiltre = Math.max(1, Math.ceil(filtered.length / TAILLE_PAGE));
+  const pageAffichee = filtered.slice((page - 1) * TAILLE_PAGE, page * TAILLE_PAGE);
+
   const counts: Record<string, number> = {
     tous: users.length,
     actifs: users.filter((u) => u.est_actif).length,
@@ -940,7 +953,7 @@ export default function SuperAdminUtilisateurs() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((user) => {
+                {pageAffichee.map((user) => {
                   const cfg = ROLE_CONFIG[user.role] ?? ROLE_CONFIG["medecin"];
                   const isDeactivating = deactivatingId === user.id;
                   return (
@@ -1072,6 +1085,7 @@ export default function SuperAdminUtilisateurs() {
             </table>
           </div>
         )}
+        <Pagination page={page} totalPages={totalPagesFiltre} onPageChange={setPage} totalItems={filtered.length} />
       </Card>
     </div>
   );
