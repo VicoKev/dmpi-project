@@ -1,9 +1,10 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from bson import ObjectId
+from bson.errors import InvalidId
 from datetime import datetime
 
 from app.database_mongo import demandes_examen_collection, prestataires_partenaires_collection
-from app.schemas.demande_examen import DemandeExamenCreate, DemandeExamenOut
+from app.schemas.demande_examen import DemandeExamenCreate, DemandeExamenOut, SignalerProblemeExamenRequest
 from app.security import get_current_user, require_role
 from app.models_sql import User
 from app.audit import enregistrer_log
@@ -105,3 +106,63 @@ async def mes_demandes_laboratoire(
     cursor = demandes_examen_collection.find({"prestataire_id": current_user.prestataire_id}).sort("created_at", -1)
     demandes = await cursor.to_list(length=200)
     return [await _enrichir(d) for d in demandes]
+
+
+@router.get("/mes-prescriptions", response_model=list[DemandeExamenOut])
+async def mes_prescriptions_medecin(
+    current_user: User = Depends(require_role("medecin"))
+):
+    """
+    Examens prescrits par le médecin connecté, tous patients confondus —
+    sans cette vue, savoir si un résultat est arrivé exige de rouvrir
+    chaque dossier patient un par un.
+    """
+    cursor = demandes_examen_collection.find({"medecin_email": current_user.email}).sort("created_at", -1)
+    demandes = await cursor.to_list(length=200)
+    return [await _enrichir(d) for d in demandes]
+
+
+@router.patch("/{demande_id}/signaler-probleme", response_model=DemandeExamenOut)
+async def signaler_probleme_examen(
+    demande_id: str,
+    body: SignalerProblemeExamenRequest | None = None,
+    current_user: User = Depends(require_role("laboratoire"))
+):
+    """
+    Le laboratoire signale un problème empêchant de traiter la demande
+    (échantillon rejeté, patient non présenté...) — la demande reste
+    "en_attente" et peut toujours recevoir un résultat plus tard si la
+    situation se résout ; seul le médecin est informé qu'il y a un souci
+    plutôt qu'un simple délai normal.
+    """
+    if not current_user.prestataire_id:
+        raise HTTPException(status_code=400, detail="Ce compte n'est rattaché à aucun laboratoire.")
+
+    try:
+        object_id = ObjectId(demande_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Identifiant de demande invalide.")
+
+    demande = await demandes_examen_collection.find_one({"_id": object_id})
+    if not demande:
+        raise HTTPException(status_code=404, detail="Demande d'examen introuvable.")
+    if demande.get("prestataire_id") != current_user.prestataire_id:
+        raise HTTPException(status_code=403, detail="Cette demande d'examen n'est pas adressée à votre laboratoire.")
+    if demande.get("statut") == "traitee":
+        raise HTTPException(status_code=400, detail="Cette demande a déjà été traitée.")
+
+    motif = body.motif.strip() if body and body.motif else None
+    await demandes_examen_collection.update_one(
+        {"_id": object_id},
+        {"$set": {"probleme_signale": True, "motif_probleme": motif}}
+    )
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="PROBLEME_SIGNALE_DEMANDE_EXAMEN",
+        statut_action="SUCCES",
+        npi_concerne=demande["npi"]
+    )
+
+    maj = await demandes_examen_collection.find_one({"_id": object_id})
+    return await _enrichir(maj)

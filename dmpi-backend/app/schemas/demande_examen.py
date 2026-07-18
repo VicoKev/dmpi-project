@@ -27,4 +27,14 @@ class DemandeExamenOut(BaseModel):
     motif: str | None = None
     medecin_email: str
     statut: str = "en_attente"  # "en_attente" | "traitee" | "annulee"
+    # Signal non bloquant du laboratoire — distinct de statut : la demande
+    # reste "en_attente" et peut toujours recevoir un résultat plus tard
+    # (ex: échantillon rejeté puis un nouveau prélèvement déposé), mais le
+    # médecin est informé qu'il y a un problème plutôt qu'un simple délai.
+    probleme_signale: bool = False
+    motif_probleme: str | None = None
     created_at: datetime
+
+
+class SignalerProblemeExamenRequest(BaseModel):
+    motif: str | None = Field(None, max_length=280)

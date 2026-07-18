@@ -110,7 +110,9 @@ async def uploader_document(
     if demande:
         await demandes_examen_collection.update_one(
             {"_id": demande["_id"]},
-            {"$set": {"statut": "traitee"}}
+            # Un résultat déposé résout tout problème signalé précédemment
+            # (ex: échantillon rejeté puis un nouveau prélèvement accepté).
+            {"$set": {"statut": "traitee", "probleme_signale": False, "motif_probleme": None}}
         )
 
     await enregistrer_log(
