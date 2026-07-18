@@ -133,6 +133,7 @@ async def exporter_mon_dossier(
             entries.append({
                 "resourceType": "MedicationStatement",
                 "patient": {"identifier": {"value": npi}},
+                "status": "active" if traitement.get("actif", True) else "stopped",
                 "medicationCodeableConcept": {"text": traitement.get("nom_medicament")},
                 "dosage": [{"text": traitement.get("posologie")}],
                 "reasonCode": [{"text": traitement.get("indication")}] if traitement.get("indication") else [],

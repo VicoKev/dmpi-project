@@ -1,19 +1,36 @@
 from pydantic import BaseModel, Field
+from enum import Enum
 from datetime import datetime, date
 from app.schemas.patient import GroupeSanguin
 
 
+class SeveriteAllergie(str, Enum):
+    LEGERE = "legere"
+    MODEREE = "moderee"
+    SEVERE = "severe"
+    ANAPHYLAXIE = "anaphylaxie"
+
+
 class Allergie(BaseModel):
     substance: str
-    severite: str
+    severite: SeveriteAllergie
     notes: str | None = None
 
 
 class TraitementEnCours(BaseModel):
-    """Traitement chronique ou en cours, distinct de l'ordonnance ponctuelle d'une consultation."""
+    """Traitement chronique ou en cours, distinct de l'ordonnance ponctuelle d'une consultation.
+    Reste dans cette liste après son arrêt (actif=False) pour préserver l'historique —
+    seule la vue active en est filtrée."""
     nom_medicament: str
     posologie: str
     indication: str | None = None
+    actif: bool = True
+    date_arret: datetime | None = None
+    motif_arret: str | None = None
+
+
+class ArreterTraitementRequest(BaseModel):
+    motif: str | None = Field(None, max_length=280)
 
 
 class Tuteur(BaseModel):
