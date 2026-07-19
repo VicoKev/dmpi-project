@@ -201,8 +201,14 @@ async def assigner_medecin(
     entree = await file_attente_collection.find_one({"_id": _trouver_object_id(entree_id)})
     if not entree:
         raise HTTPException(status_code=404, detail="Entrée introuvable.")
-    if entree["statut"] != "en_attente":
-        raise HTTPException(status_code=400, detail="Cette entrée n'est plus en attente d'assignation.")
+    # "assigne" reste corrigible — une erreur d'assignation (mauvais médecin) doit
+    # pouvoir être réparée tant que la consultation n'a pas commencé. Au-delà
+    # ("en_consultation" / "termine"), le dossier est déjà engagé avec ce médecin.
+    if entree["statut"] not in ("en_attente", "assigne"):
+        raise HTTPException(status_code=400, detail="Cette entrée n'est plus en attente ou assignée : elle ne peut plus être réassignée.")
+
+    ancien_medecin_email = entree.get("medecin_email") if entree["statut"] == "assigne" else None
+    est_reassignation = ancien_medecin_email is not None and ancien_medecin_email != payload.medecin_email
 
     await _medecin_actif_de_letablissement(db, payload.medecin_email, entree.get("etablissement_id"))
 
@@ -213,9 +219,10 @@ async def assigner_medecin(
     )
 
     await publier_evenement("dmpi.file_attente", {
-        "type": "PATIENT_ASSIGNE",
+        "type": "PATIENT_REASSIGNE" if est_reassignation else "PATIENT_ASSIGNE",
         "npi": entree["npi"],
         "medecin_email": payload.medecin_email,
+        "ancien_medecin_email": ancien_medecin_email if est_reassignation else None,
         "infirmier_email": current_user.email,
         "horodatage": maintenant.isoformat()
     })

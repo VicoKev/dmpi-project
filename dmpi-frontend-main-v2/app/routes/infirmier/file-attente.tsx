@@ -274,20 +274,33 @@ export default function InfirmierFileAttente() {
                         </span>
                       </div>
                     </div>
-                    {e.statut === "en_attente" ? (
-                      <Select
-                        value=""
-                        onChange={(ev) => handleAssigner(e, ev.target.value)}
-                        disabled={assigningId === e.id}
-                        options={[
-                          { value: "", label: assigningId === e.id ? "Assignation…" : "Assigner à un médecin", disabled: true },
-                          ...medecins.map((m) => ({
-                            value: m.email,
-                            label: `Dr. ${m.prenom} ${m.nom}${!m.disponible ? " (indisponible)" : ""}`,
-                            disabled: !m.disponible,
-                          })),
-                        ]}
-                      />
+                    {e.statut === "en_attente" || e.statut === "assigne" ? (
+                      <div className="flex flex-col gap-1.5">
+                        {e.statut === "assigne" && (
+                          <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+                            Assigné à Dr. {medecin ? `${medecin.prenom} ${medecin.nom}` : e.medecin_email}
+                          </p>
+                        )}
+                        <Select
+                          value=""
+                          onChange={(ev) => handleAssigner(e, ev.target.value)}
+                          disabled={assigningId === e.id}
+                          options={[
+                            {
+                              value: "",
+                              label: assigningId === e.id
+                                ? "Assignation…"
+                                : e.statut === "assigne" ? "Réassigner à un autre médecin" : "Assigner à un médecin",
+                              disabled: true,
+                            },
+                            ...medecins.map((m) => ({
+                              value: m.email,
+                              label: `Dr. ${m.prenom} ${m.nom}${!m.disponible ? " (indisponible)" : ""}`,
+                              disabled: !m.disponible,
+                            })),
+                          ]}
+                        />
+                      </div>
                     ) : (
                       <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
                         Dr. {medecin ? `${medecin.prenom} ${medecin.nom}` : e.medecin_email}
