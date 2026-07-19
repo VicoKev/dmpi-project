@@ -12,6 +12,7 @@ import "./app.css";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ConfirmProvider } from "./contexts/ConfirmContext";
 import { ToastProvider } from "./contexts/ToastContext";
+import { NotificationsProvider } from "./contexts/NotificationsContext";
 
 export const links: Route.LinksFunction = () => [
   // Preconnect
@@ -53,7 +54,9 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <ConfirmProvider>
-          <Outlet />
+          <NotificationsProvider>
+            <Outlet />
+          </NotificationsProvider>
         </ConfirmProvider>
       </ToastProvider>
     </AuthProvider>

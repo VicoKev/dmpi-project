@@ -1,6 +1,7 @@
 // TopBar — Barre supérieure (visible principalement sur mobile)
 import { useAuth } from "../../contexts/AuthContext";
 import type { UserRole } from "../../types/auth";
+import NotificationBell from "./NotificationBell";
 
 const ROLE_LABELS: Record<UserRole, string> = {
   medecin: "Médecin",
@@ -61,13 +62,7 @@ export default function TopBar() {
         </div>
       </div>
 
-      <button
-        className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-95 hover:bg-[var(--color-surface-container)]"
-        style={{ color: "var(--color-on-surface-variant)" }}
-        aria-label="Notifications"
-      >
-        <span className="material-symbols-outlined text-[24px]">notifications</span>
-      </button>
+      <NotificationBell />
     </header>
   );
 }

@@ -2,13 +2,12 @@
 // Mobile: cachée (remplacée par BottomNav)
 // Desktop (lg+): fixe à gauche, 256px
 
-import { useEffect, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
+import { useNotifications } from "../../contexts/NotificationsContext";
 import type { UserRole } from "../../types/auth";
-import { getFileAttenteEtablissement } from "../../services/fileAttenteService";
-import { getDemandesAccesMonEtablissement, getDemandesAcces } from "../../services/demandeAccesService";
-import { getMesDemandesLaboratoire } from "../../services/demandeExamenService";
+import NotificationBell from "./NotificationBell";
 
 interface NavItem {
   to: string;
@@ -17,41 +16,10 @@ interface NavItem {
   label: string;
 }
 
-// Compteurs "en attente" par tab — uniquement les files d'action réellement
-// bornées (une file d'attente de patients, des demandes à traiter), jamais
-// un total (utilisateurs, patients, documents...) qui pourrait grimper à
-// des milliers voire des millions d'éléments.
-const REFRESH_MS = 30_000;
+// Compteurs "en attente" par tab, dérivés de la cloche de notifications
+// partagée (voir NotificationsContext) — un seul point de récupération pour
+// les badges par lien ici et le panneau détaillé de la cloche.
 const PLAFOND_AFFICHAGE = 99;
-
-async function chargerCompteurs(role: UserRole): Promise<Record<string, number>> {
-  switch (role) {
-    case "infirmier": {
-      const entrees = await getFileAttenteEtablissement();
-      return { "/infirmier/file-attente": entrees.filter((e) => e.statut === "en_attente").length };
-    }
-    case "admin_etablissement": {
-      const [entrees, demandes] = await Promise.all([
-        getFileAttenteEtablissement(),
-        getDemandesAccesMonEtablissement(),
-      ]);
-      return {
-        "/admin/file-attente": entrees.filter((e) => e.statut === "en_attente").length,
-        "/admin/demandes-acces": demandes.filter((d) => d.statut === "en_attente").length,
-      };
-    }
-    case "superadmin_national": {
-      const demandes = await getDemandesAcces("en_attente");
-      return { "/superadmin/demandes-acces": demandes.length };
-    }
-    case "laboratoire": {
-      const demandes = await getMesDemandesLaboratoire();
-      return { "/laboratoire": demandes.filter((d) => d.statut === "en_attente").length };
-    }
-    default:
-      return {};
-  }
-}
 
 function NavCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -140,22 +108,15 @@ const ROLE_ICONS: Record<UserRole, string> = {
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [compteurs, setCompteurs] = useState<Record<string, number>>({});
+  const { elements } = useNotifications();
 
-  const rafraichirCompteurs = useCallback(async () => {
-    if (!user) return;
-    try {
-      setCompteurs(await chargerCompteurs(user.role));
-    } catch {
-      // Un badge qui ne se met pas à jour n'est pas critique : on ignore l'erreur.
+  const compteurs = useMemo(() => {
+    const parLien: Record<string, number> = {};
+    for (const element of elements) {
+      parLien[element.lien] = (parLien[element.lien] ?? 0) + element.compte;
     }
-  }, [user]);
-
-  useEffect(() => {
-    rafraichirCompteurs();
-    const intervalId = setInterval(rafraichirCompteurs, REFRESH_MS);
-    return () => clearInterval(intervalId);
-  }, [rafraichirCompteurs]);
+    return parLien;
+  }, [elements]);
 
   if (!user) return null;
 
@@ -185,34 +146,37 @@ export default function Sidebar() {
     >
       {/* Logo / En-tête */}
       <div
-        className="flex items-center gap-3 px-5 h-16 border-b border-[var(--color-outline-variant)]"
+        className="flex items-center justify-between gap-3 px-5 h-16 border-b border-[var(--color-outline-variant)]"
         style={{ flexShrink: 0 }}
       >
-        <div
-          className="w-9 h-9 rounded-full flex items-center justify-center animate-pulse-ring"
-          style={{
-            backgroundColor: "var(--color-primary)",
-            color: "var(--color-on-primary)",
-          }}
-        >
-          <span className="material-symbols-outlined filled text-[20px]">
-            medical_services
-          </span>
-        </div>
-        <div>
-          <span
-            className="text-subheading block leading-tight"
-            style={{ color: "var(--color-primary)", fontFamily: "var(--font-heading)" }}
+        <div className="flex items-center gap-3 min-w-0">
+          <div
+            className="w-9 h-9 rounded-full flex items-center justify-center animate-pulse-ring shrink-0"
+            style={{
+              backgroundColor: "var(--color-primary)",
+              color: "var(--color-on-primary)",
+            }}
           >
-            DMPI Bénin
-          </span>
-          <span
-            className="text-caption block"
-            style={{ color: "var(--color-on-surface-variant)" }}
-          >
-            Plateforme médicale
-          </span>
+            <span className="material-symbols-outlined filled text-[20px]">
+              medical_services
+            </span>
+          </div>
+          <div className="min-w-0">
+            <span
+              className="text-subheading block leading-tight truncate"
+              style={{ color: "var(--color-primary)", fontFamily: "var(--font-heading)" }}
+            >
+              DMPI Bénin
+            </span>
+            <span
+              className="text-caption block truncate"
+              style={{ color: "var(--color-on-surface-variant)" }}
+            >
+              Plateforme médicale
+            </span>
+          </div>
         </div>
+        <NotificationBell />
       </div>
 
       {/* Navigation principale */}
