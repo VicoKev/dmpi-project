@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, File, UploadFile
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from bson import ObjectId
 from datetime import datetime
@@ -7,11 +7,13 @@ from app.schemas.etablissement import (
     EtablissementCreate, EtablissementUpdate, EtablissementUpdateSelfService, EtablissementOut,
     EtablissementProche, EtablissementsProchesResponse,
 )
+from app.schemas.etablissement_import import RapportValidationImport, ConfirmerImportRequest, ConfirmerImportResponse, LigneImportCreee
 from app.schemas.prestataire import ReferenceLocalisation
 from app.models_sql import User
 from app.security import require_role, get_current_user
 from app.audit import enregistrer_log
 from app.geo_utils import distance_km
+from app.etablissement_import import valider_fichier_excel, verifier_doublons_telephone_base, generer_modele_excel
 
 router = APIRouter(
     prefix="/etablissements",
@@ -197,6 +199,118 @@ async def creer_etablissement(
     )
 
     return format_etablissement(created)
+
+
+@router.get("/import/modele")
+async def telecharger_modele_import(
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """Modèle Excel (.xlsx) avec les colonnes attendues, un exemple rempli
+    et les valeurs autorisées, pour préparer un import en masse."""
+    contenu = generer_modele_excel()
+    return Response(
+        content=contenu,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=modele-import-etablissements.xlsx"}
+    )
+
+
+@router.post("/import/valider", response_model=RapportValidationImport)
+async def valider_import_excel(
+    fichier: UploadFile = File(...),
+    db_mongo: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    db_sql: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """
+    Vérifie un fichier Excel d'établissements sans rien écrire en base :
+    formats, cohérence du découpage territorial (département/commune/
+    arrondissement/quartier), doublons de téléphone (dans le fichier et
+    contre la base). Renvoie un rapport ligne par ligne à corriger avant
+    l'import effectif via /import/confirmer.
+    """
+    if not fichier.filename or not fichier.filename.lower().endswith(".xlsx"):
+        raise HTTPException(status_code=400, detail="Le fichier doit être au format .xlsx.")
+
+    contenu = await fichier.read()
+    rapport = await valider_fichier_excel(contenu, db_sql, db_mongo)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="VALIDATION_IMPORT_ETABLISSEMENTS",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return rapport
+
+
+@router.post("/import/confirmer", response_model=ConfirmerImportResponse)
+async def confirmer_import_excel(
+    requete: ConfirmerImportRequest,
+    db_mongo: AsyncIOMotorDatabase = Depends(get_mongo_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """
+    Crée effectivement les établissements précédemment validés via
+    /import/valider. Revalide les doublons de téléphone contre l'état
+    actuel de la base (et au sein de la requête elle-même) avant d'insérer,
+    au cas où la base aurait changé entre les deux étapes.
+    """
+    if not requete.lignes:
+        raise HTTPException(status_code=400, detail="Aucune ligne à importer.")
+
+    telephones_vus: dict[str, int] = {}
+    doublons_internes: set[int] = set()
+    for ligne in requete.lignes:
+        precedente = telephones_vus.get(ligne.donnees.telephone)
+        if precedente is not None:
+            doublons_internes.add(ligne.numero_ligne)
+            doublons_internes.add(precedente)
+        else:
+            telephones_vus[ligne.donnees.telephone] = ligne.numero_ligne
+
+    doublons_base = await verifier_doublons_telephone_base(
+        db_mongo, [l.donnees.telephone for l in requete.lignes]
+    )
+
+    lignes_rejetees = [
+        l.numero_ligne for l in requete.lignes
+        if l.numero_ligne in doublons_internes or l.donnees.telephone in doublons_base
+    ]
+    if lignes_rejetees:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                "Des numéros de téléphone en doublon ont été détectés depuis la validation "
+                f"(lignes {', '.join(str(n) for n in sorted(lignes_rejetees))}). "
+                "Revalidez le fichier avant de confirmer l'import."
+            ),
+        )
+
+    maintenant = datetime.utcnow()
+    documents = []
+    for ligne in requete.lignes:
+        doc = ligne.donnees.model_dump()
+        doc["derniereSync"] = maintenant
+        documents.append(doc)
+
+    resultat = await db_mongo["etablissements"].insert_many(documents)
+
+    etablissements_crees = [
+        LigneImportCreee(numero_ligne=ligne.numero_ligne, id=str(inserted_id), nom=ligne.donnees.nom)
+        for ligne, inserted_id in zip(requete.lignes, resultat.inserted_ids)
+    ]
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="CONFIRMATION_IMPORT_ETABLISSEMENTS",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return ConfirmerImportResponse(nombre_crees=len(etablissements_crees), etablissements_crees=etablissements_crees)
+
 
 @router.get("/moi", response_model=EtablissementOut)
 async def obtenir_mon_etablissement(
