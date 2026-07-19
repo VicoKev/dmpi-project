@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, apiUpload, apiDownload } from "./api";
 import type { ReferenceLocalisation } from "./prescriptionService";
 
 export interface Etablissement {
@@ -139,5 +139,73 @@ export async function updateMonEtablissement(payload: EtablissementUpdateSelfSer
   return apiFetch<Etablissement>("/etablissements/moi", {
     method: "PATCH",
     body: JSON.stringify(payload),
+  });
+}
+
+// ─── Import en masse depuis Excel ──────────────────────────────────────────
+
+export interface EtablissementImportDonnees {
+  nom: string;
+  departement: string;
+  commune: string;
+  arrondissement: string;
+  quartier: string;
+  adresse: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  type: string;
+  statut: string;
+  telephone: string;
+  dmpiVersion: string | null;
+  patients: number;
+  medecins: number;
+  infirmiers: number;
+  consultationsMois: number;
+}
+
+export interface LigneImportValide {
+  numero_ligne: number;
+  donnees: EtablissementImportDonnees;
+}
+
+export interface LigneImportInvalide {
+  numero_ligne: number;
+  valeurs_brutes: Record<string, string | null>;
+  erreurs: string[];
+}
+
+export interface RapportValidationImport {
+  total_lignes: number;
+  nombre_valides: number;
+  nombre_invalides: number;
+  lignes_valides: LigneImportValide[];
+  lignes_invalides: LigneImportInvalide[];
+}
+
+export interface LigneImportCreee {
+  numero_ligne: number;
+  id: string;
+  nom: string;
+}
+
+export interface ConfirmerImportResponse {
+  nombre_crees: number;
+  etablissements_crees: LigneImportCreee[];
+}
+
+export async function telechargerModeleImportEtablissements(): Promise<void> {
+  return apiDownload("/etablissements/import/modele", "modele-import-etablissements.xlsx");
+}
+
+export async function validerImportEtablissements(fichier: File): Promise<RapportValidationImport> {
+  const formData = new FormData();
+  formData.append("fichier", fichier);
+  return apiUpload<RapportValidationImport>("/etablissements/import/valider", formData);
+}
+
+export async function confirmerImportEtablissements(lignes: LigneImportValide[]): Promise<ConfirmerImportResponse> {
+  return apiFetch<ConfirmerImportResponse>("/etablissements/import/confirmer", {
+    method: "POST",
+    body: JSON.stringify({ lignes }),
   });
 }

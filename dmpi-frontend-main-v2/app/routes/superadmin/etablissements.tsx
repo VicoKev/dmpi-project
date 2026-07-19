@@ -19,6 +19,8 @@ import {
   type EtablissementUpdatePayload,
 } from "../../services/etablissementService";
 import LocalisationPicker from "../../components/etablissement/LocalisationPicker";
+import ImportEtablissementsModal from "../../components/etablissement/ImportEtablissementsModal";
+import { validateTelephoneBenin, TELEPHONE_BENIN_HINT, TELEPHONE_BENIN_PLACEHOLDER } from "../../utils/telephone";
 
 // ─── Config UI ────────────────────────────────────────────────────────────────
 
@@ -96,6 +98,10 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
     }
     if (!localisationValide) {
       setError("Corrigez la latitude/longitude avant de continuer.");
+      return;
+    }
+    if (!validateTelephoneBenin(form.telephone)) {
+      setError(TELEPHONE_BENIN_HINT);
       return;
     }
     setLoading(true);
@@ -184,7 +190,13 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
           </div>
 
           <div className="grid grid-cols-1 gap-3">
-            <Input label="Téléphone" value={form.telephone} onChange={e => update("telephone", e.target.value)} placeholder="+229 21 XX XX XX" />
+            <Input
+              label="Téléphone"
+              value={form.telephone}
+              onChange={e => update("telephone", e.target.value)}
+              placeholder={TELEPHONE_BENIN_PLACEHOLDER}
+              hint={TELEPHONE_BENIN_HINT}
+            />
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -213,6 +225,7 @@ export default function SuperAdminEtablissements() {
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState<Etablissement | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [editingEtab, setEditingEtab] = useState<Etablissement | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const askConfirmation = useConfirm();
@@ -394,6 +407,18 @@ export default function SuperAdminEtablissements() {
         />
       )}
 
+      {/* Modal import Excel */}
+      {showImport && (
+        <ImportEtablissementsModal
+          onCancel={() => setShowImport(false)}
+          onSuccess={(nombreCrees) => {
+            setShowImport(false);
+            loadEtablissements();
+            showToast(`${nombreCrees} établissement${nombreCrees > 1 ? "s" : ""} importé${nombreCrees > 1 ? "s" : ""} avec succès.`);
+          }}
+        />
+      )}
+
       {/* En-tête */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -402,7 +427,10 @@ export default function SuperAdminEtablissements() {
             {loading ? "Chargement..." : `${totaux.actifs} actifs sur ${etablissements.length} dans le réseau DMPI Bénin.`}
           </p>
         </div>
-        <Button icon="add_business" onClick={() => setShowForm(true)}>Ajouter un établissement</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" icon="upload_file" onClick={() => setShowImport(true)}>Importer depuis Excel</Button>
+          <Button icon="add_business" onClick={() => setShowForm(true)}>Ajouter un établissement</Button>
+        </div>
       </div>
 
       {/* Stats */}
