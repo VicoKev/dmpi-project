@@ -176,7 +176,7 @@ export default function Sidebar() {
             </span>
           </div>
         </div>
-        <NotificationBell />
+        <NotificationBell align="left" />
       </div>
 
       {/* Navigation principale */}

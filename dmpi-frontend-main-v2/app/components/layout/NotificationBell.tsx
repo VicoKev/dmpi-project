@@ -14,7 +14,15 @@ const COULEURS_URGENCE: Record<ElementNotification["urgence"], { bg: string; col
   error: { bg: "var(--color-error-container)", color: "var(--color-on-error-container)" },
 };
 
-export default function NotificationBell() {
+interface NotificationBellProps {
+  /** Côté vers lequel le panneau s'ouvre, pour rester à l'écran quel que
+   * soit l'endroit où la cloche est placée : "right" (par défaut) quand
+   * elle est près du bord droit (TopBar mobile), "left" quand elle est
+   * près du bord gauche (en-tête de la Sidebar desktop). */
+  align?: "left" | "right";
+}
+
+export default function NotificationBell({ align = "right" }: NotificationBellProps) {
   const { elements, total } = useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -57,7 +65,7 @@ export default function NotificationBell() {
 
       {open && (
         <div
-          className="absolute right-0 mt-2 w-80 max-w-[90vw] rounded-2xl shadow-2xl overflow-hidden z-50 animate-slide-down"
+          className={`absolute ${align === "left" ? "left-0" : "right-0"} mt-2 w-72 max-w-[90vw] rounded-2xl shadow-2xl overflow-hidden z-50 animate-slide-down`}
           style={{ backgroundColor: "var(--color-surface)", border: "1px solid var(--color-outline-variant)" }}
         >
           <div className="px-4 py-3 border-b" style={{ borderColor: "var(--color-outline-variant)" }}>
