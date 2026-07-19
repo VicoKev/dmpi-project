@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+from app.validators import normaliser_telephone_benin
 
 TYPES_PRESTATAIRE_VALIDES = {"pharmacie", "laboratoire"}
 
@@ -38,6 +39,11 @@ class PrestataireBase(BaseModel):
     def type_valide(cls, v: str) -> str:
         return _valider_type(v)
 
+    @field_validator("telephone")
+    @classmethod
+    def telephone_valide(cls, v: str) -> str:
+        return normaliser_telephone_benin(v)
+
 
 class PrestataireCreate(PrestataireBase):
     # Requis à la création uniquement — PrestataireBase les garde optionnels
@@ -70,6 +76,11 @@ class PrestataireUpdate(BaseModel):
     @classmethod
     def type_valide(cls, v: str | None) -> str | None:
         return _valider_type(v) if v is not None else v
+
+    @field_validator("telephone")
+    @classmethod
+    def telephone_valide(cls, v: str | None) -> str | None:
+        return normaliser_telephone_benin(v) if v is not None else v
 
 
 class PrestataireOut(PrestataireBase):

@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
+from app.validators import normaliser_telephone_benin
 
 
 class DemandeAccesCreate(BaseModel):
@@ -7,6 +8,11 @@ class DemandeAccesCreate(BaseModel):
     nom: str
     prenom: str
     telephone_contact: str
+
+    @field_validator("telephone_contact")
+    @classmethod
+    def telephone_valide(cls, v: str) -> str:
+        return normaliser_telephone_benin(v)
 
 
 class RejeterDemandeRequest(BaseModel):
@@ -24,6 +30,11 @@ class DemandeAccesOut(BaseModel):
     statut: str
     motif_rejet: str | None = None
     date_creation: datetime
+
+    @field_validator("telephone_contact")
+    @classmethod
+    def telephone_valide(cls, v: str) -> str:
+        return normaliser_telephone_benin(v)
 
     class Config:
         from_attributes = True

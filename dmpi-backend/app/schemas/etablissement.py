@@ -1,7 +1,8 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
 from datetime import datetime
 from app.schemas.prestataire import ReferenceLocalisation
+from app.validators import normaliser_telephone_benin
 
 class EtablissementBase(BaseModel):
     nom: str
@@ -22,6 +23,11 @@ class EtablissementBase(BaseModel):
     medecins: int = 0
     infirmiers: int = 0
     consultationsMois: int = 0
+
+    @field_validator("telephone")
+    @classmethod
+    def telephone_valide(cls, v: str) -> str:
+        return normaliser_telephone_benin(v)
 
 class EtablissementCreate(EtablissementBase):
     # Requis à la création uniquement — EtablissementBase les garde optionnels
@@ -48,6 +54,11 @@ class EtablissementUpdate(BaseModel):
     medecins: Optional[int] = None
     infirmiers: Optional[int] = None
     consultationsMois: Optional[int] = None
+
+    @field_validator("telephone")
+    @classmethod
+    def telephone_valide(cls, v: Optional[str]) -> Optional[str]:
+        return normaliser_telephone_benin(v) if v is not None else v
 
 class EtablissementProche(BaseModel):
     id: str
@@ -81,6 +92,11 @@ class EtablissementUpdateSelfService(BaseModel):
     latitude: Optional[float] = Field(None, ge=-90, le=90)
     longitude: Optional[float] = Field(None, ge=-180, le=180)
     telephone: Optional[str] = None
+
+    @field_validator("telephone")
+    @classmethod
+    def telephone_valide(cls, v: Optional[str]) -> Optional[str]:
+        return normaliser_telephone_benin(v) if v is not None else v
 
 class EtablissementOut(EtablissementBase):
     id: str
