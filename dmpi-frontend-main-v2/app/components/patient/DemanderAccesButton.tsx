@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { createDemandeAcces, compteExistantPourNpi } from "../../services/demandeAccesService";
+import { validateTelephoneBenin, TELEPHONE_BENIN_HINT, TELEPHONE_BENIN_PLACEHOLDER } from "../../utils/telephone";
 
 interface DemanderAccesButtonProps {
   npi: string;
@@ -49,6 +50,10 @@ export default function DemanderAccesButton({ npi, nom, prenom, telephoneDefault
 
     if (!telephone.trim()) {
       setError("Le téléphone de contact est requis.");
+      return;
+    }
+    if (!validateTelephoneBenin(telephone)) {
+      setError(TELEPHONE_BENIN_HINT);
       return;
     }
 
@@ -119,7 +124,8 @@ export default function DemanderAccesButton({ npi, nom, prenom, telephoneDefault
                 value={telephone}
                 onChange={(e) => setTelephone(e.target.value)}
                 leadingIcon="call"
-                placeholder="Ex: +229 97 00 00 00"
+                placeholder={TELEPHONE_BENIN_PLACEHOLDER}
+                hint={TELEPHONE_BENIN_HINT}
                 required
               />
               <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>

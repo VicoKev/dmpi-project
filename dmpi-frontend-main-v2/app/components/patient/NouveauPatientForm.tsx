@@ -8,6 +8,7 @@ import Button from "../ui/Button";
 import { createDossierPatient } from "../../services/patientService";
 import { createDemandeAcces } from "../../services/demandeAccesService";
 import { validateNpi } from "../../services/patientService";
+import { validateTelephoneBenin, TELEPHONE_BENIN_HINT, TELEPHONE_BENIN_PLACEHOLDER } from "../../utils/telephone";
 
 interface NouveauPatientFormProps {
   /** Base de la route de redirection après création. Défaut : /medecin/dossier */
@@ -53,6 +54,10 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
     }
     if (demandeAccesSouhaitee && !telephoneContact.trim()) {
       setError("Un numéro de téléphone de contact est requis pour demander un accès portail.");
+      return;
+    }
+    if (demandeAccesSouhaitee && !validateTelephoneBenin(telephoneContact)) {
+      setError(TELEPHONE_BENIN_HINT);
       return;
     }
 
@@ -191,7 +196,8 @@ export default function NouveauPatientForm({ redirectBase = "/medecin/dossier" }
           value={telephoneContact}
           onChange={(e) => setTelephoneContact(e.target.value)}
           leadingIcon="call"
-          placeholder="Ex: +229 97 00 00 00"
+          placeholder={TELEPHONE_BENIN_PLACEHOLDER}
+          hint={TELEPHONE_BENIN_HINT}
           required
         />
       )}

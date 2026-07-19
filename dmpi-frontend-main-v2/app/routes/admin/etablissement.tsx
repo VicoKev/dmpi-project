@@ -5,6 +5,7 @@ import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
 import LocalisationPicker, { type LocalisationValue } from "../../components/etablissement/LocalisationPicker";
 import { getMonEtablissement, updateMonEtablissement, type Etablissement } from "../../services/etablissementService";
+import { validateTelephoneBenin, TELEPHONE_BENIN_HINT, TELEPHONE_BENIN_PLACEHOLDER } from "../../utils/telephone";
 
 const TYPE_LABELS: Record<string, string> = {
   CHU: "Centre Hospitalier Universitaire",
@@ -68,6 +69,10 @@ export default function AdminMonEtablissement() {
     }
     if (!localisationValide) {
       setSaveError("Corrigez la latitude/longitude avant de continuer.");
+      return;
+    }
+    if (!validateTelephoneBenin(telephone)) {
+      setSaveError(TELEPHONE_BENIN_HINT);
       return;
     }
     setSaving(true);
@@ -154,7 +159,13 @@ export default function AdminMonEtablissement() {
                 </div>
               )}
 
-              <Input label="Téléphone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+229 21 XX XX XX" />
+              <Input
+                label="Téléphone"
+                value={telephone}
+                onChange={(e) => setTelephone(e.target.value)}
+                placeholder={TELEPHONE_BENIN_PLACEHOLDER}
+                hint={TELEPHONE_BENIN_HINT}
+              />
 
               <LocalisationPicker
                 value={localisation}

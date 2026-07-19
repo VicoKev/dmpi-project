@@ -8,6 +8,7 @@ import Button from "../../components/ui/Button";
 import Pagination from "../../components/ui/Pagination";
 import LocalisationPicker, { type LocalisationValue } from "../../components/etablissement/LocalisationPicker";
 import HorairesPicker from "../../components/ui/HorairesPicker";
+import { validateTelephoneBenin, TELEPHONE_BENIN_HINT, TELEPHONE_BENIN_PLACEHOLDER } from "../../utils/telephone";
 import {
   getPrestatairesPagine,
   createPrestataire,
@@ -62,6 +63,10 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
     }
     if (!localisationValide) {
       setError("Corrigez la latitude/longitude avant de continuer.");
+      return;
+    }
+    if (!validateTelephoneBenin(telephone)) {
+      setError(TELEPHONE_BENIN_HINT);
       return;
     }
     setLoading(true);
@@ -151,7 +156,14 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Téléphone" value={telephone} onChange={(e) => setTelephone(e.target.value)} placeholder="+229 21 XX XX XX" required />
+            <Input
+              label="Téléphone"
+              value={telephone}
+              onChange={(e) => setTelephone(e.target.value)}
+              placeholder={TELEPHONE_BENIN_PLACEHOLDER}
+              hint={TELEPHONE_BENIN_HINT}
+              required
+            />
             <Input label="Email (optionnel)" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
 
