@@ -45,6 +45,29 @@ class Tuteur(BaseModel):
     lien_parente: str
 
 
+class Vaccination(BaseModel):
+    """Entrée du carnet de vaccination. Journal historique : une entrée
+    n'est jamais modifiée ni supprimée, seulement ajoutée — au même titre
+    qu'un acte médical déjà administré."""
+    nom_vaccin: str
+    date_administration: date
+    dose: str | None = None  # ex: "1ère dose", "2ème dose", "rappel"
+    lot: str | None = None
+    prochaine_dose_prevue: date | None = None
+    notes: str | None = None
+    # Renseigné côté serveur depuis l'utilisateur authentifié, jamais saisi par le client.
+    administre_par: str | None = None
+
+
+class VaccinationCreate(BaseModel):
+    nom_vaccin: str
+    date_administration: date
+    dose: str | None = None
+    lot: str | None = None
+    prochaine_dose_prevue: date | None = None
+    notes: str | None = None
+
+
 class DossierMedicalMongo(BaseModel):
     npi: str = Field(..., min_length=10, max_length=10)
     nom: str | None = None
@@ -55,8 +78,19 @@ class DossierMedicalMongo(BaseModel):
     allergies: list[Allergie] = []
     antecedents: list[str] = []
     traitements_en_cours: list[TraitementEnCours] = []
+    vaccinations: list[Vaccination] = []
     tuteur: Tuteur | None = None
     updated_at: datetime
+
+
+class RechercheDossierResultat(BaseModel):
+    """Vue allégée d'un dossier retrouvé par nom — sert uniquement à
+    identifier le bon NPI, jamais à afficher des données cliniques."""
+    npi: str
+    nom: str | None = None
+    prenom: str | None = None
+    date_naissance: date | None = None
+    sexe: str | None = None
 
 class FicheUrgence(BaseModel):
     """ Vue filtrée pour le mode urgence : uniquement les données vitales."""

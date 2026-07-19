@@ -129,6 +129,17 @@ async def exporter_mon_dossier(
                 "note": allergie.get("notes"),
             })
 
+        for vaccination in dossier.get("vaccinations", []):
+            entries.append({
+                "resourceType": "Immunization",
+                "patient": {"identifier": {"value": npi}},
+                "status": "completed",
+                "vaccineCode": {"text": vaccination.get("nom_vaccin")},
+                "occurrenceDateTime": vaccination.get("date_administration"),
+                "lotNumber": vaccination.get("lot"),
+                "protocolApplied": [{"doseNumberString": vaccination.get("dose")}] if vaccination.get("dose") else [],
+            })
+
         for traitement in dossier.get("traitements_en_cours", []):
             entries.append({
                 "resourceType": "MedicationStatement",

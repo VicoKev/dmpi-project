@@ -1,11 +1,15 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from app.database_mongo import dossiers_medicaux_collection
-from app.schemas.dossier_medical import DossierMedicalMongo, DossierMedicalUpdate, ArreterTraitementRequest
+from app.schemas.dossier_medical import (
+    DossierMedicalMongo, DossierMedicalUpdate, ArreterTraitementRequest,
+    VaccinationCreate, RechercheDossierResultat,
+)
 from app.security import get_current_user, require_role, verifier_acces_dossier_patient
 from app.models_sql import User
 from app.audit import enregistrer_log
 from app.kafka_producer import publier_evenement
 from datetime import datetime, date as dt_date
+import re
 
 router = APIRouter(
     prefix="/dossiers",
@@ -59,6 +63,47 @@ async def creer_dossier_medical(
     })
 
     return {"message": "Dossier médical créé avec succès dans MongoDB !", "npi": dossier.npi}
+
+
+@router.get("/recherche/patients", response_model=list[RechercheDossierResultat])
+async def rechercher_patients(
+    nom: str | None = None,
+    prenom: str | None = None,
+    date_naissance: dt_date | None = None,
+    current_user: User = Depends(require_role("medecin", "infirmier"))
+):
+    """
+    Retrouve le NPI d'un patient quand il n'est pas connu — nom, prénom
+    et/ou date de naissance, au moins un critère requis. Ne renvoie qu'une
+    vue d'identification (pas de données cliniques) : sert à choisir le
+    bon dossier avant de l'ouvrir par NPI, jamais à le consulter directement.
+    """
+    if not nom and not prenom and not date_naissance:
+        raise HTTPException(status_code=400, detail="Indiquez au moins un critère de recherche (nom, prénom ou date de naissance).")
+
+    filtre: dict = {}
+    if nom:
+        filtre["nom"] = {"$regex": re.escape(nom.strip()), "$options": "i"}
+    if prenom:
+        filtre["prenom"] = {"$regex": re.escape(prenom.strip()), "$options": "i"}
+    if date_naissance:
+        debut = datetime.combine(date_naissance, datetime.min.time())
+        fin = datetime.combine(date_naissance, datetime.max.time())
+        filtre["date_naissance"] = {"$gte": debut, "$lte": fin}
+
+    cursor = dossiers_medicaux_collection.find(
+        filtre, {"npi": 1, "nom": 1, "prenom": 1, "date_naissance": 1, "sexe": 1}
+    ).limit(20)
+    resultats = await cursor.to_list(length=20)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="RECHERCHE_PATIENT_PAR_NOM",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return resultats
 
 
 @router.get("/{npi}", response_model=DossierMedicalMongo)
@@ -182,6 +227,43 @@ async def arreter_traitement(
     await enregistrer_log(
         utilisateur_email=current_user.email,
         action="ARRET_TRAITEMENT",
+        statut_action="SUCCES",
+        npi_concerne=npi
+    )
+
+    dossier_maj = await dossiers_medicaux_collection.find_one({"npi": npi})
+    return dossier_maj
+
+
+@router.post("/{npi}/vaccinations", response_model=DossierMedicalMongo, status_code=status.HTTP_201_CREATED)
+async def ajouter_vaccination(
+    npi: str,
+    vaccination: VaccinationCreate,
+    current_user: User = Depends(require_role("medecin", "infirmier"))
+):
+    """
+    Ajoute une entrée au carnet de vaccination — journal historique, jamais
+    modifié ni supprimé après coup, à l'image d'une administration de
+    traitement déjà enregistrée.
+    """
+    dossier = await dossiers_medicaux_collection.find_one({"npi": npi})
+    if not dossier:
+        raise HTTPException(status_code=404, detail=f"Aucun dossier médical trouvé pour le NPI : {npi}")
+
+    entree = vaccination.model_dump()
+    entree["date_administration"] = datetime.combine(entree["date_administration"], datetime.min.time())
+    if entree.get("prochaine_dose_prevue"):
+        entree["prochaine_dose_prevue"] = datetime.combine(entree["prochaine_dose_prevue"], datetime.min.time())
+    entree["administre_par"] = f"{current_user.prenom} {current_user.nom}".strip() or current_user.email
+
+    await dossiers_medicaux_collection.update_one(
+        {"npi": npi},
+        {"$push": {"vaccinations": entree}, "$set": {"updated_at": datetime.utcnow()}}
+    )
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="AJOUT_VACCINATION",
         statut_action="SUCCES",
         npi_concerne=npi
     )
