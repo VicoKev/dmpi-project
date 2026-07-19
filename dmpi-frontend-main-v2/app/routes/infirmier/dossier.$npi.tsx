@@ -2,6 +2,7 @@
 // Lecture du dossier (sans écriture consultation/ordonnance) + constantes + administrations
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router";
+import { useToast } from "../../contexts/ToastContext";
 
 import Button from "../../components/ui/Button";
 import Card, { CardHeader } from "../../components/ui/Card";
@@ -10,9 +11,10 @@ import DossierHeader from "../../components/dossier/DossierHeader";
 import AntecedentsCard from "../../components/dossier/AntecedentsCard";
 import TraitementsCard from "../../components/dossier/TraitementsCard";
 import ConstanteRow from "../../components/dossier/ConstanteRow";
+import VaccinationsCard from "../../components/dossier/VaccinationsCard";
 import DemanderAccesButton from "../../components/patient/DemanderAccesButton";
 
-import { getDossierPatient, formatDateFr } from "../../services/patientService";
+import { getDossierPatient, formatDateFr, ajouterVaccination, type AjouterVaccinationPayload } from "../../services/patientService";
 import { getRelevesByPatient, type ReleveConstantes } from "../../services/constanstesService";
 import {
   getAdministrationsByPatient,
@@ -20,12 +22,13 @@ import {
 } from "../../services/administrationService";
 import type { DossierPatient } from "../../types/patient";
 
-type InfirmierTabKey = "synthese" | "constantes" | "traitements";
+type InfirmierTabKey = "synthese" | "constantes" | "traitements" | "vaccinations";
 
 const TABS: { key: InfirmierTabKey; icon: string; label: string }[] = [
   { key: "synthese", icon: "summarize", label: "Synthèse" },
   { key: "constantes", icon: "monitor_heart", label: "Constantes" },
   { key: "traitements", icon: "medication", label: "Administrations" },
+  { key: "vaccinations", icon: "vaccines", label: "Vaccinations" },
 ];
 
 export default function InfirmierDossierPage() {
@@ -38,6 +41,7 @@ export default function InfirmierDossierPage() {
   const [activeTab, setActiveTab] = useState<InfirmierTabKey>("synthese");
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const showToast = useToast();
 
   useEffect(() => {
     if (!npi) return;
@@ -59,6 +63,13 @@ export default function InfirmierDossierPage() {
 
     return () => { cancelled = true; };
   }, [npi]);
+
+  const handleAjouterVaccination = async (payload: AjouterVaccinationPayload) => {
+    if (!npi) return;
+    const dossierMaj = await ajouterVaccination(npi, payload);
+    if (dossierMaj) setDossier(dossierMaj);
+    showToast("Vaccination enregistrée.");
+  };
 
   if (loading) {
     return (
@@ -259,6 +270,10 @@ export default function InfirmierDossierPage() {
             </Card>
           )}
         </div>
+      )}
+
+      {activeTab === "vaccinations" && (
+        <VaccinationsCard vaccinations={dossier.vaccinations} onAjouter={handleAjouterVaccination} />
       )}
     </div>
   );

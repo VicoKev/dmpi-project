@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import { AllergieBadge } from "../../components/ui/Badge";
 import TraitementsCard from "../../components/dossier/TraitementsCard";
+import VaccinationsCard from "../../components/dossier/VaccinationsCard";
 import Spinner from "../../components/ui/Spinner";
 import { getDossierPatient, calculerAge, formatDateFr } from "../../services/patientService";
 import { getConsultationsByPatient } from "../../services/consultationService";
@@ -103,7 +104,7 @@ export default function PatientDashboard() {
     );
   }
 
-  const { patient, allergies, traitementsEnCours } = dossier;
+  const { patient, allergies, traitementsEnCours, vaccinations } = dossier;
   const derniereConsultation = consultations[0] ?? null;
   const derniereOrdonnance = prescriptions[0] ?? null;
 
@@ -301,6 +302,11 @@ export default function PatientDashboard() {
       {/* Traitements en cours */}
       {traitementsEnCours.length > 0 && (
         <TraitementsCard traitements={traitementsEnCours} titre="Mes traitements" />
+      )}
+
+      {/* Carnet de vaccination — lecture seule côté patient */}
+      {vaccinations.length > 0 && (
+        <VaccinationsCard vaccinations={vaccinations} titre="Mon carnet de vaccination" />
       )}
     </div>
   );

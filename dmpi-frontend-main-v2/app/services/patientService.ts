@@ -5,6 +5,7 @@ import type {
   Allergie,
   Antecedent,
   Traitement,
+  Vaccination,
 } from "../types/patient";
 import { apiFetch } from "./api";
 
@@ -31,6 +32,16 @@ interface BackendTuteur {
   lien_parente: string;
 }
 
+interface BackendVaccination {
+  nom_vaccin: string;
+  date_administration: string;
+  dose?: string | null;
+  lot?: string | null;
+  prochaine_dose_prevue?: string | null;
+  notes?: string | null;
+  administre_par?: string | null;
+}
+
 interface BackendDossier {
   npi: string;
   nom?: string;
@@ -41,6 +52,7 @@ interface BackendDossier {
   allergies: BackendAllergie[];
   antecedents: string[];
   traitements_en_cours: BackendTraitement[];
+  vaccinations?: BackendVaccination[];
   tuteur?: BackendTuteur | null;
   updated_at: string;
   _id?: string;
@@ -82,6 +94,18 @@ function mapTraitement(t: BackendTraitement, index: number): Traitement {
   };
 }
 
+function mapVaccination(v: BackendVaccination): Vaccination {
+  return {
+    nomVaccin: v.nom_vaccin,
+    dateAdministration: v.date_administration,
+    dose: v.dose ?? undefined,
+    lot: v.lot ?? undefined,
+    prochaineDosePrevue: v.prochaine_dose_prevue ?? undefined,
+    notes: v.notes ?? undefined,
+    administrePar: v.administre_par ?? undefined,
+  };
+}
+
 function mapDossierToPatient(dossier: BackendDossier): Patient {
   return {
     npi: dossier.npi,
@@ -100,6 +124,7 @@ function mapBackendDossier(raw: BackendDossier): DossierPatient {
     allergies: raw.allergies.map(mapAllergie),
     antecedents: raw.antecedents.map(mapAntecedent),
     traitementsEnCours: raw.traitements_en_cours.map(mapTraitement),
+    vaccinations: (raw.vaccinations ?? []).map(mapVaccination),
     hospitalisations: [],
     examens: [],
     tuteur: raw.tuteur
@@ -202,6 +227,43 @@ export async function createDossierPatient(payload: CreateDossierPayload): Promi
     // updated_at est recalculé côté serveur, mais le champ est requis par le schéma d'entrée.
     body: JSON.stringify({ ...payload, updated_at: new Date().toISOString() }),
   });
+}
+
+export interface AjouterVaccinationPayload {
+  nom_vaccin: string;
+  date_administration: string;
+  dose?: string;
+  lot?: string;
+  prochaine_dose_prevue?: string;
+  notes?: string;
+}
+
+/** Ajoute une entrée au carnet de vaccination — journal historique, jamais modifié ni supprimé après coup. */
+export async function ajouterVaccination(npi: string, payload: AjouterVaccinationPayload): Promise<DossierPatient | null> {
+  const raw = await apiFetch<BackendDossier>(`/dossiers/${npi.trim()}/vaccinations`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  if (!raw) return null;
+  return mapBackendDossier(raw);
+}
+
+export interface RechercheDossierResultat {
+  npi: string;
+  nom?: string;
+  prenom?: string;
+  date_naissance?: string;
+  sexe?: string;
+}
+
+/** Retrouve le NPI d'un patient par nom/prénom/date de naissance — au moins un critère requis.
+ * Ne renvoie qu'une vue d'identification, jamais de données cliniques. */
+export async function rechercherPatientsParNom(criteres: { nom?: string; prenom?: string; dateNaissance?: string }): Promise<RechercheDossierResultat[]> {
+  const params = new URLSearchParams();
+  if (criteres.nom?.trim()) params.set("nom", criteres.nom.trim());
+  if (criteres.prenom?.trim()) params.set("prenom", criteres.prenom.trim());
+  if (criteres.dateNaissance) params.set("date_naissance", criteres.dateNaissance);
+  return apiFetch<RechercheDossierResultat[]>(`/dossiers/recherche/patients?${params.toString()}`);
 }
 
 export function calculerAge(dateNaissance: string): number | "-" {

@@ -58,6 +58,16 @@ export interface Traitement {
   ligneIndex?: number;
 }
 
+export interface Vaccination {
+  nomVaccin: string;
+  dateAdministration: string;
+  dose?: string;
+  lot?: string;
+  prochaineDosePrevue?: string;
+  notes?: string;
+  administrePar?: string;
+}
+
 export interface Hospitalisation {
   id: string;
   motif: string;
@@ -102,6 +112,7 @@ export interface DossierPatient {
   allergies: Allergie[];
   antecedents: Antecedent[];
   traitementsEnCours: Traitement[];
+  vaccinations: Vaccination[];
   hospitalisations: Hospitalisation[];
   examens: ResultatExamen[];
   /** Tuteur / parent — pour mineurs et nouveau-nés sans contact propre */

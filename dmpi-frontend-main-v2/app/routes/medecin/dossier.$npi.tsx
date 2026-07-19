@@ -16,9 +16,10 @@ import ConsultationList from "../../components/dossier/ConsultationList";
 import PrescriptionList from "../../components/dossier/PrescriptionList";
 import ExamensCard from "../../components/dossier/ExamensCard";
 import ConstanteRow from "../../components/dossier/ConstanteRow";
+import VaccinationsCard from "../../components/dossier/VaccinationsCard";
 import DemanderAccesButton from "../../components/patient/DemanderAccesButton";
 
-import { getDossierPatient, arreterTraitement } from "../../services/patientService";
+import { getDossierPatient, arreterTraitement, ajouterVaccination, type AjouterVaccinationPayload } from "../../services/patientService";
 import { getConsultationsByPatient } from "../../services/consultationService";
 import { getPrescriptionsByPatient } from "../../services/prescriptionService";
 import { getRelevesByPatient, type ReleveConstantes } from "../../services/constanstesService";
@@ -109,6 +110,13 @@ export default function DossierPatientPage() {
     } catch (err) {
       showToast((err as Error).message || "Erreur lors de l'arrêt du traitement.", "error");
     }
+  };
+
+  const handleAjouterVaccination = async (payload: AjouterVaccinationPayload) => {
+    if (!npi) return;
+    const dossierMaj = await ajouterVaccination(npi, payload);
+    if (dossierMaj) setDossier(dossierMaj);
+    showToast("Vaccination enregistrée.");
   };
 
   if (loading) {
@@ -305,6 +313,12 @@ export default function DossierPatientPage() {
         {activeTab === "examens" && (
           <div className="lg:col-span-2">
             <ExamensCard npi={npi!} />
+          </div>
+        )}
+
+        {activeTab === "vaccinations" && (
+          <div className="lg:col-span-2">
+            <VaccinationsCard vaccinations={dossier.vaccinations} onAjouter={handleAjouterVaccination} />
           </div>
         )}
       </div>
