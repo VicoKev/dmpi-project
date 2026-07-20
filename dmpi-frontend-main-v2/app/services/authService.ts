@@ -102,6 +102,23 @@ export async function signalerCorrectionCompte(motif: string): Promise<void> {
   });
 }
 
+export interface SignalementCorrection {
+  id: number;
+  utilisateur_id: number;
+  motif: string;
+  statut: "en_attente" | "traitee";
+  date_creation: string;
+  date_traitement: string | null;
+  traite_par: string | null;
+  vu: boolean;
+}
+
+/** Historique des signalements de correction de l'utilisateur connecté —
+ * les consulter marque les résolutions comme vues côté backend. */
+export async function getMesSignalementsCorrection(): Promise<SignalementCorrection[]> {
+  return apiFetch<SignalementCorrection[]>("/auth/mes-signalements-correction");
+}
+
 export function getCurrentUser(): AuthLoginResponse | null {
   const token = getStoredToken();
   const userStr = typeof localStorage !== "undefined"

@@ -4,6 +4,7 @@ export default [
   route("login", "routes/login.tsx"),
   layout("components/layout/AppShell.tsx", [
     index("routes/home.tsx"),
+    route("mes-signalements", "routes/mes-signalements.tsx"),
 
     // ─── Espace Médecin ───────────────────────────────────────────────
     route("medecin", "routes/medecin/dashboard.tsx"),
