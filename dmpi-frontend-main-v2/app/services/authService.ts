@@ -71,6 +71,16 @@ export async function logout(): Promise<void> {
   clearToken();
 }
 
+/** Signal "mot de passe oublié", avant authentification — transmis au super
+ * admin, seul habilité à réinitialiser un mot de passe. La réponse est
+ * volontairement la même que l'email corresponde ou non à un compte réel. */
+export async function demanderReinitialisationMotDePasse(email: string): Promise<void> {
+  await apiFetch("/auth/mot-de-passe-oublie", {
+    method: "POST",
+    body: JSON.stringify({ email }),
+  });
+}
+
 /** Auto-service : l'utilisateur connecté change son propre mot de passe. */
 export async function changerMonMotDePasse(ancienMotDePasse: string, nouveauMotDePasse: string): Promise<void> {
   await apiFetch("/auth/mon-mot-de-passe", {
