@@ -2,12 +2,13 @@
 // Mobile: cachée (remplacée par BottomNav)
 // Desktop (lg+): fixe à gauche, 256px
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNotifications } from "../../contexts/NotificationsContext";
 import type { UserRole } from "../../types/auth";
 import NotificationBell from "./NotificationBell";
+import ChangePasswordModal from "./ChangePasswordModal";
 
 interface NavItem {
   to: string;
@@ -109,6 +110,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { elements } = useNotifications();
+  const [showChangePassword, setShowChangePassword] = useState(false);
 
   const compteurs = useMemo(() => {
     const parLien: Record<string, number> = {};
@@ -276,6 +278,20 @@ export default function Sidebar() {
           </div>
         )}
 
+        {/* Changer mot de passe */}
+        <button
+          onClick={() => setShowChangePassword(true)}
+          className="
+            w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
+            transition-all duration-200 group
+            hover:bg-[var(--color-surface-container)]
+          "
+          style={{ color: "var(--color-on-surface-variant)" }}
+        >
+          <span className="material-symbols-outlined text-[20px]">lock_reset</span>
+          <span className="text-body-md font-semibold">Changer mon mot de passe</span>
+        </button>
+
         {/* Bouton déconnexion */}
         <button
           onClick={handleLogout}
@@ -294,6 +310,8 @@ export default function Sidebar() {
           </span>
         </button>
       </div>
+
+      {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
     </aside>
   );
 }

@@ -71,6 +71,17 @@ export async function logout(): Promise<void> {
   clearToken();
 }
 
+/** Auto-service : l'utilisateur connecté change son propre mot de passe. */
+export async function changerMonMotDePasse(ancienMotDePasse: string, nouveauMotDePasse: string): Promise<void> {
+  await apiFetch("/auth/mon-mot-de-passe", {
+    method: "PATCH",
+    body: JSON.stringify({
+      ancien_mot_de_passe: ancienMotDePasse,
+      nouveau_mot_de_passe: nouveauMotDePasse,
+    }),
+  });
+}
+
 export function getCurrentUser(): AuthLoginResponse | null {
   const token = getStoredToken();
   const userStr = typeof localStorage !== "undefined"
