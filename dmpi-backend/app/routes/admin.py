@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from app.database_sql import get_sql_db
 from app.models_sql import User, AuditLog, DemandeAccesPatient
-from app.schemas.user import UserCreate, UserOut
+from app.schemas.user import UserCreate, UserOut, ReinitialiserMotDePasseRequest
 from app.schemas.logs import AuditLogOut
 from app.security import hash_password, require_role
 from app.audit import enregistrer_log
@@ -273,6 +273,37 @@ async def modifier_utilisateur(
     )
 
     return utilisateur
+
+
+@router.patch("/users/{user_id}/reinitialiser-mot-de-passe")
+async def reinitialiser_mot_de_passe(
+    user_id: int,
+    payload: ReinitialiserMotDePasseRequest,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """
+    Le super_admin force un nouveau mot de passe sur un compte — seul
+    recours en cas d'oubli, faute d'un vrai canal email/SMS pour un flux
+    de réinitialisation en libre-service.
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    utilisateur = result.scalar_one_or_none()
+
+    if not utilisateur:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+
+    utilisateur.mot_de_passe_hash = hash_password(payload.nouveau_mot_de_passe)
+    await db.commit()
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="REINITIALISATION_MOT_DE_PASSE",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return {"message": f"Mot de passe réinitialisé pour {utilisateur.email}."}
 
 
 @router.get("/logs", response_model=list[AuditLogOut])

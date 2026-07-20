@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime, date
 
 DOMAINE_EMAIL_AUTORISE = "dmpi.bj"
@@ -69,6 +69,18 @@ class UserOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+class ChangerMotDePasseRequest(BaseModel):
+    """Auto-service : l'utilisateur connecté change son propre mot de passe."""
+    ancien_mot_de_passe: str
+    nouveau_mot_de_passe: str = Field(..., min_length=8)
+
+
+class ReinitialiserMotDePasseRequest(BaseModel):
+    """Le super_admin force un nouveau mot de passe (compte oublié) — pas
+    besoin de connaître l'ancien, contrairement au changement auto-service."""
+    nouveau_mot_de_passe: str = Field(..., min_length=8)
+
 
 class TokenResponse(BaseModel):
     access_token: str
