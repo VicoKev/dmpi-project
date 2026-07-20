@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from app.database_mongo import consultations_collection
 from app.schemas.consultation import ConsultationMongo
 from app.security import get_current_user, require_role, verifier_acces_dossier_patient, verifier_acces_activite_medecin
@@ -53,6 +53,9 @@ async def enregistrer_consultation(
 @router.get("/patient/{npi}", response_model=list[ConsultationMongo])
 async def lister_consultations_patient(
     npi: str,
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -73,8 +76,14 @@ async def lister_consultations_patient(
             detail="Le NPI doit être composé d'exactement 10 chiffres."
         )
 
-    cursor = consultations_collection.find({"npi": npi})
-    consultations = await cursor.to_list(length=100)
+    total = await consultations_collection.count_documents({"npi": npi})
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = consultations_collection.find({"npi": npi}).sort("created_at", -1).skip(skip)
+    if limit is not None:
+        consultations = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        consultations = await cursor.to_list(length=100)
 
     await enregistrer_log(
         utilisateur_email=current_user.email,
@@ -89,6 +98,9 @@ async def lister_consultations_patient(
 @router.get("/medecin/{email}")
 async def lister_consultations_medecin(
     email: str,
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     current_user: User = Depends(get_current_user)
 ):
     """
@@ -96,8 +108,14 @@ async def lister_consultations_medecin(
     """
     await verifier_acces_activite_medecin(current_user, email)
 
-    cursor = consultations_collection.find({"releve_par": email})
-    consultations = await cursor.to_list(length=200)
+    total = await consultations_collection.count_documents({"releve_par": email})
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = consultations_collection.find({"releve_par": email}).sort("created_at", -1).skip(skip)
+    if limit is not None:
+        consultations = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        consultations = await cursor.to_list(length=200)
 
     # Sérialiser les ObjectId
     result = []

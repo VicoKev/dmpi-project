@@ -1,5 +1,5 @@
 import type { Consultation, CreateConsultationPayload } from "../types/consultation";
-import { apiFetch } from "./api";
+import { apiFetch, apiFetchPagine, type ReponsePaginee } from "./api";
 
 
 
@@ -99,4 +99,20 @@ export async function getConsultationsByMedecin(medecinEmail: string): Promise<C
   } catch {
     return [];
   }
+}
+
+export async function getConsultationsByMedecinPaginee(
+  medecinEmail: string,
+  skip: number,
+  limit: number
+): Promise<ReponsePaginee<Consultation>> {
+  const { items, total } = await apiFetchPagine<BackendConsultation>(
+    `/consultations/medecin/${encodeURIComponent(medecinEmail)}?skip=${skip}&limit=${limit}`
+  );
+  return {
+    items: items
+      .map((r, i) => mapBackendConsultation(r, i))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    total,
+  };
 }
