@@ -272,6 +272,7 @@ async def modifier_utilisateur(
 
 @router.get("/logs", response_model=list[AuditLogOut])
 async def consulter_journal_audit(
+    response: Response,
     npi: str | None = None,
     utilisateur_email: str | None = None,
     action: str | None = None,
@@ -286,22 +287,29 @@ async def consulter_journal_audit(
     registre de traçabilité (append-only). Réservé au Super Administrateur
     national, pour veiller au respect du secret médical et au volet juridique.
     """
-    from sqlalchemy.orm import aliased
+    filtres = []
+    if npi:
+        filtres.append(AuditLog.npi_concerne == npi)
+    if utilisateur_email:
+        filtres.append(AuditLog.utilisateur_email == utilisateur_email)
+    if action:
+        filtres.append(AuditLog.action == action)
+    if statut_action:
+        # L'UI envoie souvent en minuscules, et on a parfois stocké en MAJUSCULES (ex: "SUCCES")
+        # On fait un ILIKE ou on met en majuscules pour s'assurer que ça matche
+        filtres.append(AuditLog.statut_action.ilike(statut_action))
+
+    requete_count = select(func.count()).select_from(AuditLog)
+    for f in filtres:
+        requete_count = requete_count.where(f)
+    total = (await db.execute(requete_count)).scalar_one()
+    response.headers["X-Total-Count"] = str(total)
 
     requete = select(AuditLog, User.nom, User.prenom, User.role).outerjoin(
         User, AuditLog.utilisateur_email == User.email
     ).order_by(desc(AuditLog.horodatage))
-
-    if npi:
-        requete = requete.where(AuditLog.npi_concerne == npi)
-    if utilisateur_email:
-        requete = requete.where(AuditLog.utilisateur_email == utilisateur_email)
-    if action:
-        requete = requete.where(AuditLog.action == action)
-    if statut_action:
-        # L'UI envoie souvent en minuscules, et on a parfois stocké en MAJUSCULES (ex: "SUCCES")
-        # On fait un ILIKE ou on met en majuscules pour s'assurer que ça matche
-        requete = requete.where(AuditLog.statut_action.ilike(statut_action))
+    for f in filtres:
+        requete = requete.where(f)
 
     requete = requete.offset(skip).limit(min(limit, 500))
 

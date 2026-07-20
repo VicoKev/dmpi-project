@@ -2,18 +2,10 @@
 import { useState, useEffect } from "react";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
+import Pagination from "../../components/ui/Pagination";
+import { getJournalAudit, type AuditEntry } from "../../services/auditService";
 
-interface AuditEntry {
-  id: number;
-  utilisateur_email: string;
-  utilisateur_nom_complet?: string;
-  utilisateur_role?: string;
-  action: string;
-  npi_concerne?: string;
-  statut_action: string;
-  horodatage: string;
-  adresse_ip?: string;
-}
+const TAILLE_PAGE = 10;
 
 const ACTION_LABELS: Record<string, string> = {
   SIGN_CONSULTATION: "Signature consultation",
@@ -43,54 +35,54 @@ export default function SuperAdminAudit() {
   const [search, setSearch] = useState("");
   const [filterStatut, setFilterStatut] = useState<"tous" | "SUCCES" | "ECHEC" | "ALERTE">("tous");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
+  // Revenir à la première page à chaque changement de filtre de statut —
+  // sinon une page devenue hors limites afficherait une liste vide à tort.
+  useEffect(() => { setPage(1); }, [filterStatut]);
+
   useEffect(() => {
-    fetch("http://localhost:8000/admin/logs?limit=500", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("dmpi_access_token")}`,
-      },
+    setLoading(true);
+    getJournalAudit((page - 1) * TAILLE_PAGE, TAILLE_PAGE, {
+      statutAction: filterStatut === "tous" ? undefined : filterStatut,
     })
-      .then(async (res) => {
-        if (!res.ok) throw new Error("Erreur serveur HTTP " + res.status);
-        return res.json();
-      })
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          setLogs(data as AuditEntry[]);
-        } else {
-          console.error("Format de logs invalide:", data);
-          setLogs([]);
-        }
-        setLoading(false);
+      .then(({ items, total: totalRecu }) => {
+        setLogs(items);
+        setTotal(totalRecu);
       })
       .catch((err) => {
         console.error("Erreur chargement logs:", err);
         setLogs([]);
-        setLoading(false);
-      });
-  }, []);
+      })
+      .finally(() => setLoading(false));
+  }, [page, filterStatut]);
 
+  // Le journal complet grossit indéfiniment (append-only) : la recherche ne
+  // porte donc que sur la page actuellement chargée, pas sur l'ensemble —
+  // filtrer par statut ou par NPI (backend) reste le moyen fiable de
+  // retrouver un événement précis en dehors de la page courante.
   const filtered = logs.filter((e) => {
-    const matchStatut = filterStatut === "tous" || e.statut_action.toUpperCase() === filterStatut;
     const q = search.toLowerCase();
-    
+    if (!q) return true;
+
     const userStr = e.utilisateur_nom_complet ? e.utilisateur_nom_complet.toLowerCase() : "";
     const emailStr = e.utilisateur_email ? e.utilisateur_email.toLowerCase() : "";
     const actStr = e.action.toLowerCase();
     const lblStr = ACTION_LABELS[e.action] ? ACTION_LABELS[e.action].toLowerCase() : "";
     const npiStr = e.npi_concerne ? e.npi_concerne.toLowerCase() : "";
 
-    const matchSearch =
-      !q ||
+    return (
       userStr.includes(q) ||
       emailStr.includes(q) ||
       actStr.includes(q) ||
       lblStr.includes(q) ||
-      npiStr.includes(q);
-    
-    return matchStatut && matchSearch;
+      npiStr.includes(q)
+    );
   });
+
+  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -107,7 +99,7 @@ export default function SuperAdminAudit() {
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex-1">
           <Input
-            placeholder="Rechercher par utilisateur, action ou cible…"
+            placeholder="Filtrer cette page par utilisateur, action ou cible…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             leadingIcon="search"
@@ -190,6 +182,7 @@ export default function SuperAdminAudit() {
             })
           )}
         </div>
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={total} />
       </Card>
     </div>
   );
