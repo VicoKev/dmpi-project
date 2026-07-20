@@ -1,7 +1,10 @@
 // Demandes d'accès portail patient — Espace Admin Établissement (lecture seule)
 import { useState, useEffect, useCallback } from "react";
 import Card, { CardHeader } from "../../components/ui/Card";
-import { getDemandesAccesMonEtablissement, type DemandeAcces } from "../../services/demandeAccesService";
+import Pagination from "../../components/ui/Pagination";
+import { getDemandesAccesMonEtablissementPaginee, type DemandeAcces } from "../../services/demandeAccesService";
+
+const TAILLE_PAGE = 10;
 
 const STATUT_CONFIG: Record<DemandeAcces["statut"], { label: string; color: string; bg: string }> = {
   en_attente: { label: "En attente", color: "var(--color-on-warning-container)", bg: "var(--color-warning-container)" },
@@ -12,6 +15,8 @@ const STATUT_CONFIG: Record<DemandeAcces["statut"], { label: string; color: stri
 
 export default function AdminDemandesAcces() {
   const [demandes, setDemandes] = useState<DemandeAcces[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,15 +24,19 @@ export default function AdminDemandesAcces() {
     setLoading(true);
     setError(null);
     try {
-      setDemandes(await getDemandesAccesMonEtablissement());
+      const res = await getDemandesAccesMonEtablissementPaginee((page - 1) * TAILLE_PAGE, TAILLE_PAGE);
+      setDemandes(res.items);
+      setTotal(res.total);
     } catch (err) {
       setError((err as Error).message || "Impossible de charger les demandes d'accès.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [page]);
 
   useEffect(() => { load(); }, [load]);
+
+  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -42,7 +51,7 @@ export default function AdminDemandesAcces() {
       </div>
 
       <Card>
-        <CardHeader icon="how_to_reg" title={`${demandes.length} demande(s)`} />
+        <CardHeader icon="how_to_reg" title={`${total ?? demandes.length} demande(s)`} />
 
         {loading ? (
           <div className="flex flex-col gap-3">
@@ -94,6 +103,7 @@ export default function AdminDemandesAcces() {
             })}
           </ul>
         )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={total} />
       </Card>
     </div>
   );

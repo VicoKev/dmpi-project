@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, apiFetchPagine, type ReponsePaginee } from "./api";
 
 export interface DemandeAcces {
   id: number;
@@ -44,6 +44,10 @@ export async function getMesDemandesAcces(): Promise<DemandeAcces[]> {
 
 export async function getDemandesAccesMonEtablissement(): Promise<DemandeAcces[]> {
   return apiFetch<DemandeAcces[]>("/demandes-acces/mon-etablissement");
+}
+
+export async function getDemandesAccesMonEtablissementPaginee(skip: number, limit: number): Promise<ReponsePaginee<DemandeAcces>> {
+  return apiFetchPagine<DemandeAcces>(`/demandes-acces/mon-etablissement?skip=${skip}&limit=${limit}`);
 }
 
 export async function annulerDemandeAcces(id: number): Promise<DemandeAcces> {

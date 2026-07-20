@@ -1,6 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, func
 from app.database_sql import get_sql_db
 from app.database_mongo import dossiers_medicaux_collection
 from app.models_sql import User, DemandeAccesPatient
@@ -90,7 +90,10 @@ async def lister_demandes_acces(
 
 @router.get("/mon-etablissement", response_model=list[DemandeAccesOut])
 async def lister_demandes_acces_mon_etablissement(
+    response: Response,
     statut: str | None = None,
+    skip: int = 0,
+    limit: int | None = None,
     db: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(require_role("admin_etablissement"))
 ):
@@ -98,17 +101,29 @@ async def lister_demandes_acces_mon_etablissement(
     Demandes d'accès émises par le personnel de l'établissement de l'admin
     connecté, tous demandeurs confondus — vue de supervision en lecture
     seule (rejeter/annuler restent du ressort du super_admin et du demandeur).
+    Tous statuts confondus par défaut (pas seulement "en_attente"), donc
+    contrairement à la file du super_admin, cette liste ne s'autolimite pas
+    avec le temps : skip/limit existent pour ça.
     """
     if not current_user.etablissement_id:
         return []
 
-    requete = (
-        select(DemandeAccesPatient)
-        .where(DemandeAccesPatient.etablissement_id == current_user.etablissement_id)
-        .order_by(desc(DemandeAccesPatient.date_creation))
-    )
+    filtres = [DemandeAccesPatient.etablissement_id == current_user.etablissement_id]
     if statut:
-        requete = requete.where(DemandeAccesPatient.statut == statut)
+        filtres.append(DemandeAccesPatient.statut == statut)
+
+    requete_count = select(func.count()).select_from(DemandeAccesPatient)
+    for f in filtres:
+        requete_count = requete_count.where(f)
+    total = (await db.execute(requete_count)).scalar_one()
+    response.headers["X-Total-Count"] = str(total)
+
+    requete = select(DemandeAccesPatient).order_by(desc(DemandeAccesPatient.date_creation))
+    for f in filtres:
+        requete = requete.where(f)
+    requete = requete.offset(skip)
+    if limit is not None:
+        requete = requete.limit(min(limit, 200))
 
     result = await db.execute(requete)
     return result.scalars().all()
