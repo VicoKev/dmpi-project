@@ -5,8 +5,11 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Spinner from "../../components/ui/Spinner";
+import Pagination from "../../components/ui/Pagination";
 import { getRelevesByInfirmier, type ReleveConstantes } from "../../services/constanstesService";
 import { getAdministrationsByInfirmier, type AdministrationMedicament } from "../../services/administrationService";
+
+const TAILLE_PAGE = 10;
 
 type FiltreType = "tous" | "constantes" | "administrations";
 
@@ -66,6 +69,7 @@ export default function InfirmierHistorique() {
   const [loading, setLoading] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [filtre, setFiltre] = useState<FiltreType>("tous");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,11 +87,18 @@ export default function InfirmierHistorique() {
     return () => { cancelled = true; };
   }, []);
 
+  // Revenir à la première page à chaque changement de filtre — sinon une
+  // page devenue hors limites afficherait une liste vide à tort.
+  useEffect(() => { setPage(1); }, [filtre]);
+
   const evenementsFiltres = evenements.filter((e) => {
     if (filtre === "tous") return true;
     if (filtre === "constantes") return e.type === "constante";
     return e.type === "administration";
   });
+
+  const totalPages = Math.max(1, Math.ceil(evenementsFiltres.length / TAILLE_PAGE));
+  const evenementsAffiches = evenementsFiltres.slice((page - 1) * TAILLE_PAGE, page * TAILLE_PAGE);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -137,7 +148,7 @@ export default function InfirmierHistorique() {
           </div>
         ) : (
           <ul className="flex flex-col gap-2">
-            {evenementsFiltres.map((e) => (
+            {evenementsAffiches.map((e) => (
               <li
                 key={e.id}
                 className="flex items-center gap-3 p-3 rounded-xl"
@@ -195,6 +206,7 @@ export default function InfirmierHistorique() {
             ))}
           </ul>
         )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={evenementsFiltres.length} />
       </Card>
     </div>
   );
