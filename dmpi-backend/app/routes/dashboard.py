@@ -142,13 +142,6 @@ async def dashboard_etablissement(
             "date": alog.horodatage.isoformat() + "Z"
         })
         
-    await enregistrer_log(
-        utilisateur_email=current_user.email,
-        action="CONSULTATION_DASHBOARD_ETABLISSEMENT",
-        statut_action="SUCCES",
-        npi_concerne=None
-    )
-
     return {
         "stats": {
             "totalPatients": total_dossiers,
@@ -260,13 +253,6 @@ async def statistiques_etablissement(
     current_user: User = Depends(require_role("admin_etablissement", "super_admin"))
 ):
     stats = await _construire_statistiques_etablissement(db, current_user)
-
-    await enregistrer_log(
-        utilisateur_email=current_user.email,
-        action="CONSULTATION_STATISTIQUES_ETABLISSEMENT",
-        statut_action="SUCCES",
-        npi_concerne=None
-    )
 
     return stats
 
@@ -412,13 +398,6 @@ async def dashboard_national(
             "consultationsMois": stats["consultations_du_mois"],
             "derniereSync": etab.get("derniereSync", datetime.utcnow()).isoformat() + "Z" if isinstance(etab.get("derniereSync"), datetime) else etab.get("derniereSync", "")
         })
-
-    await enregistrer_log(
-        utilisateur_email=current_user.email,
-        action="CONSULTATION_DASHBOARD_NATIONAL",
-        statut_action="SUCCES",
-        npi_concerne=None
-    )
 
     return {
         "utilisateurs_par_role": utilisateurs_par_role,
@@ -706,13 +685,6 @@ async def get_rapports_mensuels(
     depuis PostgreSQL/MongoDB (aucune donnée figée).
     """
     rapport = await _construire_rapport_annuel(db)
-
-    await enregistrer_log(
-        utilisateur_email=current_user.email,
-        action="CONSULTATION_RAPPORTS_ANNUELS",
-        statut_action="SUCCES",
-        npi_concerne=None
-    )
 
     return rapport
 
