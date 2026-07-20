@@ -117,3 +117,18 @@ export async function reinitialiserMotDePasse(userId: number, nouveauMotDePasse:
     body: JSON.stringify({ nouveau_mot_de_passe: nouveauMotDePasse }),
   });
 }
+
+export interface DemandeReinitialisationMotDePasse {
+  id: number;
+  email: string;
+  statut: string;
+  date_creation: string;
+  date_traitement: string | null;
+  traite_par: string | null;
+}
+
+/** Signaux "mot de passe oublié" en attente — réinitialiser le mot de passe
+ * du compte correspondant (reinitialiserMotDePasse) les résout automatiquement. */
+export async function getDemandesReinitialisationMotDePasse(): Promise<DemandeReinitialisationMotDePasse[]> {
+  return apiFetch<DemandeReinitialisationMotDePasse[]>("/admin/demandes-reinitialisation-mot-de-passe");
+}

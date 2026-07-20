@@ -15,6 +15,7 @@ import {
   reactivateUser,
   updateUser,
   reinitialiserMotDePasse,
+  getDemandesReinitialisationMotDePasse,
   ROLE_CONFIG,
   ROLE_LABELS,
   ROLES_SELECTABLE,
@@ -23,6 +24,7 @@ import {
   type User,
   type UserCreatePayload,
   type UserUpdatePayload,
+  type DemandeReinitialisationMotDePasse,
 } from "../../services/userService";
 import { getEtablissements, type Etablissement } from "../../services/etablissementService";
 import { getPrestataires, type Prestataire } from "../../services/prestataireService";
@@ -768,6 +770,17 @@ export default function SuperAdminUtilisateurs() {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
+  const [demandesMdpOublie, setDemandesMdpOublie] = useState<DemandeReinitialisationMotDePasse[]>([]);
+
+  const loadDemandesMdpOublie = useCallback(async () => {
+    try {
+      setDemandesMdpOublie(await getDemandesReinitialisationMotDePasse());
+    } catch {
+      // Non bloquant : la page reste utilisable sans cette liste.
+    }
+  }, []);
+
+  useEffect(() => { loadDemandesMdpOublie(); }, [loadDemandesMdpOublie]);
 
   // Pré-remplissage depuis une demande d'accès traitée (?npi=&nom=&prenom=)
   const npiPrefill = searchParams.get("npi");
@@ -985,6 +998,7 @@ export default function SuperAdminUtilisateurs() {
           onSuccess={() => {
             showToast(`Mot de passe réinitialisé pour ${resetPasswordUser.prenom} ${resetPasswordUser.nom}.`);
             setResetPasswordUser(null);
+            loadDemandesMdpOublie();
           }}
           onCancel={() => setResetPasswordUser(null)}
         />
@@ -1004,6 +1018,43 @@ export default function SuperAdminUtilisateurs() {
           Ajouter un utilisateur
         </Button>
       </div>
+
+      {/* Demandes "mot de passe oublié" en attente */}
+      {demandesMdpOublie.length > 0 && (
+        <Card accentBorder="border-l-4 border-[var(--color-warning)]">
+          <CardHeader icon="lock_reset" title={`Mots de passe oubliés (${demandesMdpOublie.length})`} />
+          <ul className="flex flex-col gap-2">
+            {demandesMdpOublie.map((d) => {
+              const utilisateurConcerne = users.find((u) => u.email === d.email);
+              return (
+                <li
+                  key={d.id}
+                  className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl"
+                  style={{ backgroundColor: "var(--color-warning-container)" }}
+                >
+                  <div className="min-w-0">
+                    <p className="text-body-md font-semibold" style={{ color: "var(--color-on-warning-container)" }}>
+                      {d.email}
+                    </p>
+                    <p className="text-caption" style={{ color: "var(--color-on-warning-container)" }}>
+                      Demandé le {new Date(d.date_creation).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                    </p>
+                  </div>
+                  {utilisateurConcerne ? (
+                    <Button size="sm" icon="lock_reset" onClick={() => setResetPasswordUser(utilisateurConcerne)}>
+                      Réinitialiser
+                    </Button>
+                  ) : (
+                    <span className="text-caption" style={{ color: "var(--color-on-warning-container)" }}>
+                      Aucun compte ne correspond à cet email
+                    </span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
 
       {/* Stats rapides */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
