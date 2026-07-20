@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from app.database_mongo import rendez_vous_collection, dossiers_medicaux_collection
 from app.security import get_current_user, require_role, verifier_acces_dossier_patient, verifier_acces_activite_medecin
 from app.models_sql import User
@@ -102,15 +102,48 @@ async def creer_rendez_vous(
     return {"message": "Rendez-vous planifié avec succès.", "rdv_id": str(result.inserted_id)}
 
 
+def _filtre_passes(filtre_base: dict, maintenant: str) -> dict:
+    """Un RDV est "passé" s'il n'est plus confirmé (annulé/complété) ou si sa
+    date est révolue — distinct du statut administratif, qui ne change pas
+    tout seul avec le temps."""
+    return {**filtre_base, "$or": [{"statut": {"$ne": "confirme"}}, {"date_rdv": {"$lt": maintenant}}]}
+
+
+def _filtre_a_venir(filtre_base: dict, maintenant: str) -> dict:
+    return {**filtre_base, "statut": "confirme", "date_rdv": {"$gte": maintenant}}
+
+
 @router.get("/patient/{npi}")
 async def rdv_par_patient(
     npi: str,
+    response: Response,
+    moment: str | None = None,  # "a_venir" | "passes" | None (comportement historique, inchangé)
+    skip: int = 0,
+    limit: int | None = None,
     current_user: User = Depends(get_current_user)
 ):
     """Tous les RDV d'un patient (triés par date)."""
     await verifier_acces_dossier_patient(current_user, npi)
+    maintenant = datetime.utcnow().isoformat()
+    filtre_base = {"npi_patient": npi}
 
-    cursor = rendez_vous_collection.find({"npi_patient": npi}).sort("date_rdv", 1)
+    if moment == "a_venir":
+        cursor = rendez_vous_collection.find(_filtre_a_venir(filtre_base, maintenant)).sort("date_rdv", 1)
+        rdvs = await cursor.to_list(length=500)
+        return [_serialize(r) for r in rdvs]
+
+    if moment == "passes":
+        filtre = _filtre_passes(filtre_base, maintenant)
+        total = await rendez_vous_collection.count_documents(filtre)
+        response.headers["X-Total-Count"] = str(total)
+        cursor = rendez_vous_collection.find(filtre).sort("date_rdv", -1).skip(skip)
+        if limit is not None:
+            rdvs = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+        else:
+            rdvs = await cursor.to_list(length=100)
+        return [_serialize(r) for r in rdvs]
+
+    cursor = rendez_vous_collection.find(filtre_base).sort("date_rdv", 1)
     rdvs = await cursor.to_list(length=100)
     return [_serialize(r) for r in rdvs]
 
@@ -118,12 +151,34 @@ async def rdv_par_patient(
 @router.get("/medecin/{email}")
 async def rdv_par_medecin(
     email: str,
+    response: Response,
+    moment: str | None = None,  # "a_venir" | "passes" | None (comportement historique, inchangé)
+    skip: int = 0,
+    limit: int | None = None,
     current_user: User = Depends(get_current_user)
 ):
     """Tous les RDV planifiés par un médecin (triés par date)."""
     await verifier_acces_activite_medecin(current_user, email)
+    maintenant = datetime.utcnow().isoformat()
+    filtre_base = {"medecin_email": email}
 
-    cursor = rendez_vous_collection.find({"medecin_email": email}).sort("date_rdv", 1)
+    if moment == "a_venir":
+        cursor = rendez_vous_collection.find(_filtre_a_venir(filtre_base, maintenant)).sort("date_rdv", 1)
+        rdvs = await cursor.to_list(length=500)
+        return [_serialize(r) for r in rdvs]
+
+    if moment == "passes":
+        filtre = _filtre_passes(filtre_base, maintenant)
+        total = await rendez_vous_collection.count_documents(filtre)
+        response.headers["X-Total-Count"] = str(total)
+        cursor = rendez_vous_collection.find(filtre).sort("date_rdv", -1).skip(skip)
+        if limit is not None:
+            rdvs = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+        else:
+            rdvs = await cursor.to_list(length=200)
+        return [_serialize(r) for r in rdvs]
+
+    cursor = rendez_vous_collection.find(filtre_base).sort("date_rdv", 1)
     rdvs = await cursor.to_list(length=200)
     return [_serialize(r) for r in rdvs]
 

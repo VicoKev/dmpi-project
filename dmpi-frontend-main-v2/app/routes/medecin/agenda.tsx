@@ -7,7 +7,8 @@ import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
 import Spinner from "../../components/ui/Spinner";
 import {
-  getRdvByMedecin,
+  getRdvAVenirMedecin,
+  getRdvPassesMedecinPaginee,
   createRdv,
   modifierRdv,
   annulerRdv,
@@ -21,6 +22,9 @@ import {
 } from "../../services/rdvService";
 import { getPatientByNpi, validateNpi } from "../../services/patientService";
 import type { PatientSearchResult } from "../../types/patient";
+import Pagination from "../../components/ui/Pagination";
+
+const TAILLE_PAGE = 10;
 
 const STATUT_CFG = {
   confirme: { label: "Confirmé", color: "var(--color-on-success-container)", bg: "var(--color-success-container)", icon: "check_circle" },
@@ -484,7 +488,10 @@ function RdvCard({ rdv, onChanged }: { rdv: RendezVous; onChanged: () => void })
 
 export default function MedecinAgenda() {
   const { user } = useAuth();
-  const [rdvs, setRdvs] = useState<RendezVous[]>([]);
+  const [aVenir, setAVenir] = useState<RendezVous[]>([]);
+  const [passes, setPasses] = useState<RendezVous[]>([]);
+  const [totalPasses, setTotalPasses] = useState<number | null>(null);
+  const [pagePasses, setPagePasses] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -494,17 +501,34 @@ export default function MedecinAgenda() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const chargerRdvs = async () => {
+  const chargerAVenir = async () => {
     if (!user?.email) return;
-    const res = await getRdvByMedecin(user.email);
-    setRdvs(res);
+    const res = await getRdvAVenirMedecin(user.email);
+    setAVenir(res);
     setLoading(false);
   };
 
+  const chargerPasses = async () => {
+    if (!user?.email) return;
+    const res = await getRdvPassesMedecinPaginee(user.email, (pagePasses - 1) * TAILLE_PAGE, TAILLE_PAGE);
+    setPasses(res.items);
+    setTotalPasses(res.total);
+  };
+
   useEffect(() => {
-    chargerRdvs();
+    chargerAVenir();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
+
+  useEffect(() => {
+    chargerPasses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, pagePasses]);
+
+  const chargerRdvs = () => {
+    chargerAVenir();
+    chargerPasses();
+  };
 
   const handleCreated = () => {
     setShowForm(false);
@@ -516,8 +540,7 @@ export default function MedecinAgenda() {
     chargerRdvs();
   };
 
-  const aVenir = rdvs.filter((r) => !isRdvPasse(r) && r.statut === "confirme");
-  const passes = rdvs.filter((r) => isRdvPasse(r) || r.statut !== "confirme");
+  const totalPagesPasses = Math.max(1, Math.ceil((totalPasses ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -561,7 +584,7 @@ export default function MedecinAgenda() {
         <div className="flex justify-center py-12">
           <Spinner label="Chargement de l'agenda…" />
         </div>
-      ) : rdvs.length === 0 && !showForm ? (
+      ) : aVenir.length === 0 && passes.length === 0 && !showForm ? (
         <Card>
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <span className="material-symbols-outlined text-[56px]" style={{ color: "var(--color-outline)" }}>
@@ -594,10 +617,11 @@ export default function MedecinAgenda() {
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-outline)" }}>history</span>
                 <h2 className="text-subheading" style={{ color: "var(--color-on-surface-variant)" }}>
-                  Historique ({passes.length})
+                  Historique ({totalPasses ?? passes.length})
                 </h2>
               </div>
               {passes.map((r) => <RdvCard key={r._id} rdv={r} onChanged={handleChanged} />)}
+              <Pagination page={pagePasses} totalPages={totalPagesPasses} onPageChange={setPagePasses} totalItems={totalPasses} />
             </div>
           )}
         </div>

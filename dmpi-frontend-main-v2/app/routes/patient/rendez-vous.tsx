@@ -5,14 +5,17 @@ import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Spinner from "../../components/ui/Spinner";
 import Textarea from "../../components/ui/Textarea";
+import Pagination from "../../components/ui/Pagination";
 import {
-  getRdvByPatient,
+  getRdvAVenirPatient,
+  getRdvPassesPatientPaginee,
   confirmerPresence,
   signalerEmpechement,
-  isRdvPasse,
   formatRdvTime,
   type RendezVous,
 } from "../../services/rdvService";
+
+const TAILLE_PAGE = 10;
 
 const STATUT_CONFIG = {
   confirme: { label: "Confirmé", color: "var(--color-on-success-container)", bg: "var(--color-success-container)", icon: "check_circle" },
@@ -181,25 +184,41 @@ function RdvCard({ rdv, passe, onChanged }: { rdv: RendezVous; passe: boolean; o
 export default function PatientRendezVous() {
   const { user } = useAuth();
   const npi = user?.patientNpi;
-  const [rdvs, setRdvs] = useState<RendezVous[]>([]);
+  const [aVenir, setAVenir] = useState<RendezVous[]>([]);
+  const [passes, setPasses] = useState<RendezVous[]>([]);
+  const [totalPasses, setTotalPasses] = useState<number | null>(null);
+  const [pagePasses, setPagePasses] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const charger = () => {
+  const chargerAVenir = () => {
     if (!npi) { setLoading(false); return; }
-    getRdvByPatient(npi).then((res) => setRdvs(res));
+    getRdvAVenirPatient(npi).then((res) => { setAVenir(res); setLoading(false); });
+  };
+
+  const chargerPasses = () => {
+    if (!npi) return;
+    getRdvPassesPatientPaginee(npi, (pagePasses - 1) * TAILLE_PAGE, TAILLE_PAGE).then((res) => {
+      setPasses(res.items);
+      setTotalPasses(res.total);
+    });
+  };
+
+  const charger = () => {
+    chargerAVenir();
+    chargerPasses();
   };
 
   useEffect(() => {
-    if (!npi) { setLoading(false); return; }
-    let cancelled = false;
-    getRdvByPatient(npi).then((res) => {
-      if (!cancelled) { setRdvs(res); setLoading(false); }
-    });
-    return () => { cancelled = true; };
+    chargerAVenir();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [npi]);
 
-  const aVenir = rdvs.filter((r) => !isRdvPasse(r) && r.statut === "confirme");
-  const passes = rdvs.filter((r) => isRdvPasse(r) || r.statut !== "confirme");
+  useEffect(() => {
+    chargerPasses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [npi, pagePasses]);
+
+  const totalPagesPasses = Math.max(1, Math.ceil((totalPasses ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -216,7 +235,7 @@ export default function PatientRendezVous() {
         <div className="flex justify-center py-12">
           <Spinner label="Chargement de vos rendez-vous…" />
         </div>
-      ) : rdvs.length === 0 ? (
+      ) : aVenir.length === 0 && passes.length === 0 ? (
         <Card>
           <div className="flex flex-col items-center gap-3 py-10 text-center">
             <span className="material-symbols-outlined text-[48px]" style={{ color: "var(--color-outline)" }}>
@@ -257,12 +276,13 @@ export default function PatientRendezVous() {
                   history
                 </span>
                 <h2 className="text-subheading" style={{ color: "var(--color-on-surface-variant)" }}>
-                  Historique ({passes.length})
+                  Historique ({totalPasses ?? passes.length})
                 </h2>
               </div>
               {passes.map((r) => (
                 <RdvCard key={r._id} rdv={r} passe={true} onChanged={charger} />
               ))}
+              <Pagination page={pagePasses} totalPages={totalPagesPasses} onPageChange={setPagePasses} totalItems={totalPasses} />
             </div>
           )}
         </div>

@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, apiFetchPagine, type ReponsePaginee } from "./api";
 
 export interface RendezVous {
   _id: string;
@@ -54,6 +54,34 @@ export async function getRdvByMedecin(email: string): Promise<RendezVous[]> {
   } catch {
     return [];
   }
+}
+
+/** RDV confirmés à venir d'un médecin — bucket naturellement borné (agenda proche), non paginé. */
+export async function getRdvAVenirMedecin(email: string): Promise<RendezVous[]> {
+  try {
+    return await apiFetch<RendezVous[]>(`/rdv/medecin/${encodeURIComponent(email)}?moment=a_venir`);
+  } catch {
+    return [];
+  }
+}
+
+/** Historique des RDV passés d'un médecin — grossit indéfiniment, vraie pagination. */
+export async function getRdvPassesMedecinPaginee(email: string, skip: number, limit: number): Promise<ReponsePaginee<RendezVous>> {
+  return apiFetchPagine<RendezVous>(`/rdv/medecin/${encodeURIComponent(email)}?moment=passes&skip=${skip}&limit=${limit}`);
+}
+
+/** RDV confirmés à venir d'un patient — bucket naturellement borné, non paginé. */
+export async function getRdvAVenirPatient(npi: string): Promise<RendezVous[]> {
+  try {
+    return await apiFetch<RendezVous[]>(`/rdv/patient/${npi}?moment=a_venir`);
+  } catch {
+    return [];
+  }
+}
+
+/** Historique des RDV passés d'un patient — grossit indéfiniment, vraie pagination. */
+export async function getRdvPassesPatientPaginee(npi: string, skip: number, limit: number): Promise<ReponsePaginee<RendezVous>> {
+  return apiFetchPagine<RendezVous>(`/rdv/patient/${npi}?moment=passes&skip=${skip}&limit=${limit}`);
 }
 
 export async function createRdv(payload: CreateRdvPayload): Promise<{ rdv_id: string }> {
