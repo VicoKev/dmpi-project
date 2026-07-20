@@ -63,6 +63,23 @@ class DemandeAccesPatient(Base):
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class DemandeReinitialisationMotDePasse(Base):
+    """
+    Signal "mot de passe oublié" — la personne ne peut pas se connecter donc
+    ne peut rien demander en tant qu'utilisateur authentifié. Traitée par le
+    Super Admin national, seul habilité à réinitialiser un mot de passe, qui
+    communique le nouveau par un canal hors application (pas d'email/SMS).
+    """
+    __tablename__ = "demandes_reinitialisation_mot_de_passe"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String, nullable=False, index=True)
+    statut = Column(String, default="en_attente", nullable=False)  # "en_attente", "traitee"
+    date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
+    date_traitement = Column(DateTime, nullable=True)
+    traite_par = Column(String, nullable=True)  # email du super_admin ayant réinitialisé le mot de passe
+
+
 class Departement(Base):
     """
     Découpage territorial du Bénin (référentiel officiel, table en lecture seule

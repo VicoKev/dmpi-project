@@ -1,10 +1,12 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from app.database_sql import get_sql_db
-from app.models_sql import User, AuditLog, DemandeAccesPatient
+from app.models_sql import User, AuditLog, DemandeAccesPatient, DemandeReinitialisationMotDePasse
 from app.schemas.user import UserCreate, UserOut, ReinitialiserMotDePasseRequest
 from app.schemas.logs import AuditLogOut
+from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationOut
 from app.security import hash_password, require_role
 from app.audit import enregistrer_log
 
@@ -294,6 +296,21 @@ async def reinitialiser_mot_de_passe(
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
 
     utilisateur.mot_de_passe_hash = hash_password(payload.nouveau_mot_de_passe)
+
+    # La réinitialisation EST le traitement d'une éventuelle demande "mot de
+    # passe oublié" en attente pour ce compte — inutile de la faire signaler
+    # à part.
+    demandes_result = await db.execute(
+        select(DemandeReinitialisationMotDePasse).where(
+            DemandeReinitialisationMotDePasse.email == utilisateur.email,
+            DemandeReinitialisationMotDePasse.statut == "en_attente"
+        )
+    )
+    for demande in demandes_result.scalars().all():
+        demande.statut = "traitee"
+        demande.date_traitement = datetime.utcnow()
+        demande.traite_par = current_user.email
+
     await db.commit()
 
     await enregistrer_log(
@@ -304,6 +321,20 @@ async def reinitialiser_mot_de_passe(
     )
 
     return {"message": f"Mot de passe réinitialisé pour {utilisateur.email}."}
+
+
+@router.get("/demandes-reinitialisation-mot-de-passe", response_model=list[DemandeReinitialisationOut])
+async def lister_demandes_reinitialisation_mot_de_passe(
+    statut: str | None = "en_attente",
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """Demandes "mot de passe oublié", par défaut celles encore en attente."""
+    requete = select(DemandeReinitialisationMotDePasse).order_by(desc(DemandeReinitialisationMotDePasse.date_creation))
+    if statut:
+        requete = requete.where(DemandeReinitialisationMotDePasse.statut == statut)
+    result = await db.execute(requete)
+    return result.scalars().all()
 
 
 @router.get("/logs", response_model=list[AuditLogOut])

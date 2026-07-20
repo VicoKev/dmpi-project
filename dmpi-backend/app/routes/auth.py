@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database_sql import get_sql_db
-from app.models_sql import User
+from app.models_sql import User, DemandeReinitialisationMotDePasse
 from app.schemas.user import UserLogin, TokenResponse, ChangerMotDePasseRequest
+from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationCreate
 from app.security import verify_password, hash_password, create_access_token, get_current_user
 from app.audit import enregistrer_log
 
@@ -68,3 +69,37 @@ async def changer_mon_mot_de_passe(
     )
 
     return {"message": "Mot de passe modifié avec succès."}
+
+
+@router.post("/mot-de-passe-oublie", status_code=status.HTTP_202_ACCEPTED)
+async def demander_reinitialisation_mot_de_passe(
+    payload: DemandeReinitialisationCreate,
+    db: AsyncSession = Depends(get_sql_db)
+):
+    """
+    Signal "mot de passe oublié" avant authentification — la personne ne
+    peut par définition pas prouver qui elle est ici, donc pas de canal
+    email/SMS pour vérifier ou notifier automatiquement. Transmis au
+    Super Admin national, seul habilité à réinitialiser un mot de passe.
+
+    Réponse volontairement identique que l'email corresponde ou non à un
+    compte existant, pour ne jamais révéler quelles adresses sont enregistrées.
+    """
+    result = await db.execute(select(User).where(User.email == payload.email))
+    utilisateur = result.scalar_one_or_none()
+
+    if utilisateur:
+        # Pas de doublon : un clic répété (ou une page rafraîchie par erreur)
+        # ne doit pas empiler plusieurs demandes identiques dans la file du
+        # super_admin.
+        deja_en_attente = await db.execute(
+            select(DemandeReinitialisationMotDePasse).where(
+                DemandeReinitialisationMotDePasse.email == payload.email,
+                DemandeReinitialisationMotDePasse.statut == "en_attente"
+            )
+        )
+        if deja_en_attente.scalar_one_or_none() is None:
+            db.add(DemandeReinitialisationMotDePasse(email=payload.email))
+            await db.commit()
+
+    return {"message": "Si ce compte existe, votre demande a été transmise au Super Administrateur national."}

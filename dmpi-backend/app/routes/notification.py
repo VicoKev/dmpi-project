@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database_mongo import get_mongo_db
 from app.database_sql import get_sql_db
-from app.models_sql import User, DemandeAccesPatient
+from app.models_sql import User, DemandeAccesPatient, DemandeReinitialisationMotDePasse
 from app.security import get_current_user
 from app.schemas.notification import ElementNotification, NotificationsResponse
 
@@ -142,16 +142,31 @@ async def _notifications_admin_etablissement(user: User, db: AsyncSession) -> li
 
 
 async def _notifications_super_admin(db: AsyncSession) -> list[ElementNotification]:
+    elements = []
+
     resultat = await db.execute(
         select(func.count()).select_from(DemandeAccesPatient).where(DemandeAccesPatient.statut == "en_attente")
     )
     nb = resultat.scalar_one()
-    if not nb:
-        return []
-    return [ElementNotification(
-        cle="demandes_acces_en_attente", titre=f"{nb} demande(s) d'accès en attente", compte=nb,
-        lien="/superadmin/demandes-acces", icone="how_to_reg", urgence="warning",
-    )]
+    if nb:
+        elements.append(ElementNotification(
+            cle="demandes_acces_en_attente", titre=f"{nb} demande(s) d'accès en attente", compte=nb,
+            lien="/superadmin/demandes-acces", icone="how_to_reg", urgence="warning",
+        ))
+
+    resultat_mdp = await db.execute(
+        select(func.count()).select_from(DemandeReinitialisationMotDePasse).where(
+            DemandeReinitialisationMotDePasse.statut == "en_attente"
+        )
+    )
+    nb_mdp = resultat_mdp.scalar_one()
+    if nb_mdp:
+        elements.append(ElementNotification(
+            cle="demandes_reinitialisation_mdp_en_attente", titre=f"{nb_mdp} mot(s) de passe oublié(s) à réinitialiser", compte=nb_mdp,
+            lien="/superadmin/utilisateurs", icone="lock_reset", urgence="warning",
+        ))
+
+    return elements
 
 
 @router.get("/moi", response_model=NotificationsResponse)
