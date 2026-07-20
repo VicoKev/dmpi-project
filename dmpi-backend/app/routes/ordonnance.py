@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database_sql import get_sql_db
@@ -213,6 +213,9 @@ async def renouveler_ordonnance(
 @router.get("/patient/{npi}", response_model=list[OrdonnanceOut])
 async def lister_ordonnances_patient(
     npi: str,
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     db_sql: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -230,8 +233,14 @@ async def lister_ordonnances_patient(
             detail="Le NPI doit être composé d'exactement 10 chiffres."
         )
 
-    cursor = ordonnances_collection.find({"npi": npi}).sort("created_at", -1)
-    ordonnances = await cursor.to_list(length=100)
+    total = await ordonnances_collection.count_documents({"npi": npi})
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = ordonnances_collection.find({"npi": npi}).sort("created_at", -1).skip(skip)
+    if limit is not None:
+        ordonnances = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        ordonnances = await cursor.to_list(length=100)
 
     await enregistrer_log(
         utilisateur_email=current_user.email,
@@ -246,6 +255,9 @@ async def lister_ordonnances_patient(
 @router.get("/medecin/{email}", response_model=list[OrdonnanceOut])
 async def lister_ordonnances_medecin(
     email: str,
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     db_sql: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -254,8 +266,15 @@ async def lister_ordonnances_medecin(
     """
     await verifier_acces_activite_medecin(current_user, email)
 
-    cursor = ordonnances_collection.find({"auteur": email}).sort("created_at", -1)
-    ordonnances = await cursor.to_list(length=200)
+    total = await ordonnances_collection.count_documents({"auteur": email})
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = ordonnances_collection.find({"auteur": email}).sort("created_at", -1).skip(skip)
+    if limit is not None:
+        ordonnances = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        ordonnances = await cursor.to_list(length=200)
+
     ordonnances = await _enrichir_ordonnances(db_sql, ordonnances)
     return [_formater(o) for o in ordonnances]
 

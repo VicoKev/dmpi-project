@@ -1,5 +1,5 @@
 import type { Prescription, CreatePrescriptionPayload } from "../types/prescription";
-import { apiFetch } from "./api";
+import { apiFetch, apiFetchPagine, type ReponsePaginee } from "./api";
 
 interface BackendMedicament {
   nom_medicament: string;
@@ -69,6 +69,23 @@ export async function getPrescriptionById(id: string): Promise<Prescription | nu
   return null;
 }
 
+export async function getPrescriptionsByPatientPaginee(
+  npi: string,
+  skip: number,
+  limit: number
+): Promise<ReponsePaginee<Prescription>> {
+  const { items, total } = await apiFetchPagine<BackendOrdonnance>(
+    `/ordonnances/patient/${npi}?skip=${skip}&limit=${limit}`
+  );
+  return {
+    items: items
+      .map((o, i) => mapOrdonnance(o, i))
+      .filter((p): p is Prescription => p !== null)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    total,
+  };
+}
+
 export async function getPrescriptionsByPrescripteur(prescripteurEmail: string): Promise<Prescription[]> {
   try {
     const ordonnances = await apiFetch<BackendOrdonnance[]>(
@@ -82,6 +99,23 @@ export async function getPrescriptionsByPrescripteur(prescripteurEmail: string):
   } catch {
     return [];
   }
+}
+
+export async function getPrescriptionsByPrescripteurPaginee(
+  prescripteurEmail: string,
+  skip: number,
+  limit: number
+): Promise<ReponsePaginee<Prescription>> {
+  const { items, total } = await apiFetchPagine<BackendOrdonnance>(
+    `/ordonnances/medecin/${encodeURIComponent(prescripteurEmail)}?skip=${skip}&limit=${limit}`
+  );
+  return {
+    items: items
+      .map((o, i) => mapOrdonnance(o, i))
+      .filter((p): p is Prescription => p !== null)
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+    total,
+  };
 }
 
 export async function createPrescription(payload: CreatePrescriptionPayload): Promise<Prescription> {

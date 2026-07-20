@@ -6,28 +6,37 @@ import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import { StatutBadge } from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
-import { getPrescriptionsByPrescripteur } from "../../services/prescriptionService";
+import Pagination from "../../components/ui/Pagination";
+import { getPrescriptionsByPrescripteurPaginee } from "../../services/prescriptionService";
 import { formatDateFr } from "../../services/patientService";
 import type { Prescription } from "../../types/prescription";
+
+const TAILLE_PAGE = 10;
 
 export default function MedecinOrdonnances() {
   const { user } = useAuth();
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
-    getPrescriptionsByPrescripteur(user.email).then((res) => {
+    setLoading(true);
+    getPrescriptionsByPrescripteurPaginee(user.email, (page - 1) * TAILLE_PAGE, TAILLE_PAGE).then((res) => {
       if (!cancelled) {
-        setPrescriptions(res);
+        setPrescriptions(res.items);
+        setTotal(res.total);
         setLoading(false);
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user, page]);
+
+  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -82,6 +91,7 @@ export default function MedecinOrdonnances() {
             ))}
           </ul>
         )}
+        <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={total} />
       </Card>
     </div>
   );

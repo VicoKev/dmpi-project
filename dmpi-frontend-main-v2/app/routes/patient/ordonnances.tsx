@@ -4,12 +4,15 @@ import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Badge, { StatutBadge } from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
-import { getPrescriptionsByPatient, ordonnanceIdDepuisPrescriptionId } from "../../services/prescriptionService";
+import { getPrescriptionsByPatientPaginee, ordonnanceIdDepuisPrescriptionId } from "../../services/prescriptionService";
 import { getDossierPatient, formatDateFr } from "../../services/patientService";
 import type { Prescription } from "../../types/prescription";
 import { FREQUENCE_LABELS } from "../../types/prescription";
 import type { Traitement } from "../../types/patient";
 import PharmaciesProchesCard from "../../components/prescription/PharmaciesProchesCard";
+import Pagination from "../../components/ui/Pagination";
+
+const TAILLE_PAGE = 10;
 
 function normaliserMedicament(nom: string): string {
   return nom.trim().toLowerCase();
@@ -166,23 +169,29 @@ export default function PatientOrdonnances() {
   const npi = user?.patientNpi;
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [traitementsEnCours, setTraitementsEnCours] = useState<Traitement[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!npi) { setLoading(false); return; }
     let cancelled = false;
+    setLoading(true);
     Promise.all([
-      getPrescriptionsByPatient(npi),
+      getPrescriptionsByPatientPaginee(npi, (page - 1) * TAILLE_PAGE, TAILLE_PAGE),
       getDossierPatient(npi),
     ]).then(([res, dossier]) => {
       if (!cancelled) {
-        setPrescriptions(res);
+        setPrescriptions(res.items);
+        setTotal(res.total);
         setTraitementsEnCours(dossier?.traitementsEnCours ?? []);
         setLoading(false);
       }
     });
     return () => { cancelled = true; };
-  }, [npi]);
+  }, [npi, page]);
+
+  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -218,6 +227,7 @@ export default function PatientOrdonnances() {
           {prescriptions.map((p) => (
             <PrescriptionCard key={p.id} prescription={p} traitementsEnCours={traitementsEnCours} />
           ))}
+          <Pagination page={page} totalPages={totalPages} onPageChange={setPage} totalItems={total} />
         </div>
       )}
     </div>
