@@ -2,7 +2,7 @@
 // Mobile: cachée (remplacée par BottomNav)
 // Desktop (lg+): fixe à gauche, 256px
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNotifications } from "../../contexts/NotificationsContext";
@@ -111,6 +111,17 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { elements } = useNotifications();
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) setShowMenu(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showMenu]);
 
   const compteurs = useMemo(() => {
     const parLien: Record<string, number> = {};
@@ -223,14 +234,15 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      {/* Profil utilisateur + Déconnexion */}
+      {/* Profil utilisateur — clic pour ouvrir le menu (changer mot de passe / déconnexion) */}
       <div
-        className="border-t border-[var(--color-outline-variant)] p-3 space-y-2"
+        className="relative border-t border-[var(--color-outline-variant)] p-3"
         style={{ flexShrink: 0 }}
+        ref={menuRef}
       >
-        {/* Infos utilisateur */}
-        <div
-          className="flex items-center gap-3 px-2 py-2 rounded-xl"
+        <button
+          onClick={() => setShowMenu((v) => !v)}
+          className="w-full flex items-center gap-3 px-2 py-2 rounded-xl transition-colors hover:bg-[var(--color-surface-container)]"
           style={{ backgroundColor: "var(--color-surface-container-low)" }}
         >
           {user.avatarUrl ? (
@@ -250,7 +262,7 @@ export default function Sidebar() {
               {initials}
             </div>
           )}
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0 text-left">
             <p
               className="text-body-md font-semibold truncate"
               style={{ color: "var(--color-on-surface)" }}
@@ -265,12 +277,18 @@ export default function Sidebar() {
               <span className="truncate">{roleLabel}</span>
             </div>
           </div>
-        </div>
+          <span
+            className="material-symbols-outlined text-[20px] shrink-0"
+            style={{ color: "var(--color-on-surface-variant)" }}
+          >
+            {showMenu ? "expand_more" : "expand_less"}
+          </span>
+        </button>
 
         {/* Établissement */}
         {user.etablissement && (
           <div
-            className="flex items-center gap-2 px-2 py-1.5 rounded-lg text-caption"
+            className="flex items-center gap-2 px-2 pt-1.5 text-caption"
             style={{ color: "var(--color-on-surface-variant)" }}
           >
             <span className="material-symbols-outlined text-[14px]">domain</span>
@@ -278,37 +296,29 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* Changer mot de passe */}
-        <button
-          onClick={() => setShowChangePassword(true)}
-          className="
-            w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-            transition-all duration-200 group
-            hover:bg-[var(--color-surface-container)]
-          "
-          style={{ color: "var(--color-on-surface-variant)" }}
-        >
-          <span className="material-symbols-outlined text-[20px]">lock_reset</span>
-          <span className="text-body-md font-semibold">Changer mon mot de passe</span>
-        </button>
-
-        {/* Bouton déconnexion */}
-        <button
-          onClick={handleLogout}
-          className="
-            w-full flex items-center gap-3 px-3 py-2.5 rounded-xl
-            transition-all duration-200 group
-            hover:bg-[var(--color-error-container)]
-          "
-          style={{ color: "var(--color-on-surface-variant)" }}
-        >
-          <span className="material-symbols-outlined text-[20px] group-hover:text-[var(--color-error)]">
-            logout
-          </span>
-          <span className="text-body-md font-semibold group-hover:text-[var(--color-error)]">
-            Déconnexion
-          </span>
-        </button>
+        {showMenu && (
+          <div
+            className="absolute left-3 right-3 bottom-full mb-2 rounded-2xl shadow-2xl overflow-hidden z-50 animate-slide-down"
+            style={{ backgroundColor: "var(--color-surface)", border: "1px solid var(--color-outline-variant)" }}
+          >
+            <button
+              onClick={() => { setShowMenu(false); setShowChangePassword(true); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-container-low)]"
+              style={{ color: "var(--color-on-surface)" }}
+            >
+              <span className="material-symbols-outlined text-[20px]">lock_reset</span>
+              <span className="text-body-md font-semibold">Changer mon mot de passe</span>
+            </button>
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-error-container)]"
+              style={{ color: "var(--color-error)" }}
+            >
+              <span className="material-symbols-outlined text-[20px]">logout</span>
+              <span className="text-body-md font-semibold">Déconnexion</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
