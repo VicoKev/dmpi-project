@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 class ConsultationMongo(BaseModel):
-    npi: str = Field(..., min_length=10, max_length=10, description="Le NPI à 10 chiffres du patient")
+    npi: str = Field(..., min_length=10, max_length=10, pattern=r"^\d{10}$", description="Le NPI à 10 chiffres du patient")
     motif: str = Field(..., description="Motif de la consultation")
     diagnostic_cim10: str = Field(..., description="Diagnostic codifié selon la norme CIM-10")
     conclusion: str = Field(..., description="Conclusion ou décision médicale")

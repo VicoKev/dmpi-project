@@ -5,7 +5,7 @@ from app.types_examen_data import TYPES_EXAMEN_VALIDES
 
 
 class DemandeExamenCreate(BaseModel):
-    npi: str = Field(..., min_length=10, max_length=10, description="Le NPI à 10 chiffres du patient")
+    npi: str = Field(..., min_length=10, max_length=10, pattern=r"^\d{10}$", description="Le NPI à 10 chiffres du patient")
     prestataire_id: str = Field(..., description="Laboratoire destinataire, choisi dans l'annuaire des partenaires")
     type_examen: str = Field(..., description="Choisi dans le catalogue — voir GET /demandes-examen/types-disponibles")
     motif: str | None = None

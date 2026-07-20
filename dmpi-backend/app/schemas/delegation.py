@@ -5,7 +5,7 @@ from datetime import datetime
 class DelegationCreate(BaseModel):
     """Créée par le médecin/infirmier délégant."""
     beneficiaire_email: EmailStr
-    npi_patient: str = Field(..., min_length=10, max_length=10)
+    npi_patient: str = Field(..., min_length=10, max_length=10, pattern=r"^\d{10}$")
     motif: str | None = None
     duree_heures: int = Field(24, gt=0, le=720, description="Durée de validité en heures (max 30 jours)")
 

@@ -69,7 +69,7 @@ class VaccinationCreate(BaseModel):
 
 
 class DossierMedicalMongo(BaseModel):
-    npi: str = Field(..., min_length=10, max_length=10)
+    npi: str = Field(..., min_length=10, max_length=10, pattern=r"^\d{10}$")
     nom: str | None = None
     prenom: str | None = None
     date_naissance: date | None = None
@@ -106,7 +106,7 @@ class FicheUrgence(BaseModel):
 
 class DossierMedicalUpdate(BaseModel):
     """Schéma d'entrée pour la mise à jour d'un dossier — sans updated_at, calculé côté serveur."""
-    npi: str = Field(..., min_length=10, max_length=10)
+    npi: str = Field(..., min_length=10, max_length=10, pattern=r"^\d{10}$")
     nom: str | None = None
     prenom: str | None = None
     date_naissance: date | None = None

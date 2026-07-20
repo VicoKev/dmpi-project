@@ -8,7 +8,7 @@ class MedicamentPrescrit(BaseModel):
     renouvelable: bool = False  # le médecin autorise un renouvellement sans nouvelle consultation
 
 class OrdonnanceMongo(BaseModel):
-    npi: str = Field(..., min_length=10, max_length=10, description="Le NPI à 10 chiffres du patient")
+    npi: str = Field(..., min_length=10, max_length=10, pattern=r"^\d{10}$", description="Le NPI à 10 chiffres du patient")
     consultation_id: str | None = Field(None, description="ID de la consultation associée, s'il y en a une")
     traitements: list[MedicamentPrescrit] = []
     notes_additionnelles: str | None = None
