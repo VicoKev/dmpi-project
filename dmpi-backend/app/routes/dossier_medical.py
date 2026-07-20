@@ -73,13 +73,16 @@ async def rechercher_patients(
     current_user: User = Depends(require_role("medecin", "infirmier"))
 ):
     """
-    Retrouve le NPI d'un patient quand il n'est pas connu — nom, prénom
-    et/ou date de naissance, au moins un critère requis. Ne renvoie qu'une
-    vue d'identification (pas de données cliniques) : sert à choisir le
-    bon dossier avant de l'ouvrir par NPI, jamais à le consulter directement.
+    Retrouve le NPI d'un patient quand il n'est pas connu — nom et prénom
+    obligatoires (la date de naissance seule affinerait trop peu et un nom
+    seul, sur des patronymes courants, renvoie trop d'homonymes pour une
+    liste plafonnée à 20 résultats), date de naissance optionnelle en
+    complément. Ne renvoie qu'une vue d'identification (pas de données
+    cliniques) : sert à choisir le bon dossier avant de l'ouvrir par NPI,
+    jamais à le consulter directement.
     """
-    if not nom and not prenom and not date_naissance:
-        raise HTTPException(status_code=400, detail="Indiquez au moins un critère de recherche (nom, prénom ou date de naissance).")
+    if not nom or not prenom:
+        raise HTTPException(status_code=400, detail="Le nom et le prénom sont obligatoires (la date de naissance est optionnelle).")
 
     filtre: dict = {}
     if nom:

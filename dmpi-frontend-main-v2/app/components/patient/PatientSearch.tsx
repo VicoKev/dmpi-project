@@ -27,8 +27,8 @@ export default function PatientSearch({ redirectBase = "/medecin/dossier" }: Pat
     setError(null);
     setResultats(null);
 
-    if (!nom.trim() && !prenom.trim() && !dateNaissance) {
-      setError("Indiquez au moins un nom, un prénom ou une date de naissance.");
+    if (!nom.trim() || !prenom.trim()) {
+      setError("Le nom et le prénom sont obligatoires (la date de naissance est optionnelle).");
       return;
     }
 
@@ -138,8 +138,8 @@ export default function PatientSearch({ redirectBase = "/medecin/dossier" }: Pat
             bon NPI — le dossier reste identifié par NPI une fois ouvert.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Nom" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex: Dossou" />
-            <Input label="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Ex: Koffi" />
+            <Input label="Nom" value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Ex: Dossou" required />
+            <Input label="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} placeholder="Ex: Koffi" required />
           </div>
           <Input label="Date de naissance (optionnel)" type="date" value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} />
           {error && (
