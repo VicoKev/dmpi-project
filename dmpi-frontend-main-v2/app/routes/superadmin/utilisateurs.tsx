@@ -14,6 +14,7 @@ import {
   deactivateUser,
   reactivateUser,
   updateUser,
+  reinitialiserMotDePasse,
   ROLE_CONFIG,
   ROLE_LABELS,
   ROLES_SELECTABLE,
@@ -663,6 +664,91 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
   );
 }
 
+// ─── Réinitialisation de mot de passe ──────────────────────────────────────
+
+interface ReinitialiserMotDePasseModalProps {
+  user: User;
+  onSuccess: () => void;
+  onCancel: () => void;
+}
+
+function ReinitialiserMotDePasseModal({ user, onSuccess, onCancel }: ReinitialiserMotDePasseModalProps) {
+  const [nouveauMotDePasse, setNouveauMotDePasse] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (nouveauMotDePasse.length < 8) {
+      setError("Le nouveau mot de passe doit comporter au moins 8 caractères.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await reinitialiserMotDePasse(user.id, nouveauMotDePasse);
+      onSuccess();
+    } catch (err) {
+      setError((err as Error).message || "Erreur lors de la réinitialisation.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+    >
+      <div className="w-full max-w-md rounded-3xl p-6 shadow-2xl animate-slide-down" style={{ backgroundColor: "var(--color-surface)" }}>
+        <div className="flex items-start justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--color-primary-container)" }}>
+              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>lock_reset</span>
+            </div>
+            <div>
+              <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
+                Réinitialiser le mot de passe
+              </h2>
+              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+                {user.prenom} {user.nom} — {user.email}
+              </p>
+            </div>
+          </div>
+          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]">
+            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
+          </button>
+        </div>
+
+        {error && (
+          <div className="p-3 mb-4 rounded-xl text-caption font-medium" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <Input
+            label="Nouveau mot de passe"
+            type="password"
+            value={nouveauMotDePasse}
+            onChange={(e) => setNouveauMotDePasse(e.target.value)}
+            leadingIcon="key"
+            hint="8 caractères minimum — à communiquer à l'utilisateur"
+            required
+          />
+          <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+            Prend effet immédiatement — l'ancien mot de passe cessera de fonctionner.
+          </p>
+          <div className="flex gap-3 pt-2">
+            <Button variant="outline" fullWidth type="button" onClick={onCancel} disabled={loading}>Annuler</Button>
+            <Button fullWidth type="submit" loading={loading} icon="lock_reset">Réinitialiser</Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Page principale ─────────────────────────────────────────────────────────
 
 const TAILLE_PAGE = 10;
@@ -680,6 +766,7 @@ export default function SuperAdminUtilisateurs() {
   const [reactivatingId, setReactivatingId] = useState<number | null>(null);
   const askConfirmation = useConfirm();
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   // Pré-remplissage depuis une demande d'accès traitée (?npi=&nom=&prenom=)
@@ -888,6 +975,18 @@ export default function SuperAdminUtilisateurs() {
           user={editingUser}
           onSuccess={handleEditSuccess}
           onCancel={() => setEditingUser(null)}
+        />
+      )}
+
+      {/* Modal réinitialisation mot de passe */}
+      {resetPasswordUser && (
+        <ReinitialiserMotDePasseModal
+          user={resetPasswordUser}
+          onSuccess={() => {
+            showToast(`Mot de passe réinitialisé pour ${resetPasswordUser.prenom} ${resetPasswordUser.nom}.`);
+            setResetPasswordUser(null);
+          }}
+          onCancel={() => setResetPasswordUser(null)}
         />
       )}
 
@@ -1101,6 +1200,10 @@ export default function SuperAdminUtilisateurs() {
                         <div className="flex gap-2">
                           <Button variant="outline" size="sm" icon="edit" onClick={() => setEditingUser(user)}>
                             Modifier
+                          </Button>
+
+                          <Button variant="outline" size="sm" icon="lock_reset" onClick={() => setResetPasswordUser(user)}>
+                            Mot de passe
                           </Button>
 
                           {user.est_actif ? (

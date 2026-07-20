@@ -108,3 +108,12 @@ export async function updateUser(userId: number, payload: UserUpdatePayload): Pr
     body: JSON.stringify(payload),
   });
 }
+
+/** Force un nouveau mot de passe sur un compte — seul recours en cas d'oubli,
+ * faute d'un flux de réinitialisation par email/SMS en libre-service. */
+export async function reinitialiserMotDePasse(userId: number, nouveauMotDePasse: string): Promise<{ message: string }> {
+  return apiFetch<{ message: string }>(`/admin/users/${userId}/reinitialiser-mot-de-passe`, {
+    method: "PATCH",
+    body: JSON.stringify({ nouveau_mot_de_passe: nouveauMotDePasse }),
+  });
+}
