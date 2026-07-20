@@ -213,7 +213,7 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
 
 // ─── Page principale ──────────────────────────────────────────────────────────
 
-const TAILLE_PAGE = 20;
+const TAILLE_PAGE = 10;
 
 export default function SuperAdminEtablissements() {
   const [etablissements, setEtablissements] = useState<Etablissement[]>([]);
