@@ -3,6 +3,7 @@
 // confirmer explicitement la création des lignes valides retenues.
 import { useRef, useState } from "react";
 import Button from "../ui/Button";
+import Modal, { ModalHeader } from "../ui/Modal";
 import {
   telechargerModeleImportEtablissements,
   validerImportEtablissements,
@@ -84,28 +85,20 @@ export default function ImportEtablissementsModal({ onCancel, onSuccess }: Impor
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+    <Modal
+      onClose={onCancel}
+      labelledBy="import-etablissements-title"
+      closeOnBackdrop={false}
+      maxWidth="max-w-3xl"
+      className="sm:p-8 max-h-[90vh] overflow-y-auto"
     >
-      <div
-        className="w-full max-w-3xl rounded-3xl p-6 sm:p-8 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: "var(--color-surface)" }}
-      >
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--color-primary-container)" }}>
-              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>upload_file</span>
-            </div>
-            <div>
-              <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>Importer des établissements</h2>
-              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>Depuis un fichier Excel (.xlsx)</p>
-            </div>
-          </div>
-          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]">
-            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
-          </button>
-        </div>
+      <ModalHeader
+        icon="upload_file"
+        title="Importer des établissements"
+        subtitle="Depuis un fichier Excel (.xlsx)"
+        titleId="import-etablissements-title"
+        onClose={onCancel}
+      />
 
         {error && (
           <div className="p-3 mb-4 rounded-xl text-caption font-medium" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
@@ -262,7 +255,6 @@ export default function ImportEtablissementsModal({ onCancel, onSuccess }: Impor
             <Button icon="done" onClick={() => onSuccess(resultat.nombre_crees)}>Terminer</Button>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

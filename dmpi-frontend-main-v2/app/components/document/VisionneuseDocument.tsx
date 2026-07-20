@@ -35,10 +35,21 @@ export default function VisionneuseDocument({ document: doc, fichier, onClose }:
     };
   }, [doc.id, fichier.id]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
   const estPdf = fichier.type_mime === "application/pdf";
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={fichier.nom_original}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ backgroundColor: "rgba(0,0,0,0.85)" }}
       onClick={onClose}

@@ -1,5 +1,6 @@
 // Composant ConfirmDialog — Design system DMPI
 // Remplace window.confirm() par une boîte de dialogue cohérente avec le reste de l'interface.
+import { useEffect } from "react";
 import Button from "./Button";
 
 export interface ConfirmDialogOptions {
@@ -26,6 +27,15 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, onCancel]);
+
   if (!open) return null;
 
   return (

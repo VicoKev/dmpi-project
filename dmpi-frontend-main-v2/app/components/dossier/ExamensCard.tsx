@@ -7,6 +7,7 @@ import Card, { CardHeader } from "../ui/Card";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import GalerieDocuments from "../document/GalerieDocuments";
+import Modal from "../ui/Modal";
 import PrescrireExamenForm from "../document/PrescrireExamenForm";
 import UploadDocumentForm from "../document/UploadDocumentForm";
 import { getDemandesExamenPatient, type DemandeExamen } from "../../services/demandeExamenService";
@@ -99,33 +100,29 @@ export default function ExamensCard({ npi }: ExamensCardProps) {
       <GalerieDocuments documents={documents} loading={loading} onChanged={charger} />
 
       {afficherPrescription && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }}>
-            <h2 className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Prescrire un examen</h2>
-            <PrescrireExamenForm
-              npi={npi}
-              onCreated={() => { setAfficherPrescription(false); charger(); }}
-              onCancel={() => setAfficherPrescription(false)}
-            />
-          </div>
-        </div>
+        <Modal onClose={() => setAfficherPrescription(false)} labelledBy="prescrire-examen-title" maxWidth="max-w-lg" className="max-h-[90vh] overflow-y-auto">
+          <h2 id="prescrire-examen-title" className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Prescrire un examen</h2>
+          <PrescrireExamenForm
+            npi={npi}
+            onCreated={() => { setAfficherPrescription(false); charger(); }}
+            onCancel={() => setAfficherPrescription(false)}
+          />
+        </Modal>
       )}
 
       {demandeAUploader && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }}>
-            <h2 className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>
-              {demandeAUploader === "libre" ? "Déposer un document" : "Déposer le résultat"}
-            </h2>
-            <UploadDocumentForm
-              npi={npi}
-              demandeExamenId={demandeAUploader === "libre" ? null : demandeAUploader.id}
-              libelleParDefaut={demandeAUploader === "libre" ? "" : demandeAUploader.type_examen}
-              onUploaded={() => { setDemandeAUploader(null); charger(); }}
-              onCancel={() => setDemandeAUploader(null)}
-            />
-          </div>
-        </div>
+        <Modal onClose={() => setDemandeAUploader(null)} labelledBy="deposer-document-title" maxWidth="max-w-lg" className="max-h-[90vh] overflow-y-auto">
+          <h2 id="deposer-document-title" className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>
+            {demandeAUploader === "libre" ? "Déposer un document" : "Déposer le résultat"}
+          </h2>
+          <UploadDocumentForm
+            npi={npi}
+            demandeExamenId={demandeAUploader === "libre" ? null : demandeAUploader.id}
+            libelleParDefaut={demandeAUploader === "libre" ? "" : demandeAUploader.type_examen}
+            onUploaded={() => { setDemandeAUploader(null); charger(); }}
+            onCancel={() => setDemandeAUploader(null)}
+          />
+        </Modal>
       )}
     </Card>
   );

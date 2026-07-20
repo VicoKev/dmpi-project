@@ -5,6 +5,7 @@ import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Select from "../../components/ui/Select";
 import Button from "../../components/ui/Button";
+import Modal, { ModalHeader } from "../../components/ui/Modal";
 import Pagination from "../../components/ui/Pagination";
 import {
   getEtablissements,
@@ -121,34 +122,14 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-    >
-      <div
-        className="w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: "var(--color-surface)" }}
-      >
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--color-primary-container)" }}>
-              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>
-                {initial ? "edit" : "add_business"}
-              </span>
-            </div>
-            <div>
-              <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
-                {initial ? "Modifier l'établissement" : "Nouvel établissement"}
-              </h2>
-              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                {initial ? initial.nom : "Ajouter au réseau DMPI Bénin"}
-              </p>
-            </div>
-          </div>
-          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]">
-            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
-          </button>
-        </div>
+    <Modal onClose={onCancel} labelledBy="etablissement-form-title" maxWidth="max-w-2xl" className="sm:p-8 max-h-[90vh] overflow-y-auto">
+      <ModalHeader
+        icon={initial ? "edit" : "add_business"}
+        title={initial ? "Modifier l'établissement" : "Nouvel établissement"}
+        subtitle={initial ? initial.nom : "Ajouter au réseau DMPI Bénin"}
+        titleId="etablissement-form-title"
+        onClose={onCancel}
+      />
 
         {error && (
           <div className="p-3 mb-4 rounded-xl text-caption font-medium" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
@@ -206,8 +187,7 @@ function EtablissementForm({ initial, onSuccess, onCancel }: EtablissementFormPr
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -333,17 +313,14 @@ export default function SuperAdminEtablissements() {
 
       {/* Modal detail */}
       {selected && !editingEtab && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-          onClick={() => setSelected(null)}>
-          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }} onClick={e => e.stopPropagation()}>
+        <Modal onClose={() => setSelected(null)} labelledBy="etablissement-detail-title" maxWidth="max-w-lg" className="max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-5">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: TYPE_CONFIG[selected.type]?.bg }}>
                   <span className="material-symbols-outlined filled text-[24px]" style={{ color: TYPE_CONFIG[selected.type]?.color }}>{TYPE_CONFIG[selected.type]?.icon}</span>
                 </div>
                 <div>
-                  <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>{selected.nom}</h2>
+                  <h2 id="etablissement-detail-title" className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>{selected.nom}</h2>
                   <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>{selected.commune} · {selected.departement} · v{selected.dmpiVersion}</p>
                 </div>
               </div>
@@ -394,8 +371,7 @@ export default function SuperAdminEtablissements() {
                 <Button fullWidth icon="block" onClick={() => handleDelete(selected)} style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>Désactiver</Button>
               )}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Modal formulaire */}

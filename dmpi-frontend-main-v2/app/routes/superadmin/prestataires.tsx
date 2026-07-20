@@ -1,10 +1,12 @@
 // Gestion des prestataires partenaires (pharmacies, laboratoires) — Espace Super Admin National
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { useConfirm } from "../../contexts/ConfirmContext";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Button from "../../components/ui/Button";
+import Modal, { ModalHeader } from "../../components/ui/Modal";
 import Pagination from "../../components/ui/Pagination";
 import LocalisationPicker, { type LocalisationValue } from "../../components/etablissement/LocalisationPicker";
 import HorairesPicker from "../../components/ui/HorairesPicker";
@@ -97,22 +99,13 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-    >
-      <div
-        className="w-full max-w-2xl rounded-3xl p-6 sm:p-8 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: "var(--color-surface)" }}
-      >
-        <div className="flex items-start justify-between mb-6">
-          <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
-            {initial ? "Modifier le prestataire" : "Nouveau prestataire partenaire"}
-          </h2>
-          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]">
-            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
-          </button>
-        </div>
+    <Modal onClose={onCancel} labelledBy="prestataire-form-title" maxWidth="max-w-2xl" className="sm:p-8 max-h-[90vh] overflow-y-auto">
+      <ModalHeader
+        icon={initial ? "edit" : "add_business"}
+        title={initial ? "Modifier le prestataire" : "Nouveau prestataire partenaire"}
+        titleId="prestataire-form-title"
+        onClose={onCancel}
+      />
 
         {error && (
           <div className="p-3 mb-4 rounded-xl text-caption font-medium" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
@@ -183,20 +176,28 @@ function PrestataireForm({ initial, onSuccess, onCancel }: PrestataireFormProps)
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
 const TAILLE_PAGE = 10;
 
 export default function SuperAdminPrestataires() {
-  const [prestataires, setPrestataires] = useState<Prestataire[]>([]);
-  const [totalItems, setTotalItems] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
+  const {
+    items: prestataires,
+    setItems: setPrestataires,
+    total: totalItems,
+    page,
+    setPage,
+    totalPages,
+    loading,
+    error,
+    reload: load,
+  } = useListePaginee<Prestataire>(
+    (skip, limit) => getPrestatairesPagine(skip, limit),
+    { taillePage: TAILLE_PAGE }
+  );
   const [laboratoiresAvecCompte, setLaboratoiresAvecCompte] = useState<Set<string>>(new Set());
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Prestataire | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -207,29 +208,15 @@ export default function SuperAdminPrestataires() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [prestatairesData, usersData] = await Promise.all([
-        getPrestatairesPagine((page - 1) * TAILLE_PAGE, TAILLE_PAGE),
-        // Un échec ici ne doit pas bloquer l'affichage des prestataires — le
-        // bouton "Créer un compte" resterait juste visible par défaut.
-        getUsers().catch(() => []),
-      ]);
-      setPrestataires(prestatairesData.items);
-      setTotalItems(prestatairesData.total);
+  useEffect(() => {
+    // Un échec ici ne doit pas bloquer l'affichage des prestataires — le
+    // bouton "Créer un compte" resterait juste visible par défaut.
+    getUsers().then((usersData) => {
       setLaboratoiresAvecCompte(new Set(
         usersData.filter((u) => u.role === "laboratoire" && u.prestataire_id).map((u) => u.prestataire_id!)
       ));
-    } catch (err) {
-      setError((err as Error).message || "Impossible de charger les prestataires.");
-    } finally {
-      setLoading(false);
-    }
-  }, [page]);
-
-  useEffect(() => { load(); }, [load]);
+    }).catch(() => {});
+  }, []);
 
   const handleCreated = (p: Prestataire) => {
     setPrestataires((prev) => [p, ...prev]);
@@ -371,7 +358,7 @@ export default function SuperAdminPrestataires() {
         )}
         <Pagination
           page={page}
-          totalPages={Math.max(1, Math.ceil((totalItems ?? 0) / TAILLE_PAGE))}
+          totalPages={totalPages}
           onPageChange={setPage}
           totalItems={totalItems}
         />

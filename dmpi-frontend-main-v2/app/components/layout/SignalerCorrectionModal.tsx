@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Textarea from "../ui/Textarea";
 import Button from "../ui/Button";
+import Modal, { ModalHeader } from "../ui/Modal";
 import { signalerCorrectionCompte } from "../../services/authService";
 
 interface SignalerCorrectionModalProps {
@@ -35,29 +36,10 @@ export default function SignalerCorrectionModal({ onClose }: SignalerCorrectionM
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-    >
-      <div
-        className="w-full max-w-md rounded-3xl p-6 shadow-2xl animate-slide-down"
-        style={{ backgroundColor: "var(--color-surface)" }}
-      >
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--color-primary-container)" }}>
-              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>edit_note</span>
-            </div>
-            <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
-              Signaler une erreur sur mon compte
-            </h2>
-          </div>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]">
-            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
-          </button>
-        </div>
+    <Modal onClose={onClose} labelledBy="signaler-correction-title">
+      <ModalHeader icon="edit_note" title="Signaler une erreur sur mon compte" titleId="signaler-correction-title" onClose={onClose} />
 
-        {succes ? (
+      {succes ? (
           <div className="flex flex-col items-center gap-4 py-4 text-center">
             <div className="w-14 h-14 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--color-success-container)" }}>
               <span className="material-symbols-outlined text-[28px]" style={{ color: "var(--color-on-success-container)" }}>check_circle</span>
@@ -99,7 +81,6 @@ export default function SignalerCorrectionModal({ onClose }: SignalerCorrectionM
             </div>
           </form>
         )}
-      </div>
-    </div>
+    </Modal>
   );
 }

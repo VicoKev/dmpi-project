@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router";
 import { useConfirm } from "../../contexts/ConfirmContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
+import Modal, { ModalHeader } from "../../components/ui/Modal";
 import Pagination from "../../components/ui/Pagination";
 import Input from "../../components/ui/Input";
 import SelectRecherche from "../../components/ui/SelectRecherche";
@@ -132,6 +133,11 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
       return;
     }
 
+    if (form.mot_de_passe.length < 8) {
+      setError("Le mot de passe initial doit comporter au moins 8 caractères.");
+      return;
+    }
+
     if (form.role === "patient" && (!form.npi_patient || form.npi_patient.length !== 10)) {
       setError("Le NPI du patient doit comporter exactement 10 chiffres.");
       return;
@@ -174,48 +180,14 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-    >
-      <div
-        className="w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: "var(--color-surface)" }}
-      >
-        {/* En-tete modale */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "var(--color-primary-container)" }}
-            >
-              <span
-                className="material-symbols-outlined text-[20px]"
-                style={{ color: "var(--color-on-primary-container)" }}
-              >
-                person_add
-              </span>
-            </div>
-            <div>
-              <h2
-                className="text-headline-sm font-bold"
-                style={{ color: "var(--color-on-surface)" }}
-              >
-                Nouvel utilisateur
-              </h2>
-              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                Compte configuré par le Super Admin
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onCancel}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-[var(--color-surface-container)]"
-            style={{ color: "var(--color-on-surface-variant)" }}
-          >
-            <span className="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
+    <Modal onClose={onCancel} labelledBy="nouvel-utilisateur-title" maxWidth="max-w-lg" className="sm:p-8 max-h-[90vh] overflow-y-auto">
+        <ModalHeader
+          icon="person_add"
+          title="Nouvel utilisateur"
+          subtitle="Compte configuré par le Super Admin"
+          titleId="nouvel-utilisateur-title"
+          onClose={onCancel}
+        />
 
         {/* Erreur */}
         {error && (
@@ -267,6 +239,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
             value={form.mot_de_passe}
             onChange={(e) => update("mot_de_passe", e.target.value)}
             leadingIcon="lock"
+            hint="8 caractères minimum"
             required
           />
 
@@ -485,8 +458,7 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -569,38 +541,14 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-    >
-      <div
-        className="w-full max-w-lg rounded-3xl p-6 sm:p-8 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto"
-        style={{ backgroundColor: "var(--color-surface)" }}
-      >
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: "var(--color-primary-container)" }}
-            >
-              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>edit</span>
-            </div>
-            <div>
-              <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
-                Modifier l'utilisateur
-              </h2>
-              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                {user.email}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={onCancel}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors hover:bg-[var(--color-surface-container)]"
-          >
-            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
-          </button>
-        </div>
+    <Modal onClose={onCancel} labelledBy="modifier-utilisateur-title" maxWidth="max-w-lg" className="sm:p-8 max-h-[90vh] overflow-y-auto">
+        <ModalHeader
+          icon="edit"
+          title="Modifier l'utilisateur"
+          subtitle={user.email}
+          titleId="modifier-utilisateur-title"
+          onClose={onCancel}
+        />
 
         {error && (
           <div className="p-3 mb-4 rounded-xl text-caption font-medium" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
@@ -664,8 +612,7 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
             <Button fullWidth type="submit" loading={loading} icon="save">Enregistrer</Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -701,29 +648,14 @@ function ReinitialiserMotDePasseModal({ user, onSuccess, onCancel }: Reinitialis
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-    >
-      <div className="w-full max-w-md rounded-3xl p-6 shadow-2xl animate-slide-down" style={{ backgroundColor: "var(--color-surface)" }}>
-        <div className="flex items-start justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full flex items-center justify-center" style={{ backgroundColor: "var(--color-primary-container)" }}>
-              <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-primary-container)" }}>lock_reset</span>
-            </div>
-            <div>
-              <h2 className="text-headline-sm font-bold" style={{ color: "var(--color-on-surface)" }}>
-                Réinitialiser le mot de passe
-              </h2>
-              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                {user.prenom} {user.nom} — {user.email}
-              </p>
-            </div>
-          </div>
-          <button onClick={onCancel} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)]">
-            <span className="material-symbols-outlined text-[20px]" style={{ color: "var(--color-on-surface)" }}>close</span>
-          </button>
-        </div>
+    <Modal onClose={onCancel} labelledBy="reinitialiser-mdp-title">
+        <ModalHeader
+          icon="lock_reset"
+          title="Réinitialiser le mot de passe"
+          subtitle={`${user.prenom} ${user.nom} — ${user.email}`}
+          titleId="reinitialiser-mdp-title"
+          onClose={onCancel}
+        />
 
         {error && (
           <div className="p-3 mb-4 rounded-xl text-caption font-medium" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
@@ -749,8 +681,7 @@ function ReinitialiserMotDePasseModal({ user, onSuccess, onCancel }: Reinitialis
             <Button fullWidth type="submit" loading={loading} icon="lock_reset">Réinitialiser</Button>
           </div>
         </form>
-      </div>
-    </div>
+    </Modal>
   );
 }
 

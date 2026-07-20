@@ -7,7 +7,9 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Textarea from "../../components/ui/Textarea";
 import UploadDocumentForm from "../../components/document/UploadDocumentForm";
+import Modal from "../../components/ui/Modal";
 import Pagination from "../../components/ui/Pagination";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import { useToast } from "../../contexts/ToastContext";
 import {
   getMesDemandesLaboratoire,
@@ -97,9 +99,6 @@ export default function LaboratoireDashboard() {
   const [enAttente, setEnAttente] = useState<DemandeExamen[]>([]);
   const [loading, setLoading] = useState(true);
   const [demandeAUploader, setDemandeAUploader] = useState<DemandeExamen | null>(null);
-  const [traitees, setTraitees] = useState<DemandeExamen[]>([]);
-  const [totalTraitees, setTotalTraitees] = useState<number | null>(null);
-  const [pageTraitees, setPageTraitees] = useState(1);
   const showToast = useToast();
 
   const charger = useCallback(async () => {
@@ -118,18 +117,16 @@ export default function LaboratoireDashboard() {
     return () => clearInterval(interval);
   }, [charger]);
 
-  useEffect(() => {
-    let cancelled = false;
-    getMesDemandesLaboratoirePaginee((pageTraitees - 1) * TAILLE_PAGE, TAILLE_PAGE, "traitee").then((res) => {
-      if (!cancelled) {
-        setTraitees(res.items);
-        setTotalTraitees(res.total);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [pageTraitees]);
+  const {
+    items: traitees,
+    total: totalTraitees,
+    page: pageTraitees,
+    setPage: setPageTraitees,
+    totalPages: totalPagesTraitees,
+  } = useListePaginee<DemandeExamen>(
+    (skip, limit) => getMesDemandesLaboratoirePaginee(skip, limit, "traitee"),
+    { taillePage: TAILLE_PAGE }
+  );
 
   const handleProblemeSignale = async (demandeId: string, motif?: string) => {
     try {
@@ -139,8 +136,6 @@ export default function LaboratoireDashboard() {
       showToast((err as Error).message || "Erreur lors du signalement.", "error");
     }
   };
-
-  const totalPagesTraitees = Math.max(1, Math.ceil((totalTraitees ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -193,18 +188,16 @@ export default function LaboratoireDashboard() {
       )}
 
       {demandeAUploader && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }}>
-            <h2 className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Déposer le résultat</h2>
-            <UploadDocumentForm
-              npi={demandeAUploader.npi}
-              demandeExamenId={demandeAUploader.id}
-              libelleParDefaut={demandeAUploader.type_examen}
-              onUploaded={() => { setDemandeAUploader(null); charger(); }}
-              onCancel={() => setDemandeAUploader(null)}
-            />
-          </div>
-        </div>
+        <Modal onClose={() => setDemandeAUploader(null)} labelledBy="deposer-resultat-title" maxWidth="max-w-lg" className="max-h-[90vh] overflow-y-auto">
+          <h2 id="deposer-resultat-title" className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Déposer le résultat</h2>
+          <UploadDocumentForm
+            npi={demandeAUploader.npi}
+            demandeExamenId={demandeAUploader.id}
+            libelleParDefaut={demandeAUploader.type_examen}
+            onUploaded={() => { setDemandeAUploader(null); charger(); }}
+            onCancel={() => setDemandeAUploader(null)}
+          />
+        </Modal>
       )}
     </div>
   );

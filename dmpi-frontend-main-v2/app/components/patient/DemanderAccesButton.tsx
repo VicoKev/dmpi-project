@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
+import Modal from "../ui/Modal";
 import { createDemandeAcces, compteExistantPourNpi } from "../../services/demandeAccesService";
 import { validateTelephoneBenin, TELEPHONE_BENIN_HINT, TELEPHONE_BENIN_PLACEHOLDER } from "../../utils/telephone";
 
@@ -93,56 +94,48 @@ export default function DemanderAccesButton({ npi, nom, prenom, telephoneDefault
       </Button>
 
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
-        >
-          <div
-            className="w-full max-w-md rounded-3xl p-6 shadow-2xl animate-slide-down max-h-[90vh] overflow-y-auto"
-            style={{ backgroundColor: "var(--color-surface)" }}
-          >
-            <h2 className="text-headline-sm font-bold mb-1" style={{ color: "var(--color-on-surface)" }}>
-              Demander un accès portail
-            </h2>
-            <p className="text-body-md mb-4" style={{ color: "var(--color-on-surface-variant)" }}>
-              {prenom} {nom} — NPI {npi}
+        <Modal onClose={() => setOpen(false)} labelledBy="demander-acces-title" className="max-h-[90vh] overflow-y-auto">
+          <h2 id="demander-acces-title" className="text-headline-sm font-bold mb-1" style={{ color: "var(--color-on-surface)" }}>
+            Demander un accès portail
+          </h2>
+          <p className="text-body-md mb-4" style={{ color: "var(--color-on-surface-variant)" }}>
+            {prenom} {nom} — NPI {npi}
+          </p>
+
+          {error && (
+            <div
+              className="flex items-start gap-2 p-3 rounded-xl mb-4 text-body-md"
+              style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}
+            >
+              <span className="material-symbols-outlined text-[18px] mt-0.5">error</span>
+              <span>{error}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <Input
+              label="Téléphone de contact"
+              value={telephone}
+              onChange={(e) => setTelephone(e.target.value)}
+              leadingIcon="call"
+              placeholder={TELEPHONE_BENIN_PLACEHOLDER}
+              hint={TELEPHONE_BENIN_HINT}
+              required
+            />
+            <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+              Transmis au Super Admin, seul habilité à créer le compte de connexion.
             </p>
 
-            {error && (
-              <div
-                className="flex items-start gap-2 p-3 rounded-xl mb-4 text-body-md"
-                style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}
-              >
-                <span className="material-symbols-outlined text-[18px] mt-0.5">error</span>
-                <span>{error}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-              <Input
-                label="Téléphone de contact"
-                value={telephone}
-                onChange={(e) => setTelephone(e.target.value)}
-                leadingIcon="call"
-                placeholder={TELEPHONE_BENIN_PLACEHOLDER}
-                hint={TELEPHONE_BENIN_HINT}
-                required
-              />
-              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                Transmis au Super Admin, seul habilité à créer le compte de connexion.
-              </p>
-
-              <div className="flex gap-3">
-                <Button variant="outline" fullWidth type="button" onClick={() => setOpen(false)} disabled={loading}>
-                  Annuler
-                </Button>
-                <Button fullWidth type="submit" icon="send" loading={loading}>
-                  Envoyer la demande
-                </Button>
-              </div>
-            </form>
-          </div>
-        </div>
+            <div className="flex gap-3">
+              <Button variant="outline" fullWidth type="button" onClick={() => setOpen(false)} disabled={loading}>
+                Annuler
+              </Button>
+              <Button fullWidth type="submit" icon="send" loading={loading}>
+                Envoyer la demande
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </>
   );

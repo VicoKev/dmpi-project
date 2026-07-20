@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Button from "../ui/Button";
+import Modal from "../ui/Modal";
 import Textarea from "../ui/Textarea";
 import { formatDateFr } from "../../services/patientService";
 import {
@@ -62,6 +63,7 @@ function VignetteFichier({ document: doc, fichier, onClick }: { document: Docume
         className="relative w-full aspect-square rounded-xl overflow-hidden border flex items-center justify-center shrink-0"
         style={{ borderColor: "var(--color-outline-variant)", backgroundColor: "var(--color-surface-container-low)", width: "88px", height: "88px" }}
         title={fichier.nom_original}
+        aria-label={`Ouvrir ${fichier.nom_original}`}
       >
         {url ? (
           <img src={url} alt={fichier.nom_original} className="w-full h-full object-cover" />
@@ -292,17 +294,15 @@ export default function GalerieDocuments({ documents, loading, onChanged }: Gale
       )}
 
       {enEdition && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}>
-          <div className="w-full max-w-lg rounded-3xl p-6 shadow-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: "var(--color-surface)" }}>
-            <h2 className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Modifier le document</h2>
-            <UploadDocumentForm
-              npi={enEdition.npi}
-              documentExistant={enEdition}
-              onUploaded={() => { setEnEdition(null); onChanged?.(); }}
-              onCancel={() => setEnEdition(null)}
-            />
-          </div>
-        </div>
+        <Modal onClose={() => setEnEdition(null)} labelledBy="modifier-document-title" maxWidth="max-w-lg" className="max-h-[90vh] overflow-y-auto">
+          <h2 id="modifier-document-title" className="text-headline-sm font-bold mb-4" style={{ color: "var(--color-on-surface)" }}>Modifier le document</h2>
+          <UploadDocumentForm
+            npi={enEdition.npi}
+            documentExistant={enEdition}
+            onUploaded={() => { setEnEdition(null); onChanged?.(); }}
+            onCancel={() => setEnEdition(null)}
+          />
+        </Modal>
       )}
     </>
   );
