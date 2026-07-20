@@ -1,11 +1,12 @@
 // Mes Rendez-vous — Espace Patient
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import Card from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Spinner from "../../components/ui/Spinner";
 import Textarea from "../../components/ui/Textarea";
 import Pagination from "../../components/ui/Pagination";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import {
   getRdvAVenirPatient,
   getRdvPassesPatientPaginee,
@@ -185,40 +186,31 @@ export default function PatientRendezVous() {
   const { user } = useAuth();
   const npi = user?.patientNpi;
   const [aVenir, setAVenir] = useState<RendezVous[]>([]);
-  const [passes, setPasses] = useState<RendezVous[]>([]);
-  const [totalPasses, setTotalPasses] = useState<number | null>(null);
-  const [pagePasses, setPagePasses] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const chargerAVenir = () => {
+  const chargerAVenir = useCallback(() => {
     if (!npi) { setLoading(false); return; }
     getRdvAVenirPatient(npi).then((res) => { setAVenir(res); setLoading(false); });
-  };
+  }, [npi]);
 
-  const chargerPasses = () => {
-    if (!npi) return;
-    getRdvPassesPatientPaginee(npi, (pagePasses - 1) * TAILLE_PAGE, TAILLE_PAGE).then((res) => {
-      setPasses(res.items);
-      setTotalPasses(res.total);
-    });
-  };
+  useEffect(() => { chargerAVenir(); }, [chargerAVenir]);
+
+  const {
+    items: passes,
+    total: totalPasses,
+    page: pagePasses,
+    setPage: setPagePasses,
+    totalPages: totalPagesPasses,
+    reload: rechargerPasses,
+  } = useListePaginee<RendezVous>(
+    (skip, limit) => getRdvPassesPatientPaginee(npi!, skip, limit),
+    { taillePage: TAILLE_PAGE, active: !!npi, deps: [npi] }
+  );
 
   const charger = () => {
     chargerAVenir();
-    chargerPasses();
+    rechargerPasses();
   };
-
-  useEffect(() => {
-    chargerAVenir();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [npi]);
-
-  useEffect(() => {
-    chargerPasses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [npi, pagePasses]);
-
-  const totalPagesPasses = Math.max(1, Math.ceil((totalPasses ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">

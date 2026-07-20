@@ -4,6 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Badge, { StatutBadge } from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import { getPrescriptionsByPatientPaginee, ordonnanceIdDepuisPrescriptionId } from "../../services/prescriptionService";
 import { getDossierPatient, formatDateFr } from "../../services/patientService";
 import type { Prescription } from "../../types/prescription";
@@ -167,31 +168,20 @@ function PrescriptionCard({ prescription: p, traitementsEnCours }: { prescriptio
 export default function PatientOrdonnances() {
   const { user } = useAuth();
   const npi = user?.patientNpi;
-  const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
-  const [traitementsEnCours, setTraitementsEnCours] = useState<Traitement[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const { items: prescriptions, total, page, setPage, totalPages, loading } = useListePaginee<Prescription>(
+    (skip, limit) => getPrescriptionsByPatientPaginee(npi!, skip, limit),
+    { taillePage: TAILLE_PAGE, active: !!npi, deps: [npi] }
+  );
 
+  const [traitementsEnCours, setTraitementsEnCours] = useState<Traitement[]>([]);
   useEffect(() => {
-    if (!npi) { setLoading(false); return; }
+    if (!npi) return;
     let cancelled = false;
-    setLoading(true);
-    Promise.all([
-      getPrescriptionsByPatientPaginee(npi, (page - 1) * TAILLE_PAGE, TAILLE_PAGE),
-      getDossierPatient(npi),
-    ]).then(([res, dossier]) => {
-      if (!cancelled) {
-        setPrescriptions(res.items);
-        setTotal(res.total);
-        setTraitementsEnCours(dossier?.traitementsEnCours ?? []);
-        setLoading(false);
-      }
+    getDossierPatient(npi).then((dossier) => {
+      if (!cancelled) setTraitementsEnCours(dossier?.traitementsEnCours ?? []);
     });
     return () => { cancelled = true; };
-  }, [npi, page]);
-
-  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
+  }, [npi]);
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">

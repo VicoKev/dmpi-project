@@ -1,5 +1,4 @@
 // Liste de toutes les consultations du médecin — tous patients confondus
-import { useEffect, useState } from "react";
 import { Link } from "react-router";
 
 import { useAuth } from "../../contexts/AuthContext";
@@ -7,6 +6,7 @@ import Card, { CardHeader } from "../../components/ui/Card";
 import { StatutBadge } from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
 import Pagination from "../../components/ui/Pagination";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import { getConsultationsByMedecinPaginee } from "../../services/consultationService";
 import { formatDateFr } from "../../services/patientService";
 import type { Consultation } from "../../types/consultation";
@@ -15,28 +15,10 @@ const TAILLE_PAGE = 10;
 
 export default function MedecinConsultations() {
   const { user } = useAuth();
-  const [consultations, setConsultations] = useState<Consultation[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!user) return;
-    let cancelled = false;
-    setLoading(true);
-    getConsultationsByMedecinPaginee(user.email, (page - 1) * TAILLE_PAGE, TAILLE_PAGE).then((res) => {
-      if (!cancelled) {
-        setConsultations(res.items);
-        setTotal(res.total);
-        setLoading(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [user, page]);
-
-  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
+  const { items: consultations, total, page, setPage, totalPages, loading, error } = useListePaginee<Consultation>(
+    (skip, limit) => getConsultationsByMedecinPaginee(user!.email, skip, limit),
+    { taillePage: TAILLE_PAGE, active: !!user, deps: [user?.email] }
+  );
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -55,6 +37,11 @@ export default function MedecinConsultations() {
         {loading ? (
           <div className="flex justify-center py-8">
             <Spinner label="Chargement…" />
+          </div>
+        ) : error ? (
+          <div className="flex items-center gap-3 p-4 rounded-xl" style={{ backgroundColor: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
+            <span className="material-symbols-outlined">error</span>
+            <span>{error}</span>
           </div>
         ) : consultations.length === 0 ? (
           <p className="text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>

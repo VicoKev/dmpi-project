@@ -7,6 +7,7 @@ import Card, { CardHeader } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
 import Pagination from "../../components/ui/Pagination";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import { getMesPrescriptionsExamen, getMesPrescriptionsExamenPaginee, type DemandeExamen } from "../../services/demandeExamenService";
 import { formatDateFr } from "../../services/patientService";
 
@@ -47,11 +48,7 @@ function LigneExamen({ demande: d }: { demande: DemandeExamen }) {
 
 export default function MedecinExamens() {
   const [enCours, setEnCours] = useState<DemandeExamen[]>([]);
-  const [traitees, setTraitees] = useState<DemandeExamen[]>([]);
-  const [totalTraitees, setTotalTraitees] = useState<number | null>(null);
-  const [pageTraitees, setPageTraitees] = useState(1);
   const [loadingEnCours, setLoadingEnCours] = useState(true);
-  const [loadingTraitees, setLoadingTraitees] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -67,25 +64,21 @@ export default function MedecinExamens() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    setLoadingTraitees(true);
-    getMesPrescriptionsExamenPaginee((pageTraitees - 1) * TAILLE_PAGE, TAILLE_PAGE, "traitee").then((res) => {
-      if (!cancelled) {
-        setTraitees(res.items);
-        setTotalTraitees(res.total);
-        setLoadingTraitees(false);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [pageTraitees]);
+  const {
+    items: traitees,
+    total: totalTraitees,
+    page: pageTraitees,
+    setPage: setPageTraitees,
+    totalPages: totalPagesTraitees,
+    loading: loadingTraitees,
+  } = useListePaginee<DemandeExamen>(
+    (skip, limit) => getMesPrescriptionsExamenPaginee(skip, limit, "traitee"),
+    { taillePage: TAILLE_PAGE }
+  );
 
   const loading = loadingEnCours || loadingTraitees;
   const avecProbleme = enCours.filter((d) => d.probleme_signale);
   const enAttente = enCours.filter((d) => !d.probleme_signale);
-  const totalPagesTraitees = Math.max(1, Math.ceil((totalTraitees ?? 0) / TAILLE_PAGE));
   const demandes = [...enCours, ...traitees];
 
   return (

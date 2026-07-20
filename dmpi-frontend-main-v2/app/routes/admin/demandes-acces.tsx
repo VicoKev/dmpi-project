@@ -1,7 +1,7 @@
 // Demandes d'accès portail patient — Espace Admin Établissement (lecture seule)
-import { useState, useEffect, useCallback } from "react";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Pagination from "../../components/ui/Pagination";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import { getDemandesAccesMonEtablissementPaginee, type DemandeAcces } from "../../services/demandeAccesService";
 
 const TAILLE_PAGE = 10;
@@ -14,29 +14,19 @@ const STATUT_CONFIG: Record<DemandeAcces["statut"], { label: string; color: stri
 };
 
 export default function AdminDemandesAcces() {
-  const [demandes, setDemandes] = useState<DemandeAcces[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await getDemandesAccesMonEtablissementPaginee((page - 1) * TAILLE_PAGE, TAILLE_PAGE);
-      setDemandes(res.items);
-      setTotal(res.total);
-    } catch (err) {
-      setError((err as Error).message || "Impossible de charger les demandes d'accès.");
-    } finally {
-      setLoading(false);
-    }
-  }, [page]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
+  const {
+    items: demandes,
+    total,
+    page,
+    setPage,
+    totalPages,
+    loading,
+    error,
+    reload: load,
+  } = useListePaginee<DemandeAcces>(
+    (skip, limit) => getDemandesAccesMonEtablissementPaginee(skip, limit),
+    { taillePage: TAILLE_PAGE }
+  );
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">

@@ -1,7 +1,8 @@
 // Agenda médecin — Planification et gestion des rendez-vous
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useConfirm } from "../../contexts/ConfirmContext";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Button from "../../components/ui/Button";
 import Input from "../../components/ui/Input";
@@ -489,9 +490,6 @@ function RdvCard({ rdv, onChanged }: { rdv: RendezVous; onChanged: () => void })
 export default function MedecinAgenda() {
   const { user } = useAuth();
   const [aVenir, setAVenir] = useState<RendezVous[]>([]);
-  const [passes, setPasses] = useState<RendezVous[]>([]);
-  const [totalPasses, setTotalPasses] = useState<number | null>(null);
-  const [pagePasses, setPagePasses] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
@@ -501,33 +499,30 @@ export default function MedecinAgenda() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const chargerAVenir = async () => {
+  const chargerAVenir = useCallback(async () => {
     if (!user?.email) return;
     const res = await getRdvAVenirMedecin(user.email);
     setAVenir(res);
     setLoading(false);
-  };
+  }, [user?.email]);
 
-  const chargerPasses = async () => {
-    if (!user?.email) return;
-    const res = await getRdvPassesMedecinPaginee(user.email, (pagePasses - 1) * TAILLE_PAGE, TAILLE_PAGE);
-    setPasses(res.items);
-    setTotalPasses(res.total);
-  };
+  useEffect(() => { chargerAVenir(); }, [chargerAVenir]);
 
-  useEffect(() => {
-    chargerAVenir();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
-
-  useEffect(() => {
-    chargerPasses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, pagePasses]);
+  const {
+    items: passes,
+    total: totalPasses,
+    page: pagePasses,
+    setPage: setPagePasses,
+    totalPages: totalPagesPasses,
+    reload: rechargerPasses,
+  } = useListePaginee<RendezVous>(
+    (skip, limit) => getRdvPassesMedecinPaginee(user!.email, skip, limit),
+    { taillePage: TAILLE_PAGE, active: !!user?.email, deps: [user?.email] }
+  );
 
   const chargerRdvs = () => {
     chargerAVenir();
-    chargerPasses();
+    rechargerPasses();
   };
 
   const handleCreated = () => {
@@ -539,8 +534,6 @@ export default function MedecinAgenda() {
   const handleChanged = () => {
     chargerRdvs();
   };
-
-  const totalPagesPasses = Math.max(1, Math.ceil((totalPasses ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">

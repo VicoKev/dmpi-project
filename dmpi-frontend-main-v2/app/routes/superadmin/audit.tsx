@@ -1,8 +1,9 @@
 // Journal d'audit — Espace Super Admin
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Input from "../../components/ui/Input";
 import Pagination from "../../components/ui/Pagination";
+import { useListePaginee } from "../../hooks/useListePaginee";
 import { getJournalAudit, type AuditEntry } from "../../services/auditService";
 
 const TAILLE_PAGE = 10;
@@ -34,30 +35,11 @@ const STATUT_CONFIG: Record<string, {label: string, color: string, bg: string, i
 export default function SuperAdminAudit() {
   const [search, setSearch] = useState("");
   const [filterStatut, setFilterStatut] = useState<"tous" | "SUCCES" | "ECHEC" | "ALERTE">("tous");
-  const [logs, setLogs] = useState<AuditEntry[]>([]);
-  const [total, setTotal] = useState<number | null>(null);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
 
-  // Revenir à la première page à chaque changement de filtre de statut —
-  // sinon une page devenue hors limites afficherait une liste vide à tort.
-  useEffect(() => { setPage(1); }, [filterStatut]);
-
-  useEffect(() => {
-    setLoading(true);
-    getJournalAudit((page - 1) * TAILLE_PAGE, TAILLE_PAGE, {
-      statutAction: filterStatut === "tous" ? undefined : filterStatut,
-    })
-      .then(({ items, total: totalRecu }) => {
-        setLogs(items);
-        setTotal(totalRecu);
-      })
-      .catch((err) => {
-        console.error("Erreur chargement logs:", err);
-        setLogs([]);
-      })
-      .finally(() => setLoading(false));
-  }, [page, filterStatut]);
+  const { items: logs, total, page, setPage, totalPages, loading } = useListePaginee<AuditEntry>(
+    (skip, limit) => getJournalAudit(skip, limit, { statutAction: filterStatut === "tous" ? undefined : filterStatut }),
+    { taillePage: TAILLE_PAGE, deps: [filterStatut] }
+  );
 
   // Le journal complet grossit indéfiniment (append-only) : la recherche ne
   // porte donc que sur la page actuellement chargée, pas sur l'ensemble —
@@ -81,8 +63,6 @@ export default function SuperAdminAudit() {
       npiStr.includes(q)
     );
   });
-
-  const totalPages = Math.max(1, Math.ceil((total ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -127,9 +107,9 @@ export default function SuperAdminAudit() {
         <CardHeader icon="policy" title={`Événements`} />
         <div className="flex flex-col gap-2">
           {loading ? (
-            <div className="py-8 text-center text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
-              Chargement des logs...
-            </div>
+            Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-16 rounded-xl animate-pulse" style={{ backgroundColor: "var(--color-surface-container-low)" }} />
+            ))
           ) : filtered.length === 0 ? (
             <div className="py-8 text-center text-body-md" style={{ color: "var(--color-on-surface-variant)" }}>
               Aucun événement trouvé.
