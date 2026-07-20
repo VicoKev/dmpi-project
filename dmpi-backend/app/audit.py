@@ -1,8 +1,11 @@
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models_sql import AuditLog
 from app.database_sql import AsyncSessionLocal
 from datetime import datetime
 from app.context import client_ip
+
+logger = logging.getLogger(__name__)
 
 async def enregistrer_log(
     utilisateur_email: str,
@@ -31,4 +34,4 @@ async def enregistrer_log(
             await db.commit()
     except Exception as e:
         # Le logging ne doit jamais faire planter la requête principale.
-        print(f"Erreur lors de l'écriture du log d'audit : {e}")
+        logger.error("Erreur lors de l'écriture du log d'audit : %s", e)
