@@ -12,6 +12,11 @@ export interface NavItem {
   label: string;
 }
 
+/** Plafond d'affichage des badges de compteur "en attente" par lien
+ * (Sidebar et BottomNav) — au-delà, on affiche "99+" plutôt qu'un nombre
+ * qui ferait exploser la mise en page. */
+export const PLAFOND_AFFICHAGE_BADGE = 99;
+
 export const NAV_ITEMS: Record<UserRole, NavItem[]> = {
   medecin: [
     { to: "/medecin", icon: "home_health", iconActive: "home_health", label: "Tableau de bord" },

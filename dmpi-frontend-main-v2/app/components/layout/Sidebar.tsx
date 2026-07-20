@@ -10,12 +10,11 @@ import type { UserRole } from "../../types/auth";
 import NotificationBell from "./NotificationBell";
 import ChangePasswordModal from "./ChangePasswordModal";
 import SignalerCorrectionModal from "./SignalerCorrectionModal";
-import { NAV_ITEMS, estRacineDeRole } from "./navItems";
+import { NAV_ITEMS, estRacineDeRole, PLAFOND_AFFICHAGE_BADGE } from "./navItems";
 
 // Compteurs "en attente" par tab, dérivés de la cloche de notifications
 // partagée (voir NotificationsContext) — un seul point de récupération pour
 // les badges par lien ici et le panneau détaillé de la cloche.
-const PLAFOND_AFFICHAGE = 99;
 
 function NavCountBadge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -29,7 +28,7 @@ function NavCountBadge({ count }: { count: number }) {
         color: "var(--color-on-error)",
       }}
     >
-      {count > PLAFOND_AFFICHAGE ? `${PLAFOND_AFFICHAGE}+` : count}
+      {count > PLAFOND_AFFICHAGE_BADGE ? `${PLAFOND_AFFICHAGE_BADGE}+` : count}
     </span>
   );
 }
