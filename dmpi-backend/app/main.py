@@ -1,11 +1,22 @@
 from fastapi import FastAPI, Request
+import logging
 import os
 from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from app.rate_limit import limiter
 from app.context import client_ip
-from app.database_mongo import database as mongo_database
+from app.database_mongo import database as mongo_database, initialiser_mongo
 from app.database_sql import engine as sql_engine
 from app import kafka_producer
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+logger = logging.getLogger(__name__)
 from app.routes.dossier_medical import router as dossier_router
 from app.routes.consultation import router as consultation_router
 from app.routes.ordonnance import router as ordonnance_router
@@ -32,6 +43,33 @@ app = FastAPI(
     description="API Backend pour le projet DMPI - Architecture Polyglotte (SQL + NoSQL/FHIR)",
     version="1.0.0"
 )
+
+app.state.limiter = limiter
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(
+        status_code=429,
+        content={"detail": "Trop de tentatives. Veuillez réessayer plus tard."},
+    )
+
+app.add_middleware(SlowAPIMiddleware)
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Filet de sécurité pour toute erreur non anticipée par une route — sans
+    lui, elle ne laisse qu'une trace brute dans la sortie standard d'uvicorn
+    (perdue une fois le conteneur redémarré), plutôt qu'une ligne de log
+    structurée et horodatée comme le reste de l'application.
+    """
+    logger.error("Erreur non gérée sur %s %s : %s", request.method, request.url.path, exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Une erreur interne est survenue."},
+    )
 
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:5173")
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",")]
@@ -66,6 +104,7 @@ async def startup_event():
     # Dockerfile qui lance `alembic upgrade head` avant uvicorn) — plus de
     # create_all ici, qui ne pouvait de toute façon jamais modifier une table
     # déjà existante.
+    await initialiser_mongo()
     await demarrer_producer()
 
 @app.on_event("shutdown")

@@ -378,6 +378,8 @@ async def reinitialiser_mot_de_passe(
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
 
     utilisateur.mot_de_passe_hash = hash_password(payload.nouveau_mot_de_passe)
+    # Invalide immédiatement toute session ouverte avec l'ancien mot de passe.
+    utilisateur.token_version += 1
 
     # La réinitialisation EST le traitement d'une éventuelle demande "mot de
     # passe oublié" en attente pour ce compte — inutile de la faire signaler

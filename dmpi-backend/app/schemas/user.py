@@ -17,7 +17,7 @@ class UserLogin(BaseModel):
 class UserCreate(BaseModel):
     """Schéma pour la création d'un compte par le Super Admin."""
     email: EmailStr
-    mot_de_passe: str
+    mot_de_passe: str = Field(..., min_length=8)
     nom: str
     prenom: str
     role: str  # "medecin", "infirmier", "admin_etablissement", "super_admin", "patient", "laboratoire"

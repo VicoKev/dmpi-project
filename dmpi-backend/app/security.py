@@ -17,7 +17,7 @@ if not SECRET_KEY:
         "JWT_SECRET_KEY doit être définie dans le fichier .env avant de démarrer l'application."
     )
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 120
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "120"))
 
 bearer_scheme = HTTPBearer(
     scheme_name="Bearer",
@@ -62,6 +62,7 @@ async def get_current_user(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         email: str = payload.get("sub")
+        token_version = payload.get("tv")
         if email is None:
             raise credentials_exception
     except JWTError:
@@ -71,6 +72,12 @@ async def get_current_user(
     user = result.scalar_one_or_none()
 
     if user is None or not user.est_actif:
+        raise credentials_exception
+
+    # Un token émis avant un changement/une réinitialisation de mot de passe
+    # porte encore l'ancien "tv" — le rejeter permet de couper une session
+    # précise sans attendre son expiration naturelle (2h).
+    if token_version is not None and token_version != user.token_version:
         raise credentials_exception
 
     return user

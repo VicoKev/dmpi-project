@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database_sql import get_sql_db
@@ -8,6 +8,7 @@ from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationCre
 from app.schemas.signalement_correction import SignalerCorrectionRequest, SignalementCorrectionOut
 from app.security import verify_password, hash_password, create_access_token, get_current_user
 from app.audit import enregistrer_log
+from app.rate_limit import limiter
 
 router = APIRouter(
     prefix="/auth",
@@ -15,9 +16,12 @@ router = APIRouter(
 )
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin, db: AsyncSession = Depends(get_sql_db)):
+@limiter.limit("10/minute")
+async def login(request: Request, credentials: UserLogin, db: AsyncSession = Depends(get_sql_db)):
     """
     Connexion par email/mot de passe (MVP : comptes préconfigurés, pas d'inscription).
+    Limité à 10 tentatives par minute et par IP pour freiner un essai
+    automatisé de mots de passe.
     """
     result = await db.execute(select(User).where(User.email == credentials.email))
     user = result.scalar_one_or_none()
@@ -41,7 +45,7 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_sql_db)):
     await db.commit()
     await db.refresh(user)
 
-    token = create_access_token({"sub": user.email, "role": user.role})
+    token = create_access_token({"sub": user.email, "role": user.role, "tv": user.token_version})
 
     return TokenResponse(access_token=token, utilisateur=user)
 
@@ -60,6 +64,9 @@ async def changer_mon_mot_de_passe(
         raise HTTPException(status_code=400, detail="Le nouveau mot de passe doit être différent de l'actuel.")
 
     current_user.mot_de_passe_hash = hash_password(payload.nouveau_mot_de_passe)
+    # Invalide immédiatement tout autre token émis avec l'ancien mot de passe
+    # (ex : session volée) plutôt que d'attendre son expiration naturelle (2h).
+    current_user.token_version += 1
     await db.commit()
 
     await enregistrer_log(
@@ -72,8 +79,43 @@ async def changer_mon_mot_de_passe(
     return {"message": "Mot de passe modifié avec succès."}
 
 
+@router.post("/deconnecter-autres-sessions", response_model=TokenResponse)
+async def deconnecter_autres_sessions(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Invalide tout token émis avant maintenant (ex : session oubliée ouverte
+    sur un autre appareil), sans devoir changer de mot de passe. La
+    révocation ne distingue pas les tokens entre eux (un seul compteur de
+    version par compte) : elle invalide donc aussi celui de la requête en
+    cours, d'où la réémission immédiate d'un nouveau token pour ne
+    déconnecter que les *autres* sessions.
+    """
+    current_user.token_version += 1
+    await db.commit()
+    await db.refresh(current_user)
+
+    nouveau_token = create_access_token({
+        "sub": current_user.email,
+        "role": current_user.role,
+        "tv": current_user.token_version,
+    })
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="DECONNEXION_AUTRES_SESSIONS",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return TokenResponse(access_token=nouveau_token, utilisateur=current_user)
+
+
 @router.post("/mot-de-passe-oublie", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("3/hour")
 async def demander_reinitialisation_mot_de_passe(
+    request: Request,
     payload: DemandeReinitialisationCreate,
     db: AsyncSession = Depends(get_sql_db)
 ):
@@ -85,6 +127,7 @@ async def demander_reinitialisation_mot_de_passe(
 
     Réponse volontairement identique que l'email corresponde ou non à un
     compte existant, pour ne jamais révéler quelles adresses sont enregistrées.
+    Limité par IP pour empêcher de faire spammer la file du super_admin.
     """
     result = await db.execute(select(User).where(User.email == payload.email))
     utilisateur = result.scalar_one_or_none()
@@ -107,7 +150,9 @@ async def demander_reinitialisation_mot_de_passe(
 
 
 @router.patch("/moi/signaler-correction", status_code=status.HTTP_202_ACCEPTED)
+@limiter.limit("5/hour")
 async def signaler_correction_compte(
+    request: Request,
     payload: SignalerCorrectionRequest,
     db: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(get_current_user)

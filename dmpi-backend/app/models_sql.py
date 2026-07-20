@@ -38,6 +38,9 @@ class User(Base):
     prestataire_id = Column(String, nullable=True)  # ID MongoDB du prestataire (labo) de rattachement, si role == "laboratoire"
     disponible = Column(Boolean, default=True, nullable=False)  # medecin uniquement : dispo pour assignation (garde)
     est_actif = Column(Boolean, default=True, nullable=False)
+    # Incrémenté à chaque changement/réinitialisation de mot de passe — un
+    # token JWT émis avant devient invalide immédiatement (voir get_current_user).
+    token_version = Column(Integer, default=0, nullable=False)
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
     derniere_connexion = Column(DateTime, nullable=True)
     derniere_connexion_ip = Column(String, nullable=True)
