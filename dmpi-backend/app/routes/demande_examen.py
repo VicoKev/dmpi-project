@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from bson import ObjectId
 from bson.errors import InvalidId
 from datetime import datetime
@@ -82,6 +82,9 @@ async def creer_demande_examen(
 @router.get("/patient/{npi}", response_model=list[DemandeExamenOut])
 async def lister_demandes_patient(
     npi: str,
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
     current_user: User = Depends(get_current_user)
 ):
     """Médecin/infirmier : accès libre (contexte clinique). Patient : uniquement son propre NPI."""
@@ -90,26 +93,50 @@ async def lister_demandes_patient(
     if current_user.role not in ("medecin", "infirmier", "patient"):
         raise HTTPException(status_code=403, detail="Accès non autorisé.")
 
-    cursor = demandes_examen_collection.find({"npi": npi}).sort("created_at", -1)
-    demandes = await cursor.to_list(length=200)
+    total = await demandes_examen_collection.count_documents({"npi": npi})
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = demandes_examen_collection.find({"npi": npi}).sort("created_at", -1).skip(skip)
+    if limit is not None:
+        demandes = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        demandes = await cursor.to_list(length=200)
     return [await _enrichir(d) for d in demandes]
 
 
 @router.get("/mes-demandes", response_model=list[DemandeExamenOut])
 async def mes_demandes_laboratoire(
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
+    statut: str | None = None,
     current_user: User = Depends(require_role("laboratoire"))
 ):
     """Demandes d'examen adressées au laboratoire du compte connecté."""
     if not current_user.prestataire_id:
         raise HTTPException(status_code=400, detail="Ce compte n'est rattaché à aucun laboratoire.")
 
-    cursor = demandes_examen_collection.find({"prestataire_id": current_user.prestataire_id}).sort("created_at", -1)
-    demandes = await cursor.to_list(length=200)
+    filtre: dict = {"prestataire_id": current_user.prestataire_id}
+    if statut:
+        filtre["statut"] = statut
+
+    total = await demandes_examen_collection.count_documents(filtre)
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = demandes_examen_collection.find(filtre).sort("created_at", -1).skip(skip)
+    if limit is not None:
+        demandes = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        demandes = await cursor.to_list(length=200)
     return [await _enrichir(d) for d in demandes]
 
 
 @router.get("/mes-prescriptions", response_model=list[DemandeExamenOut])
 async def mes_prescriptions_medecin(
+    response: Response,
+    skip: int = 0,
+    limit: int | None = None,
+    statut: str | None = None,
     current_user: User = Depends(require_role("medecin"))
 ):
     """
@@ -117,8 +144,18 @@ async def mes_prescriptions_medecin(
     sans cette vue, savoir si un résultat est arrivé exige de rouvrir
     chaque dossier patient un par un.
     """
-    cursor = demandes_examen_collection.find({"medecin_email": current_user.email}).sort("created_at", -1)
-    demandes = await cursor.to_list(length=200)
+    filtre: dict = {"medecin_email": current_user.email}
+    if statut:
+        filtre["statut"] = statut
+
+    total = await demandes_examen_collection.count_documents(filtre)
+    response.headers["X-Total-Count"] = str(total)
+
+    cursor = demandes_examen_collection.find(filtre).sort("created_at", -1).skip(skip)
+    if limit is not None:
+        demandes = await cursor.limit(min(limit, 200)).to_list(length=min(limit, 200))
+    else:
+        demandes = await cursor.to_list(length=200)
     return [await _enrichir(d) for d in demandes]
 
 

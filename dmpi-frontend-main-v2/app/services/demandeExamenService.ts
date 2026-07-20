@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, apiFetchPagine, type ReponsePaginee } from "./api";
 
 export interface DemandeExamen {
   id: string;
@@ -42,13 +42,27 @@ export async function getDemandesExamenPatient(npi: string): Promise<DemandeExam
   return apiFetch<DemandeExamen[]>(`/demandes-examen/patient/${npi}`);
 }
 
-export async function getMesDemandesLaboratoire(): Promise<DemandeExamen[]> {
-  return apiFetch<DemandeExamen[]>("/demandes-examen/mes-demandes");
+export async function getMesDemandesLaboratoire(statut?: string): Promise<DemandeExamen[]> {
+  const params = statut ? `?statut=${statut}` : "";
+  return apiFetch<DemandeExamen[]>(`/demandes-examen/mes-demandes${params}`);
+}
+
+export async function getMesDemandesLaboratoirePaginee(skip: number, limit: number, statut?: string): Promise<ReponsePaginee<DemandeExamen>> {
+  const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+  if (statut) params.set("statut", statut);
+  return apiFetchPagine<DemandeExamen>(`/demandes-examen/mes-demandes?${params.toString()}`);
 }
 
 /** Examens prescrits par le médecin connecté, tous patients confondus. */
-export async function getMesPrescriptionsExamen(): Promise<DemandeExamen[]> {
-  return apiFetch<DemandeExamen[]>("/demandes-examen/mes-prescriptions");
+export async function getMesPrescriptionsExamen(statut?: string): Promise<DemandeExamen[]> {
+  const params = statut ? `?statut=${statut}` : "";
+  return apiFetch<DemandeExamen[]>(`/demandes-examen/mes-prescriptions${params}`);
+}
+
+export async function getMesPrescriptionsExamenPaginee(skip: number, limit: number, statut?: string): Promise<ReponsePaginee<DemandeExamen>> {
+  const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+  if (statut) params.set("statut", statut);
+  return apiFetchPagine<DemandeExamen>(`/demandes-examen/mes-prescriptions?${params.toString()}`);
 }
 
 export async function signalerProblemeExamen(demandeId: string, motif?: string): Promise<DemandeExamen> {

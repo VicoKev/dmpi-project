@@ -6,8 +6,11 @@ import { Link } from "react-router";
 import Card, { CardHeader } from "../../components/ui/Card";
 import Badge from "../../components/ui/Badge";
 import Spinner from "../../components/ui/Spinner";
-import { getMesPrescriptionsExamen, type DemandeExamen } from "../../services/demandeExamenService";
+import Pagination from "../../components/ui/Pagination";
+import { getMesPrescriptionsExamen, getMesPrescriptionsExamenPaginee, type DemandeExamen } from "../../services/demandeExamenService";
 import { formatDateFr } from "../../services/patientService";
+
+const TAILLE_PAGE = 10;
 
 function LigneExamen({ demande: d }: { demande: DemandeExamen }) {
   return (
@@ -43,15 +46,20 @@ function LigneExamen({ demande: d }: { demande: DemandeExamen }) {
 }
 
 export default function MedecinExamens() {
-  const [demandes, setDemandes] = useState<DemandeExamen[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [enCours, setEnCours] = useState<DemandeExamen[]>([]);
+  const [traitees, setTraitees] = useState<DemandeExamen[]>([]);
+  const [totalTraitees, setTotalTraitees] = useState<number | null>(null);
+  const [pageTraitees, setPageTraitees] = useState(1);
+  const [loadingEnCours, setLoadingEnCours] = useState(true);
+  const [loadingTraitees, setLoadingTraitees] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
-    getMesPrescriptionsExamen().then((res) => {
+    setLoadingEnCours(true);
+    getMesPrescriptionsExamen("en_attente").then((res) => {
       if (!cancelled) {
-        setDemandes(res);
-        setLoading(false);
+        setEnCours(res);
+        setLoadingEnCours(false);
       }
     });
     return () => {
@@ -59,9 +67,26 @@ export default function MedecinExamens() {
     };
   }, []);
 
-  const avecProbleme = demandes.filter((d) => d.statut === "en_attente" && d.probleme_signale);
-  const enAttente = demandes.filter((d) => d.statut === "en_attente" && !d.probleme_signale);
-  const traitees = demandes.filter((d) => d.statut === "traitee");
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingTraitees(true);
+    getMesPrescriptionsExamenPaginee((pageTraitees - 1) * TAILLE_PAGE, TAILLE_PAGE, "traitee").then((res) => {
+      if (!cancelled) {
+        setTraitees(res.items);
+        setTotalTraitees(res.total);
+        setLoadingTraitees(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pageTraitees]);
+
+  const loading = loadingEnCours || loadingTraitees;
+  const avecProbleme = enCours.filter((d) => d.probleme_signale);
+  const enAttente = enCours.filter((d) => !d.probleme_signale);
+  const totalPagesTraitees = Math.max(1, Math.ceil((totalTraitees ?? 0) / TAILLE_PAGE));
+  const demandes = [...enCours, ...traitees];
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -115,12 +140,13 @@ export default function MedecinExamens() {
 
           {traitees.length > 0 && (
             <Card>
-              <CardHeader icon="task_alt" title={`Résultats reçus (${traitees.length})`} />
+              <CardHeader icon="task_alt" title={`Résultats reçus (${totalTraitees ?? traitees.length})`} />
               <ul className="flex flex-col gap-2">
-                {traitees.slice(0, 20).map((d) => (
+                {traitees.map((d) => (
                   <LigneExamen key={d.id} demande={d} />
                 ))}
               </ul>
+              <Pagination page={pageTraitees} totalPages={totalPagesTraitees} onPageChange={setPageTraitees} totalItems={totalTraitees} />
             </Card>
           )}
         </div>

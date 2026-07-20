@@ -7,15 +7,18 @@ import Badge from "../../components/ui/Badge";
 import Button from "../../components/ui/Button";
 import Textarea from "../../components/ui/Textarea";
 import UploadDocumentForm from "../../components/document/UploadDocumentForm";
+import Pagination from "../../components/ui/Pagination";
 import { useToast } from "../../contexts/ToastContext";
 import {
   getMesDemandesLaboratoire,
+  getMesDemandesLaboratoirePaginee,
   signalerProblemeExamen,
   type DemandeExamen,
 } from "../../services/demandeExamenService";
 import { formatDateFr } from "../../services/patientService";
 
 const REFRESH_MS = 30_000;
+const TAILLE_PAGE = 10;
 
 function LigneEnAttente({
   demande: d,
@@ -91,14 +94,17 @@ function LigneEnAttente({
 }
 
 export default function LaboratoireDashboard() {
-  const [demandes, setDemandes] = useState<DemandeExamen[]>([]);
+  const [enAttente, setEnAttente] = useState<DemandeExamen[]>([]);
   const [loading, setLoading] = useState(true);
   const [demandeAUploader, setDemandeAUploader] = useState<DemandeExamen | null>(null);
+  const [traitees, setTraitees] = useState<DemandeExamen[]>([]);
+  const [totalTraitees, setTotalTraitees] = useState<number | null>(null);
+  const [pageTraitees, setPageTraitees] = useState(1);
   const showToast = useToast();
 
   const charger = useCallback(async () => {
     try {
-      setDemandes(await getMesDemandesLaboratoire());
+      setEnAttente(await getMesDemandesLaboratoire("en_attente"));
     } catch {
       // Échec silencieux : nouvelle tentative au prochain cycle de rafraîchissement.
     } finally {
@@ -112,6 +118,19 @@ export default function LaboratoireDashboard() {
     return () => clearInterval(interval);
   }, [charger]);
 
+  useEffect(() => {
+    let cancelled = false;
+    getMesDemandesLaboratoirePaginee((pageTraitees - 1) * TAILLE_PAGE, TAILLE_PAGE, "traitee").then((res) => {
+      if (!cancelled) {
+        setTraitees(res.items);
+        setTotalTraitees(res.total);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [pageTraitees]);
+
   const handleProblemeSignale = async (demandeId: string, motif?: string) => {
     try {
       await signalerProblemeExamen(demandeId, motif);
@@ -121,8 +140,7 @@ export default function LaboratoireDashboard() {
     }
   };
 
-  const enAttente = demandes.filter((d) => d.statut === "en_attente");
-  const traitees = demandes.filter((d) => d.statut === "traitee");
+  const totalPagesTraitees = Math.max(1, Math.ceil((totalTraitees ?? 0) / TAILLE_PAGE));
 
   return (
     <div className="flex flex-col gap-6 animate-fade-in-up">
@@ -158,9 +176,9 @@ export default function LaboratoireDashboard() {
 
       {traitees.length > 0 && (
         <Card>
-          <CardHeader icon="task_alt" title={`Traitées récemment (${traitees.length})`} />
+          <CardHeader icon="task_alt" title={`Traitées (${totalTraitees ?? traitees.length})`} />
           <ul className="flex flex-col gap-2">
-            {traitees.slice(0, 10).map((d) => (
+            {traitees.map((d) => (
               <li key={d.id} className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl" style={{ backgroundColor: "var(--color-surface-container-low)" }}>
                 <div>
                   <p className="text-body-md font-semibold" style={{ color: "var(--color-on-surface)" }}>{d.type_examen}</p>
@@ -170,6 +188,7 @@ export default function LaboratoireDashboard() {
               </li>
             ))}
           </ul>
+          <Pagination page={pageTraitees} totalPages={totalPagesTraitees} onPageChange={setPageTraitees} totalItems={totalTraitees} />
         </Card>
       )}
 
