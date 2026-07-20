@@ -80,6 +80,43 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.role, form.prestataire_id, laboratoireSelectionne?.nom, laboratoireSelectionne?.commune]);
 
+  // Un compte patient est toujours rattaché à un dossier médical déjà existant
+  // (créé par un médecin/infirmier) — dès que le NPI saisi est complet, on
+  // précharge date de naissance / sexe / groupe sanguin depuis ce dossier
+  // plutôt que de faire ressaisir des données déjà connues du système.
+  const [prefillEnCours, setPrefillEnCours] = useState(false);
+  const [prefillIntrouvable, setPrefillIntrouvable] = useState(false);
+  useEffect(() => {
+    if (form.role !== "patient" || !form.npi_patient || form.npi_patient.length !== 10) {
+      setPrefillIntrouvable(false);
+      return;
+    }
+    let cancelled = false;
+    setPrefillEnCours(true);
+    setPrefillIntrouvable(false);
+    getDossierPatient(form.npi_patient)
+      .then((dossier) => {
+        if (cancelled) return;
+        if (dossier) {
+          setForm((prev) => ({
+            ...prev,
+            date_naissance: dossier.patient.dateNaissance ? dossier.patient.dateNaissance.split("T")[0] : prev.date_naissance,
+            sexe: dossier.patient.sexe || prev.sexe,
+            groupe_sanguin: dossier.patient.groupeSanguin ?? prev.groupe_sanguin,
+          }));
+        } else {
+          setPrefillIntrouvable(true);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPrefillIntrouvable(true);
+      })
+      .finally(() => {
+        if (!cancelled) setPrefillEnCours(false);
+      });
+    return () => { cancelled = true; };
+  }, [form.role, form.npi_patient]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -313,6 +350,17 @@ function CreateUserForm({ onSuccess, onCancel, initialValues }: CreateUserFormPr
               <p className="text-caption mt-1.5" style={{ color: "var(--color-on-success-container)" }}>
                 Le patient ne pourra consulter que son propre dossier via ce NPI.
               </p>
+              {prefillEnCours && (
+                <p className="text-caption mt-1 flex items-center gap-1.5" style={{ color: "var(--color-on-success-container)" }}>
+                  <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                  Recherche du dossier existant…
+                </p>
+              )}
+              {prefillIntrouvable && (
+                <p className="text-caption mt-1" style={{ color: "var(--color-on-success-container)" }}>
+                  Aucun dossier trouvé pour ce NPI — complétez les champs manuellement.
+                </p>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                 <Input
@@ -617,7 +665,7 @@ function EditUserForm({ user, onSuccess, onCancel }: EditUserFormProps) {
 
 // ─── Page principale ─────────────────────────────────────────────────────────
 
-const TAILLE_PAGE = 20;
+const TAILLE_PAGE = 10;
 
 export default function SuperAdminUtilisateurs() {
   const [searchParams, setSearchParams] = useSearchParams();
