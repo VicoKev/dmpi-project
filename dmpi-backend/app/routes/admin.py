@@ -133,6 +133,11 @@ async def lister_utilisateurs(
     requete = select(User)
     if limit is not None:
         requete = requete.offset(skip).limit(min(limit, 200))
+    else:
+        # Filet de sécurité pour l'appel "liste complète" historique : les
+        # comptes patients pourraient un jour se compter en milliers, une
+        # requête vraiment sans limite serait alors imprudente.
+        requete = requete.limit(2000)
     result = await db.execute(requete)
     return result.scalars().all()
 
