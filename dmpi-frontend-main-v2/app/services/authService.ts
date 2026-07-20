@@ -71,6 +71,17 @@ export async function logout(): Promise<void> {
   clearToken();
 }
 
+/** Déconnecte toute autre session ouverte avec ce compte (ex : appareil
+ * oublié connecté) sans changer de mot de passe. Le backend réémet un
+ * nouveau token pour la session en cours — remplace donc le token stocké
+ * ici plutôt que de nous déconnecter nous-mêmes. */
+export async function deconnecterAutresSessions(): Promise<void> {
+  const raw = await apiFetch<BackendLoginResponse>("/auth/deconnecter-autres-sessions", {
+    method: "POST",
+  });
+  storeToken(raw.access_token);
+}
+
 /** Signal "mot de passe oublié", avant authentification — transmis au super
  * admin, seul habilité à réinitialiser un mot de passe. La réponse est
  * volontairement la même que l'email corresponde ou non à un compte réel. */

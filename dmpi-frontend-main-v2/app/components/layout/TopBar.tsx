@@ -2,10 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
+import { useConfirm } from "../../contexts/ConfirmContext";
+import { useToast } from "../../contexts/ToastContext";
 import type { UserRole } from "../../types/auth";
 import NotificationBell from "./NotificationBell";
 import ChangePasswordModal from "./ChangePasswordModal";
 import SignalerCorrectionModal from "./SignalerCorrectionModal";
+import { deconnecterAutresSessions } from "../../services/authService";
 
 const ROLE_LABELS: Record<UserRole, string> = {
   medecin: "Médecin",
@@ -19,10 +22,32 @@ const ROLE_LABELS: Record<UserRole, string> = {
 export default function TopBar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const askConfirmation = useConfirm();
+  const showToast = useToast();
   const [showMenu, setShowMenu] = useState(false);
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showSignalerCorrection, setShowSignalerCorrection] = useState(false);
+  const [deconnectingSessions, setDeconnectingSessions] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  const handleDeconnecterAutresSessions = async () => {
+    setShowMenu(false);
+    const ok = await askConfirmation({
+      title: "Déconnecter mes autres sessions",
+      message: "Toute autre session ouverte avec ce compte (un autre appareil, un navigateur oublié…) sera déconnectée. Cette session-ci reste active.",
+      confirmLabel: "Déconnecter",
+    });
+    if (!ok) return;
+    setDeconnectingSessions(true);
+    try {
+      await deconnecterAutresSessions();
+      showToast("Vos autres sessions ont été déconnectées.");
+    } catch (err) {
+      showToast((err as Error).message || "Erreur lors de la déconnexion des autres sessions.", "error");
+    } finally {
+      setDeconnectingSessions(false);
+    }
+  };
 
   useEffect(() => {
     if (!showMenu) return;
@@ -106,6 +131,15 @@ export default function TopBar() {
             >
               <span className="material-symbols-outlined text-[20px]">edit_note</span>
               <span className="text-body-md font-semibold">Signaler une erreur sur mon compte</span>
+            </button>
+            <button
+              onClick={handleDeconnecterAutresSessions}
+              disabled={deconnectingSessions}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-container-low)] disabled:opacity-60"
+              style={{ color: "var(--color-on-surface)" }}
+            >
+              <span className="material-symbols-outlined text-[20px]">devices_off</span>
+              <span className="text-body-md font-semibold">Déconnecter mes autres sessions</span>
             </button>
             <button
               onClick={handleLogout}

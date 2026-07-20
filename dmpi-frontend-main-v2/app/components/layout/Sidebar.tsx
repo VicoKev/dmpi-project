@@ -6,11 +6,14 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { NavLink, useNavigate } from "react-router";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNotifications } from "../../contexts/NotificationsContext";
+import { useConfirm } from "../../contexts/ConfirmContext";
+import { useToast } from "../../contexts/ToastContext";
 import type { UserRole } from "../../types/auth";
 import NotificationBell from "./NotificationBell";
 import ChangePasswordModal from "./ChangePasswordModal";
 import SignalerCorrectionModal from "./SignalerCorrectionModal";
 import { NAV_ITEMS, estRacineDeRole, PLAFOND_AFFICHAGE_BADGE } from "./navItems";
+import { deconnecterAutresSessions } from "../../services/authService";
 
 // Compteurs "en attente" par tab, dérivés de la cloche de notifications
 // partagée (voir NotificationsContext) — un seul point de récupération pour
@@ -55,10 +58,32 @@ export default function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const { elements } = useNotifications();
+  const askConfirmation = useConfirm();
+  const showToast = useToast();
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [showSignalerCorrection, setShowSignalerCorrection] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
+  const [deconnectingSessions, setDeconnectingSessions] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const handleDeconnecterAutresSessions = async () => {
+    setShowMenu(false);
+    const ok = await askConfirmation({
+      title: "Déconnecter mes autres sessions",
+      message: "Toute autre session ouverte avec ce compte (un autre appareil, un navigateur oublié…) sera déconnectée. Cette session-ci reste active.",
+      confirmLabel: "Déconnecter",
+    });
+    if (!ok) return;
+    setDeconnectingSessions(true);
+    try {
+      await deconnecterAutresSessions();
+      showToast("Vos autres sessions ont été déconnectées.");
+    } catch (err) {
+      showToast((err as Error).message || "Erreur lors de la déconnexion des autres sessions.", "error");
+    } finally {
+      setDeconnectingSessions(false);
+    }
+  };
 
   useEffect(() => {
     if (!showMenu) return;
@@ -262,6 +287,15 @@ export default function Sidebar() {
             >
               <span className="material-symbols-outlined text-[20px]">edit_note</span>
               <span className="text-body-md font-semibold">Signaler une erreur sur mon compte</span>
+            </button>
+            <button
+              onClick={handleDeconnecterAutresSessions}
+              disabled={deconnectingSessions}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-container-low)] disabled:opacity-60"
+              style={{ color: "var(--color-on-surface)" }}
+            >
+              <span className="material-symbols-outlined text-[20px]">devices_off</span>
+              <span className="text-body-md font-semibold">Déconnecter mes autres sessions</span>
             </button>
             <button
               onClick={handleLogout}
