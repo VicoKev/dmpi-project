@@ -20,8 +20,6 @@ export interface User {
   service?: string | null;
   etablissement_id?: string | null;
   prestataire_id?: string | null;
-  correction_signalee?: boolean;
-  motif_correction?: string | null;
 }
 
 export interface UserCreatePayload {
@@ -134,6 +132,25 @@ export interface DemandeReinitialisationMotDePasse {
  * l'efface aussi automatiquement, côté backend. */
 export async function marquerCorrectionTraitee(userId: number): Promise<User> {
   return apiFetch<User>(`/admin/users/${userId}/marquer-correction-traitee`, { method: "PATCH" });
+}
+
+export interface SignalementCorrectionAvecUtilisateur {
+  id: number;
+  utilisateur_id: number;
+  motif: string;
+  statut: string;
+  date_creation: string;
+  date_traitement: string | null;
+  traite_par: string | null;
+  vu: boolean;
+  utilisateur_email: string;
+  utilisateur_nom: string;
+  utilisateur_prenom: string;
+}
+
+/** Signalements de correction de compte, par défaut ceux encore en attente. */
+export async function getSignalementsCorrection(): Promise<SignalementCorrectionAvecUtilisateur[]> {
+  return apiFetch<SignalementCorrectionAvecUtilisateur[]>("/admin/signalements-correction");
 }
 
 /** Signaux "mot de passe oublié" en attente — réinitialiser le mot de passe

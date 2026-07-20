@@ -17,6 +17,7 @@ import {
   reinitialiserMotDePasse,
   getDemandesReinitialisationMotDePasse,
   marquerCorrectionTraitee,
+  getSignalementsCorrection,
   ROLE_CONFIG,
   ROLE_LABELS,
   ROLES_SELECTABLE,
@@ -26,6 +27,7 @@ import {
   type UserCreatePayload,
   type UserUpdatePayload,
   type DemandeReinitialisationMotDePasse,
+  type SignalementCorrectionAvecUtilisateur,
 } from "../../services/userService";
 import { getEtablissements, type Etablissement } from "../../services/etablissementService";
 import { getPrestataires, type Prestataire } from "../../services/prestataireService";
@@ -773,6 +775,7 @@ export default function SuperAdminUtilisateurs() {
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [demandesMdpOublie, setDemandesMdpOublie] = useState<DemandeReinitialisationMotDePasse[]>([]);
   const [dismissingCorrectionId, setDismissingCorrectionId] = useState<number | null>(null);
+  const [signalementsCorrection, setSignalementsCorrection] = useState<SignalementCorrectionAvecUtilisateur[]>([]);
 
   const loadDemandesMdpOublie = useCallback(async () => {
     try {
@@ -781,6 +784,16 @@ export default function SuperAdminUtilisateurs() {
       // Non bloquant : la page reste utilisable sans cette liste.
     }
   }, []);
+
+  const loadSignalementsCorrection = useCallback(async () => {
+    try {
+      setSignalementsCorrection(await getSignalementsCorrection());
+    } catch {
+      // Non bloquant : la page reste utilisable sans cette liste.
+    }
+  }, []);
+
+  useEffect(() => { loadSignalementsCorrection(); }, [loadSignalementsCorrection]);
 
   useEffect(() => { loadDemandesMdpOublie(); }, [loadDemandesMdpOublie]);
 
@@ -880,14 +893,12 @@ export default function SuperAdminUtilisateurs() {
     loadUsers();
   }, [loadUsers]);
 
-  const comptesAvecCorrection = users.filter((u) => u.correction_signalee);
-
-  const handleMarquerCorrectionTraitee = async (u: User) => {
-    setDismissingCorrectionId(u.id);
+  const handleMarquerCorrectionTraitee = async (s: SignalementCorrectionAvecUtilisateur) => {
+    setDismissingCorrectionId(s.id);
     try {
-      const updated = await marquerCorrectionTraitee(u.id);
-      setUsers((prev) => prev.map((existing) => (existing.id === updated.id ? updated : existing)));
-      showToast(`Signalement de ${u.prenom} ${u.nom} marqué comme traité.`);
+      await marquerCorrectionTraitee(s.utilisateur_id);
+      await loadSignalementsCorrection();
+      showToast(`Signalement de ${s.utilisateur_prenom} ${s.utilisateur_nom} marqué comme traité.`);
     } catch (err) {
       showToast((err as Error).message || "Erreur lors du traitement du signalement.", "error");
     } finally {
@@ -939,6 +950,7 @@ export default function SuperAdminUtilisateurs() {
     setUsers((prev) => prev.map((u) => (u.id === updatedUser.id ? updatedUser : u)));
     setEditingUser(null);
     showToast(`Informations mises à jour pour ${updatedUser.prenom} ${updatedUser.nom}.`);
+    loadSignalementsCorrection();
   };
 
   const filtered = users.filter((u) => {
@@ -1074,40 +1086,45 @@ export default function SuperAdminUtilisateurs() {
       )}
 
       {/* Corrections de compte signalées */}
-      {comptesAvecCorrection.length > 0 && (
+      {signalementsCorrection.length > 0 && (
         <Card accentBorder="border-l-4 border-[var(--color-primary)]">
-          <CardHeader icon="edit_note" title={`Corrections signalées (${comptesAvecCorrection.length})`} />
+          <CardHeader icon="edit_note" title={`Corrections signalées (${signalementsCorrection.length})`} />
           <ul className="flex flex-col gap-2">
-            {comptesAvecCorrection.map((u) => (
-              <li
-                key={u.id}
-                className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl"
-                style={{ backgroundColor: "var(--color-primary-container)" }}
-              >
-                <div className="min-w-0">
-                  <p className="text-body-md font-semibold" style={{ color: "var(--color-on-primary-container)" }}>
-                    {u.prenom} {u.nom} — {u.email}
-                  </p>
-                  <p className="text-caption" style={{ color: "var(--color-on-primary-container)" }}>
-                    {u.motif_correction}
-                  </p>
-                </div>
-                <div className="flex gap-2 shrink-0">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    icon="check"
-                    loading={dismissingCorrectionId === u.id}
-                    onClick={() => handleMarquerCorrectionTraitee(u)}
-                  >
-                    Marquer comme traité
-                  </Button>
-                  <Button size="sm" icon="edit" onClick={() => setEditingUser(u)}>
-                    Corriger
-                  </Button>
-                </div>
-              </li>
-            ))}
+            {signalementsCorrection.map((s) => {
+              const utilisateurConcerne = users.find((u) => u.id === s.utilisateur_id);
+              return (
+                <li
+                  key={s.id}
+                  className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl"
+                  style={{ backgroundColor: "var(--color-primary-container)" }}
+                >
+                  <div className="min-w-0">
+                    <p className="text-body-md font-semibold" style={{ color: "var(--color-on-primary-container)" }}>
+                      {s.utilisateur_prenom} {s.utilisateur_nom} — {s.utilisateur_email}
+                    </p>
+                    <p className="text-caption" style={{ color: "var(--color-on-primary-container)" }}>
+                      {s.motif}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon="check"
+                      loading={dismissingCorrectionId === s.id}
+                      onClick={() => handleMarquerCorrectionTraitee(s)}
+                    >
+                      Marquer comme traité
+                    </Button>
+                    {utilisateurConcerne && (
+                      <Button size="sm" icon="edit" onClick={() => setEditingUser(utilisateurConcerne)}>
+                        Corriger
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </Card>
       )}
