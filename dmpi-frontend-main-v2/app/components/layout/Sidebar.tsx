@@ -9,6 +9,7 @@ import { useNotifications } from "../../contexts/NotificationsContext";
 import type { UserRole } from "../../types/auth";
 import NotificationBell from "./NotificationBell";
 import ChangePasswordModal from "./ChangePasswordModal";
+import SignalerCorrectionModal from "./SignalerCorrectionModal";
 
 interface NavItem {
   to: string;
@@ -111,6 +112,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const { elements } = useNotifications();
   const [showChangePassword, setShowChangePassword] = useState(false);
+  const [showSignalerCorrection, setShowSignalerCorrection] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -310,6 +312,14 @@ export default function Sidebar() {
               <span className="text-body-md font-semibold">Changer mon mot de passe</span>
             </button>
             <button
+              onClick={() => { setShowMenu(false); setShowSignalerCorrection(true); }}
+              className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-container-low)]"
+              style={{ color: "var(--color-on-surface)" }}
+            >
+              <span className="material-symbols-outlined text-[20px]">edit_note</span>
+              <span className="text-body-md font-semibold">Signaler une erreur sur mon compte</span>
+            </button>
+            <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-error-container)]"
               style={{ color: "var(--color-error)" }}
@@ -322,6 +332,7 @@ export default function Sidebar() {
       </div>
 
       {showChangePassword && <ChangePasswordModal onClose={() => setShowChangePassword(false)} />}
+      {showSignalerCorrection && <SignalerCorrectionModal onClose={() => setShowSignalerCorrection(false)} />}
     </aside>
   );
 }

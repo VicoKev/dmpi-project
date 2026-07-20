@@ -92,6 +92,16 @@ export async function changerMonMotDePasse(ancienMotDePasse: string, nouveauMotD
   });
 }
 
+/** Auto-service : signale une erreur sur ses propres informations (nom,
+ * spécialité...) — non modifiables par l'utilisateur lui-même, seul le
+ * super_admin le peut. */
+export async function signalerCorrectionCompte(motif: string): Promise<void> {
+  await apiFetch("/auth/moi/signaler-correction", {
+    method: "PATCH",
+    body: JSON.stringify({ motif }),
+  });
+}
+
 export function getCurrentUser(): AuthLoginResponse | null {
   const token = getStoredToken();
   const userStr = typeof localStorage !== "undefined"
