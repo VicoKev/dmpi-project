@@ -41,6 +41,12 @@ class User(Base):
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
     derniere_connexion = Column(DateTime, nullable=True)
     derniere_connexion_ip = Column(String, nullable=True)
+    # Auto-service : le titulaire du compte signale une erreur sur ses
+    # propres informations (faute de frappe, mauvaise spécialité...) — lui
+    # seul ne peut pas les corriger, ces champs restent du ressort du
+    # super_admin (voir PATCH /admin/users/{id}).
+    correction_signalee = Column(Boolean, default=False, nullable=False)
+    motif_correction = Column(String, nullable=True)
 
 
 class DemandeAccesPatient(Base):

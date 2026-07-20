@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database_sql import get_sql_db
 from app.models_sql import User, DemandeReinitialisationMotDePasse
-from app.schemas.user import UserLogin, TokenResponse, ChangerMotDePasseRequest
+from app.schemas.user import UserLogin, TokenResponse, ChangerMotDePasseRequest, SignalerCorrectionRequest
 from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationCreate
 from app.security import verify_password, hash_password, create_access_token, get_current_user
 from app.audit import enregistrer_log
@@ -103,3 +103,29 @@ async def demander_reinitialisation_mot_de_passe(
             await db.commit()
 
     return {"message": "Si ce compte existe, votre demande a été transmise au Super Administrateur national."}
+
+
+@router.patch("/moi/signaler-correction")
+async def signaler_correction_compte(
+    payload: SignalerCorrectionRequest,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Auto-service : signale une erreur sur ses propres informations (faute de
+    frappe sur le nom, mauvaise spécialité...). Ces champs restent du
+    ressort du super_admin — voir PATCH /admin/users/{id} — ce signal lui
+    transmet juste de quoi corriger sans devoir être contacté hors application.
+    """
+    current_user.correction_signalee = True
+    current_user.motif_correction = payload.motif
+    await db.commit()
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="SIGNALEMENT_CORRECTION_COMPTE",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return {"message": "Signalement transmis au Super Administrateur national."}

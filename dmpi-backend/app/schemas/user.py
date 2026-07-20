@@ -66,6 +66,8 @@ class UserOut(BaseModel):
     est_actif: bool
     date_creation: datetime
     derniere_connexion: datetime | None = None
+    correction_signalee: bool = False
+    motif_correction: str | None = None
 
     class Config:
         from_attributes = True
@@ -80,6 +82,13 @@ class ReinitialiserMotDePasseRequest(BaseModel):
     """Le super_admin force un nouveau mot de passe (compte oublié) — pas
     besoin de connaître l'ancien, contrairement au changement auto-service."""
     nouveau_mot_de_passe: str = Field(..., min_length=8)
+
+
+class SignalerCorrectionRequest(BaseModel):
+    """Auto-service : l'utilisateur connecté signale une erreur sur ses
+    propres informations (faute de frappe, mauvaise spécialité...) —
+    lui-même ne peut pas les corriger, seul le super_admin le peut."""
+    motif: str = Field(..., min_length=5, max_length=500)
 
 
 class TokenResponse(BaseModel):

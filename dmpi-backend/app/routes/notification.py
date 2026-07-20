@@ -166,6 +166,16 @@ async def _notifications_super_admin(db: AsyncSession) -> list[ElementNotificati
             lien="/superadmin/utilisateurs", icone="lock_reset", urgence="warning",
         ))
 
+    resultat_corrections = await db.execute(
+        select(func.count()).select_from(User).where(User.correction_signalee == True)  # noqa: E712
+    )
+    nb_corrections = resultat_corrections.scalar_one()
+    if nb_corrections:
+        elements.append(ElementNotification(
+            cle="corrections_compte_signalees", titre=f"{nb_corrections} correction(s) de compte signalée(s)", compte=nb_corrections,
+            lien="/superadmin/utilisateurs", icone="edit_note", urgence="info",
+        ))
+
     return elements
 
 

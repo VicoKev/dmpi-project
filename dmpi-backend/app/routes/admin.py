@@ -264,12 +264,49 @@ async def modifier_utilisateur(
     if updates.prestataire_id is not None:
         utilisateur.prestataire_id = updates.prestataire_id
 
+    # Modifier la fiche EST le traitement d'un éventuel signalement de
+    # correction en attente — inutile de le faire lever à part.
+    utilisateur.correction_signalee = False
+    utilisateur.motif_correction = None
+
     await db.commit()
     await db.refresh(utilisateur)
 
     await enregistrer_log(
         utilisateur_email=current_user.email,
         action="MODIFICATION_COMPTE",
+        statut_action="SUCCES",
+        npi_concerne=None
+    )
+
+    return utilisateur
+
+
+@router.patch("/users/{user_id}/marquer-correction-traitee", response_model=UserOut)
+async def marquer_correction_traitee(
+    user_id: int,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """
+    Efface un signalement de correction sans modifier la fiche — pour le cas
+    où le super_admin l'a examiné et jugé qu'aucun changement n'était
+    nécessaire (échange avec l'utilisateur, faux signalement...).
+    """
+    result = await db.execute(select(User).where(User.id == user_id))
+    utilisateur = result.scalar_one_or_none()
+
+    if not utilisateur:
+        raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
+
+    utilisateur.correction_signalee = False
+    utilisateur.motif_correction = None
+    await db.commit()
+    await db.refresh(utilisateur)
+
+    await enregistrer_log(
+        utilisateur_email=current_user.email,
+        action="CORRECTION_COMPTE_TRAITEE",
         statut_action="SUCCES",
         npi_concerne=None
     )
