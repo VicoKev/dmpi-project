@@ -4,12 +4,34 @@ import Card, { CardHeader } from "../ui/Card";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
+import Select from "../ui/Select";
 import Textarea from "../ui/Textarea";
 import { formatDateFr } from "../../services/patientService";
 import type { Vaccination } from "../../types/patient";
 import type { AjouterVaccinationPayload } from "../../services/patientService";
 
-const VACCIN_VIDE = { nomVaccin: "", dateAdministration: "", dose: "", lot: "", prochaineDosePrevue: "", notes: "" };
+// Vaccins du Programme Élargi de Vaccination (PEV) du Bénin, complétés de
+// quelques vaccins courants hors PEV — liste fermée pour éviter les fautes
+// de frappe, avec une échappatoire "Autre" pour les cas non couverts.
+const VACCINS_COURANTS = [
+  "BCG (tuberculose)",
+  "Polio (VPO/VPI)",
+  "Pentavalent (DTC-HepB-Hib)",
+  "Pneumocoque (PCV)",
+  "Rotavirus",
+  "Rougeole-Rubéole (VAR)",
+  "Fièvre jaune",
+  "Méningite A (MenA)",
+  "Tétanos (VAT)",
+  "Hépatite B",
+  "Fièvre typhoïde",
+  "Choléra",
+  "Papillomavirus (HPV)",
+  "COVID-19",
+];
+const AUTRE_VACCIN = "Autre";
+
+const VACCIN_VIDE = { nomVaccin: "", nomVaccinAutre: "", dateAdministration: "", dose: "", lot: "", prochaineDosePrevue: "", notes: "" };
 
 export default function VaccinationsCard({
   vaccinations,
@@ -35,14 +57,15 @@ export default function VaccinationsCard({
   const handleAjouter = async () => {
     if (!onAjouter) return;
     setError(null);
-    if (!form.nomVaccin.trim() || !form.dateAdministration) {
+    const nomVaccinFinal = form.nomVaccin === AUTRE_VACCIN ? form.nomVaccinAutre.trim() : form.nomVaccin;
+    if (!nomVaccinFinal || !form.dateAdministration) {
       setError("Le vaccin et la date d'administration sont obligatoires.");
       return;
     }
     setSaving(true);
     try {
       await onAjouter({
-        nom_vaccin: form.nomVaccin.trim(),
+        nom_vaccin: nomVaccinFinal,
         date_administration: form.dateAdministration,
         dose: form.dose.trim() || undefined,
         lot: form.lot.trim() || undefined,
@@ -91,8 +114,28 @@ export default function VaccinationsCard({
             </div>
           )}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Input label="Vaccin" value={form.nomVaccin} onChange={(e) => update("nomVaccin", e.target.value)} placeholder="Ex: Fièvre jaune" required />
+            <Select
+              label="Vaccin"
+              value={form.nomVaccin}
+              onChange={(e) => update("nomVaccin", e.target.value)}
+              required
+              options={[
+                { value: "", label: "Sélectionner…", disabled: true },
+                ...VACCINS_COURANTS.map((v) => ({ value: v, label: v })),
+                { value: AUTRE_VACCIN, label: "Autre (préciser)" },
+              ]}
+            />
             <Input label="Date d'administration" type="date" value={form.dateAdministration} onChange={(e) => update("dateAdministration", e.target.value)} required />
+            {form.nomVaccin === AUTRE_VACCIN && (
+              <Input
+                label="Préciser le vaccin"
+                value={form.nomVaccinAutre}
+                onChange={(e) => update("nomVaccinAutre", e.target.value)}
+                placeholder="Nom du vaccin"
+                required
+                className="sm:col-span-2"
+              />
+            )}
             <Input label="Dose (optionnel)" value={form.dose} onChange={(e) => update("dose", e.target.value)} placeholder="Ex: 1ère dose, rappel" />
             <Input label="N° de lot (optionnel)" value={form.lot} onChange={(e) => update("lot", e.target.value)} />
             <Input label="Prochaine dose prévue (optionnel)" type="date" value={form.prochaineDosePrevue} onChange={(e) => update("prochaineDosePrevue", e.target.value)} />
