@@ -16,6 +16,7 @@ import {
   updateUser,
   reinitialiserMotDePasse,
   getDemandesReinitialisationMotDePasse,
+  marquerCorrectionTraitee,
   ROLE_CONFIG,
   ROLE_LABELS,
   ROLES_SELECTABLE,
@@ -771,6 +772,7 @@ export default function SuperAdminUtilisateurs() {
   const [resetPasswordUser, setResetPasswordUser] = useState<User | null>(null);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
   const [demandesMdpOublie, setDemandesMdpOublie] = useState<DemandeReinitialisationMotDePasse[]>([]);
+  const [dismissingCorrectionId, setDismissingCorrectionId] = useState<number | null>(null);
 
   const loadDemandesMdpOublie = useCallback(async () => {
     try {
@@ -877,6 +879,21 @@ export default function SuperAdminUtilisateurs() {
   useEffect(() => {
     loadUsers();
   }, [loadUsers]);
+
+  const comptesAvecCorrection = users.filter((u) => u.correction_signalee);
+
+  const handleMarquerCorrectionTraitee = async (u: User) => {
+    setDismissingCorrectionId(u.id);
+    try {
+      const updated = await marquerCorrectionTraitee(u.id);
+      setUsers((prev) => prev.map((existing) => (existing.id === updated.id ? updated : existing)));
+      showToast(`Signalement de ${u.prenom} ${u.nom} marqué comme traité.`);
+    } catch (err) {
+      showToast((err as Error).message || "Erreur lors du traitement du signalement.", "error");
+    } finally {
+      setDismissingCorrectionId(null);
+    }
+  };
 
   const handleCreateSuccess = (newUser: User) => {
     setUsers((prev) => [newUser, ...prev]);
@@ -1052,6 +1069,45 @@ export default function SuperAdminUtilisateurs() {
                 </li>
               );
             })}
+          </ul>
+        </Card>
+      )}
+
+      {/* Corrections de compte signalées */}
+      {comptesAvecCorrection.length > 0 && (
+        <Card accentBorder="border-l-4 border-[var(--color-primary)]">
+          <CardHeader icon="edit_note" title={`Corrections signalées (${comptesAvecCorrection.length})`} />
+          <ul className="flex flex-col gap-2">
+            {comptesAvecCorrection.map((u) => (
+              <li
+                key={u.id}
+                className="flex flex-wrap items-center justify-between gap-3 p-3 rounded-xl"
+                style={{ backgroundColor: "var(--color-primary-container)" }}
+              >
+                <div className="min-w-0">
+                  <p className="text-body-md font-semibold" style={{ color: "var(--color-on-primary-container)" }}>
+                    {u.prenom} {u.nom} — {u.email}
+                  </p>
+                  <p className="text-caption" style={{ color: "var(--color-on-primary-container)" }}>
+                    {u.motif_correction}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    icon="check"
+                    loading={dismissingCorrectionId === u.id}
+                    onClick={() => handleMarquerCorrectionTraitee(u)}
+                  >
+                    Marquer comme traité
+                  </Button>
+                  <Button size="sm" icon="edit" onClick={() => setEditingUser(u)}>
+                    Corriger
+                  </Button>
+                </div>
+              </li>
+            ))}
           </ul>
         </Card>
       )}

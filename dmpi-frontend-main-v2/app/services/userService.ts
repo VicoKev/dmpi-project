@@ -20,6 +20,8 @@ export interface User {
   service?: string | null;
   etablissement_id?: string | null;
   prestataire_id?: string | null;
+  correction_signalee?: boolean;
+  motif_correction?: string | null;
 }
 
 export interface UserCreatePayload {
@@ -125,6 +127,13 @@ export interface DemandeReinitialisationMotDePasse {
   date_creation: string;
   date_traitement: string | null;
   traite_par: string | null;
+}
+
+/** Efface un signalement de correction sans modifier la fiche — pour le cas
+ * où aucun changement n'est nécessaire. Modifier la fiche (updateUser)
+ * l'efface aussi automatiquement, côté backend. */
+export async function marquerCorrectionTraitee(userId: number): Promise<User> {
+  return apiFetch<User>(`/admin/users/${userId}/marquer-correction-traitee`, { method: "PATCH" });
 }
 
 /** Signaux "mot de passe oublié" en attente — réinitialiser le mot de passe
