@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database_mongo import get_mongo_db
 from app.database_sql import get_sql_db
-from app.models_sql import User, DemandeAccesPatient, DemandeReinitialisationMotDePasse
+from app.models_sql import User, DemandeAccesPatient, DemandeReinitialisationMotDePasse, SignalementCorrectionCompte
 from app.security import get_current_user
 from app.schemas.notification import ElementNotification, NotificationsResponse
 
@@ -167,7 +167,9 @@ async def _notifications_super_admin(db: AsyncSession) -> list[ElementNotificati
         ))
 
     resultat_corrections = await db.execute(
-        select(func.count()).select_from(User).where(User.correction_signalee == True)  # noqa: E712
+        select(func.count()).select_from(SignalementCorrectionCompte).where(
+            SignalementCorrectionCompte.statut == "en_attente"
+        )
     )
     nb_corrections = resultat_corrections.scalar_one()
     if nb_corrections:
@@ -177,6 +179,30 @@ async def _notifications_super_admin(db: AsyncSession) -> list[ElementNotificati
         ))
 
     return elements
+
+
+async def _notifications_signalements_resolus(user: User, db: AsyncSession) -> list[ElementNotification]:
+    """
+    Commun à tous les rôles : signale qu'un signalement de correction que
+    CET utilisateur a lui-même soumis vient d'être traité — contrairement
+    aux autres éléments (toujours orientés vers une action à faire), celui-ci
+    est purement informatif, d'où le besoin d'un indicateur "vu" pour ne pas
+    rester affiché indéfiniment une fois consulté (voir GET /auth/mes-signalements-correction).
+    """
+    resultat = await db.execute(
+        select(func.count()).select_from(SignalementCorrectionCompte).where(
+            SignalementCorrectionCompte.utilisateur_id == user.id,
+            SignalementCorrectionCompte.statut == "traitee",
+            SignalementCorrectionCompte.vu == False,  # noqa: E712
+        )
+    )
+    nb = resultat.scalar_one()
+    if not nb:
+        return []
+    return [ElementNotification(
+        cle="mes_signalements_resolus", titre=f"{nb} signalement(s) de correction traité(s)", compte=nb,
+        lien="/mes-signalements", icone="task_alt", urgence="info",
+    )]
 
 
 @router.get("/moi", response_model=NotificationsResponse)
@@ -200,5 +226,10 @@ async def mes_notifications(
         elements = await _notifications_super_admin(db_sql)
     else:
         elements = []
+
+    # Commun à tous les rôles, y compris super_admin : la résolution de son
+    # propre signalement de correction, indépendamment de ce que son rôle
+    # a par ailleurs en attente.
+    elements = elements + await _notifications_signalements_resolus(current_user, db_sql)
 
     return NotificationsResponse(total=sum(e.compte for e in elements), elements=elements)

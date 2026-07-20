@@ -3,10 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from app.database_sql import get_sql_db
-from app.models_sql import User, AuditLog, DemandeAccesPatient, DemandeReinitialisationMotDePasse
+from app.models_sql import User, AuditLog, DemandeAccesPatient, DemandeReinitialisationMotDePasse, SignalementCorrectionCompte
 from app.schemas.user import UserCreate, UserOut, ReinitialiserMotDePasseRequest
 from app.schemas.logs import AuditLogOut
 from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationOut
+from app.schemas.signalement_correction import SignalementCorrectionAvecUtilisateurOut
 from app.security import hash_password, require_role
 from app.audit import enregistrer_log
 
@@ -16,6 +17,24 @@ router = APIRouter(
 )
 
 ROLES_VALIDES = {"medecin", "infirmier", "admin_etablissement", "super_admin", "patient", "laboratoire"}
+
+
+async def _resoudre_signalements_correction(db: AsyncSession, utilisateur_id: int, traite_par: str) -> None:
+    """Marque tout signalement de correction en attente pour ce compte comme
+    traité — vu=False pour que l'auteur voie qu'une résolution est intervenue
+    la prochaine fois qu'il consulte "Mes signalements" (ou la cloche)."""
+    result = await db.execute(
+        select(SignalementCorrectionCompte).where(
+            SignalementCorrectionCompte.utilisateur_id == utilisateur_id,
+            SignalementCorrectionCompte.statut == "en_attente"
+        )
+    )
+    maintenant = datetime.utcnow()
+    for signalement in result.scalars().all():
+        signalement.statut = "traitee"
+        signalement.date_traitement = maintenant
+        signalement.traite_par = traite_par
+        signalement.vu = False
 
 
 @router.post("/users", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -265,9 +284,9 @@ async def modifier_utilisateur(
         utilisateur.prestataire_id = updates.prestataire_id
 
     # Modifier la fiche EST le traitement d'un éventuel signalement de
-    # correction en attente — inutile de le faire lever à part.
-    utilisateur.correction_signalee = False
-    utilisateur.motif_correction = None
+    # correction en attente — inutile de le faire lever à part. vu=False
+    # pour que l'auteur voie qu'une résolution est intervenue.
+    await _resoudre_signalements_correction(db, utilisateur.id, current_user.email)
 
     await db.commit()
     await db.refresh(utilisateur)
@@ -289,9 +308,10 @@ async def marquer_correction_traitee(
     current_user: User = Depends(require_role("super_admin"))
 ):
     """
-    Efface un signalement de correction sans modifier la fiche — pour le cas
-    où le super_admin l'a examiné et jugé qu'aucun changement n'était
-    nécessaire (échange avec l'utilisateur, faux signalement...).
+    Résout le(s) signalement(s) de correction en attente sans modifier la
+    fiche — pour le cas où le super_admin l'a examiné et jugé qu'aucun
+    changement n'était nécessaire (échange avec l'utilisateur, faux
+    signalement...).
     """
     result = await db.execute(select(User).where(User.id == user_id))
     utilisateur = result.scalar_one_or_none()
@@ -299,8 +319,7 @@ async def marquer_correction_traitee(
     if not utilisateur:
         raise HTTPException(status_code=404, detail="Utilisateur introuvable.")
 
-    utilisateur.correction_signalee = False
-    utilisateur.motif_correction = None
+    await _resoudre_signalements_correction(db, utilisateur.id, current_user.email)
     await db.commit()
     await db.refresh(utilisateur)
 
@@ -312,6 +331,32 @@ async def marquer_correction_traitee(
     )
 
     return utilisateur
+
+
+@router.get("/signalements-correction", response_model=list[SignalementCorrectionAvecUtilisateurOut])
+async def lister_signalements_correction(
+    statut: str | None = "en_attente",
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """Signalements de correction de compte, par défaut ceux encore en attente."""
+    requete = (
+        select(SignalementCorrectionCompte, User.email, User.nom, User.prenom)
+        .join(User, User.id == SignalementCorrectionCompte.utilisateur_id)
+        .order_by(desc(SignalementCorrectionCompte.date_creation))
+    )
+    if statut:
+        requete = requete.where(SignalementCorrectionCompte.statut == statut)
+
+    result = await db.execute(requete)
+    return [
+        SignalementCorrectionAvecUtilisateurOut(
+            id=s.id, utilisateur_id=s.utilisateur_id, motif=s.motif, statut=s.statut,
+            date_creation=s.date_creation, date_traitement=s.date_traitement, traite_par=s.traite_par, vu=s.vu,
+            utilisateur_email=email, utilisateur_nom=nom, utilisateur_prenom=prenom,
+        )
+        for s, email, nom, prenom in result.all()
+    ]
 
 
 @router.patch("/users/{user_id}/reinitialiser-mot-de-passe")

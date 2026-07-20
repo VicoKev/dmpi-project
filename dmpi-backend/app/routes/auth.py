@@ -2,9 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database_sql import get_sql_db
-from app.models_sql import User, DemandeReinitialisationMotDePasse
-from app.schemas.user import UserLogin, TokenResponse, ChangerMotDePasseRequest, SignalerCorrectionRequest
+from app.models_sql import User, DemandeReinitialisationMotDePasse, SignalementCorrectionCompte
+from app.schemas.user import UserLogin, TokenResponse, ChangerMotDePasseRequest
 from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationCreate
+from app.schemas.signalement_correction import SignalerCorrectionRequest, SignalementCorrectionOut
 from app.security import verify_password, hash_password, create_access_token, get_current_user
 from app.audit import enregistrer_log
 
@@ -105,7 +106,7 @@ async def demander_reinitialisation_mot_de_passe(
     return {"message": "Si ce compte existe, votre demande a été transmise au Super Administrateur national."}
 
 
-@router.patch("/moi/signaler-correction")
+@router.patch("/moi/signaler-correction", status_code=status.HTTP_202_ACCEPTED)
 async def signaler_correction_compte(
     payload: SignalerCorrectionRequest,
     db: AsyncSession = Depends(get_sql_db),
@@ -117,8 +118,19 @@ async def signaler_correction_compte(
     ressort du super_admin — voir PATCH /admin/users/{id} — ce signal lui
     transmet juste de quoi corriger sans devoir être contacté hors application.
     """
-    current_user.correction_signalee = True
-    current_user.motif_correction = payload.motif
+    # Pas de doublon : inutile d'empiler plusieurs signalements identiques
+    # tant que le précédent n'a pas été traité.
+    deja_en_attente = await db.execute(
+        select(SignalementCorrectionCompte).where(
+            SignalementCorrectionCompte.utilisateur_id == current_user.id,
+            SignalementCorrectionCompte.statut == "en_attente"
+        )
+    )
+    existant = deja_en_attente.scalar_one_or_none()
+    if existant:
+        existant.motif = payload.motif
+    else:
+        db.add(SignalementCorrectionCompte(utilisateur_id=current_user.id, motif=payload.motif))
     await db.commit()
 
     await enregistrer_log(
@@ -129,3 +141,30 @@ async def signaler_correction_compte(
     )
 
     return {"message": "Signalement transmis au Super Administrateur national."}
+
+
+@router.get("/mes-signalements-correction", response_model=list[SignalementCorrectionOut])
+async def mes_signalements_correction(
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Historique des signalements de correction faits par l'utilisateur
+    connecté, du plus récent au plus ancien — lui permet de savoir si un
+    signalement a été traité sans avoir à deviner. Consulter cette liste
+    marque les résolutions comme vues.
+    """
+    result = await db.execute(
+        select(SignalementCorrectionCompte)
+        .where(SignalementCorrectionCompte.utilisateur_id == current_user.id)
+        .order_by(SignalementCorrectionCompte.date_creation.desc())
+    )
+    signalements = result.scalars().all()
+
+    a_marquer_vus = [s for s in signalements if not s.vu]
+    if a_marquer_vus:
+        for s in a_marquer_vus:
+            s.vu = True
+        await db.commit()
+
+    return signalements

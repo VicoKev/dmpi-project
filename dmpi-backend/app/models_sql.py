@@ -41,12 +41,6 @@ class User(Base):
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
     derniere_connexion = Column(DateTime, nullable=True)
     derniere_connexion_ip = Column(String, nullable=True)
-    # Auto-service : le titulaire du compte signale une erreur sur ses
-    # propres informations (faute de frappe, mauvaise spécialité...) — lui
-    # seul ne peut pas les corriger, ces champs restent du ressort du
-    # super_admin (voir PATCH /admin/users/{id}).
-    correction_signalee = Column(Boolean, default=False, nullable=False)
-    motif_correction = Column(String, nullable=True)
 
 
 class DemandeAccesPatient(Base):
@@ -84,6 +78,34 @@ class DemandeReinitialisationMotDePasse(Base):
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
     date_traitement = Column(DateTime, nullable=True)
     traite_par = Column(String, nullable=True)  # email du super_admin ayant réinitialisé le mot de passe
+
+
+class SignalementCorrectionCompte(Base):
+    """
+    Auto-service : le titulaire d'un compte signale une erreur sur ses
+    propres informations (faute de frappe, mauvaise spécialité...) — lui
+    seul ne peut pas les corriger, ces champs restent du ressort du
+    super_admin (voir PATCH /admin/users/{id}, qui résout automatiquement
+    tout signalement en attente pour ce compte).
+
+    Contrairement à la demande de réinitialisation de mot de passe,
+    l'auteur reste connecté pendant tout le cycle de vie du signalement —
+    `vu` lui permet de savoir qu'une résolution est intervenue depuis sa
+    dernière consultation de "Mes signalements", sans avoir à deviner.
+    """
+    __tablename__ = "signalements_correction_compte"
+
+    id = Column(Integer, primary_key=True, index=True)
+    utilisateur_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    motif = Column(String, nullable=False)
+    statut = Column(String, default="en_attente", nullable=False)  # "en_attente", "traitee"
+    date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
+    date_traitement = Column(DateTime, nullable=True)
+    traite_par = Column(String, nullable=True)  # email du super_admin ayant traité le signalement
+    # Vrai tant qu'il n'y a rien de nouveau à voir (en attente, ou déjà
+    # consulté après résolution) ; mis à faux au moment de la résolution,
+    # remis à vrai quand l'auteur consulte "Mes signalements".
+    vu = Column(Boolean, default=True, nullable=False)
 
 
 class Departement(Base):
