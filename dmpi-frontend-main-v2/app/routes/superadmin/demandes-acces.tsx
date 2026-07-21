@@ -119,7 +119,7 @@ export default function SuperAdminDemandesAcces() {
                     {new Date(d.date_creation).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                   </p>
                 </div>
-                <div className="flex gap-2 shrink-0">
+                <div className="flex flex-wrap gap-2">
                   <Button
                     icon="block"
                     variant="outline"

@@ -67,7 +67,7 @@ export default function TraitementsCard({
                     {t.prescripteur ? ` · Prescrit par ${t.prescripteur}` : ""}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="success" size="sm">Actif</Badge>
                   {onArreter && indexEnArret !== t.index && (
                     <Button variant="outline" size="sm" icon="block" onClick={() => ouvrirArret(t.index)}>

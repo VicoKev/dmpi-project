@@ -317,7 +317,7 @@ export default function SuperAdminPrestataires() {
                     {p.commune ?? p.departement} · {p.telephone}{p.latitude == null ? " · pas de position sur la carte" : ""}
                   </p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2">
                   <span
                     className="text-caption font-semibold px-2.5 py-1 rounded-full"
                     style={{

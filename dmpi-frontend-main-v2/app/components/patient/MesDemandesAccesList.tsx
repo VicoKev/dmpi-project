@@ -112,7 +112,7 @@ export default function MesDemandesAccesList() {
                   {new Date(d.date_creation).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <span
                   className="text-caption font-semibold px-2.5 py-1 rounded-full flex items-center gap-1"
                   style={{ backgroundColor: cfg.bg, color: cfg.color }}

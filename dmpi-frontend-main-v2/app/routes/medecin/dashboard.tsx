@@ -139,7 +139,7 @@ function FileAttenteCard() {
                   {p.motif_bref || "Sans motif renseigné"}
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   icon="folder_open"
                   variant="outline"
