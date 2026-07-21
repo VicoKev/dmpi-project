@@ -280,14 +280,16 @@ export default function Sidebar() {
               <span className="material-symbols-outlined text-[20px]">lock_reset</span>
               <span className="text-body-md font-semibold">Changer mon mot de passe</span>
             </button>
-            <button
-              onClick={() => { setShowMenu(false); setShowSignalerCorrection(true); }}
-              className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-container-low)]"
-              style={{ color: "var(--color-on-surface)" }}
-            >
-              <span className="material-symbols-outlined text-[20px]">edit_note</span>
-              <span className="text-body-md font-semibold">Signaler une erreur sur mon compte</span>
-            </button>
+            {user.role !== "superadmin_national" && (
+              <button
+                onClick={() => { setShowMenu(false); setShowSignalerCorrection(true); }}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-container-low)]"
+                style={{ color: "var(--color-on-surface)" }}
+              >
+                <span className="material-symbols-outlined text-[20px]">edit_note</span>
+                <span className="text-body-md font-semibold">Signaler une erreur sur mon compte</span>
+              </button>
+            )}
             <button
               onClick={handleDeconnecterAutresSessions}
               disabled={deconnectingSessions}
