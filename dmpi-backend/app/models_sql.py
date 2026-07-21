@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, UniqueConstraint
 from app.database_sql import Base
 from datetime import datetime
 
@@ -168,3 +168,30 @@ class DelegationAcces(Base):
     date_fin = Column(DateTime, nullable=False)
     active = Column(Boolean, default=True, nullable=False)  # permet une révocation anticipée
     date_creation = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+class NotificationVue(Base):
+    """
+    Marque qu'un utilisateur a choisi de masquer un élément précis d'une
+    notification purement informative (voir CLES_MARQUABLES_VUES dans
+    routes/notification.py). Les notifications elles-mêmes sont calculées à
+    la volée depuis les données existantes (voir le docstring de ce module) —
+    ceci est le seul état propre au système de notification qu'on conserve
+    volontairement, car sans lui rien ne pourrait jamais être masqué.
+
+    Réservé aux notifications informatives : les autres (patient en attente,
+    rendez-vous à confirmer...) signalent une action encore non faite et ne
+    doivent disparaître que lorsque le problème est réellement résolu, pas
+    parce que quelqu'un l'a masquée.
+    """
+    __tablename__ = "notifications_vues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    utilisateur_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    cle = Column(String, nullable=False)
+    reference_id = Column(String, nullable=False)
+    date_vue = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("utilisateur_id", "cle", "reference_id", name="uq_notification_vue"),
+    )
