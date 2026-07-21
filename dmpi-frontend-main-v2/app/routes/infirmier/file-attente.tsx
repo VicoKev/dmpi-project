@@ -277,9 +277,16 @@ export default function InfirmierFileAttente() {
                     {e.statut === "en_attente" || e.statut === "assigne" ? (
                       <div className="flex flex-col gap-1.5">
                         {e.statut === "assigne" && (
-                          <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
-                            Assigné à Dr. {medecin ? `${medecin.prenom} ${medecin.nom}` : e.medecin_email}
-                          </p>
+                          medecin && !medecin.disponible ? (
+                            <p className="text-caption font-semibold flex items-center gap-1" style={{ color: "var(--color-error)" }}>
+                              <span className="material-symbols-outlined text-[14px]">person_off</span>
+                              Dr. {medecin.prenom} {medecin.nom} est devenu indisponible — réassignez ce patient.
+                            </p>
+                          ) : (
+                            <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+                              Assigné à Dr. {medecin ? `${medecin.prenom} ${medecin.nom}` : e.medecin_email}
+                            </p>
+                          )
                         )}
                         <Select
                           value=""
