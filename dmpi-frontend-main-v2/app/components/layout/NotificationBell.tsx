@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { useNotifications } from "../../contexts/NotificationsContext";
-import type { ElementNotification } from "../../services/notificationService";
+import { marquerNotificationVue, type ElementNotification } from "../../services/notificationService";
 
 const PLAFOND_AFFICHAGE = 99;
 
@@ -23,8 +23,9 @@ interface NotificationBellProps {
 }
 
 export default function NotificationBell({ align = "right" }: NotificationBellProps) {
-  const { elements, total } = useNotifications();
+  const { elements, total, rafraichir } = useNotifications();
   const [open, setOpen] = useState(false);
+  const [marquantVu, setMarquantVu] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
@@ -40,6 +41,19 @@ export default function NotificationBell({ align = "right" }: NotificationBellPr
   const handleClick = (element: ElementNotification) => {
     setOpen(false);
     navigate(element.lien);
+  };
+
+  const handleMarquerVu = async (e: React.MouseEvent, element: ElementNotification) => {
+    e.stopPropagation();
+    setMarquantVu(element.cle);
+    try {
+      await marquerNotificationVue(element.cle);
+      rafraichir();
+    } catch {
+      // Échec silencieux — l'élément reste affiché, l'utilisateur peut réessayer.
+    } finally {
+      setMarquantVu(null);
+    }
   };
 
   return (
@@ -82,10 +96,10 @@ export default function NotificationBell({ align = "right" }: NotificationBellPr
               {elements.map((element) => {
                 const style = COULEURS_URGENCE[element.urgence];
                 return (
-                  <li key={element.cle}>
+                  <li key={element.cle} className="flex items-center hover:bg-[var(--color-surface-container-low)] transition-colors">
                     <button
                       onClick={() => handleClick(element)}
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--color-surface-container-low)]"
+                      className="flex-1 min-w-0 flex items-center gap-3 px-4 py-3 text-left"
                     >
                       <span
                         className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
@@ -98,6 +112,20 @@ export default function NotificationBell({ align = "right" }: NotificationBellPr
                       </span>
                       <span className="material-symbols-outlined ml-auto shrink-0" style={{ color: "var(--color-on-surface-variant)" }}>chevron_right</span>
                     </button>
+                    {element.peut_marquer_vu && (
+                      <button
+                        onClick={(e) => handleMarquerVu(e, element)}
+                        disabled={marquantVu === element.cle}
+                        className="shrink-0 w-8 h-8 mr-3 flex items-center justify-center rounded-full hover:bg-[var(--color-surface-container)] disabled:opacity-50"
+                        style={{ color: "var(--color-on-surface-variant)" }}
+                        aria-label={`Marquer « ${element.titre} » comme vu`}
+                        title="Marquer comme vu"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">
+                          {marquantVu === element.cle ? "hourglass_empty" : "close"}
+                        </span>
+                      </button>
+                    )}
                   </li>
                 );
               })}
