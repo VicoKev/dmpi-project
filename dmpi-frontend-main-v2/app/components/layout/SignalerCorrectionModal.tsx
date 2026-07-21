@@ -3,6 +3,7 @@ import { useState } from "react";
 import Textarea from "../ui/Textarea";
 import Button from "../ui/Button";
 import Modal, { ModalHeader } from "../ui/Modal";
+import ZoneDepotFichiers from "../document/ZoneDepotFichiers";
 import { signalerCorrectionCompte } from "../../services/authService";
 
 interface SignalerCorrectionModalProps {
@@ -11,6 +12,7 @@ interface SignalerCorrectionModalProps {
 
 export default function SignalerCorrectionModal({ onClose }: SignalerCorrectionModalProps) {
   const [motif, setMotif] = useState("");
+  const [fichiers, setFichiers] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [succes, setSucces] = useState(false);
@@ -23,10 +25,14 @@ export default function SignalerCorrectionModal({ onClose }: SignalerCorrectionM
       setError("Décrivez brièvement l'erreur (5 caractères minimum).");
       return;
     }
+    if (fichiers.length === 0) {
+      setError("Joignez un justificatif (pièce d'identité, diplôme, attestation...) : sans lui, le Super Administrateur ne peut pas vérifier l'information avant de modifier votre compte.");
+      return;
+    }
 
     setLoading(true);
     try {
-      await signalerCorrectionCompte(motif.trim());
+      await signalerCorrectionCompte(motif.trim(), fichiers[0]);
       setSucces(true);
     } catch (err) {
       setError((err as Error).message || "Erreur lors de l'envoi du signalement.");
@@ -70,6 +76,23 @@ export default function SignalerCorrectionModal({ onClose }: SignalerCorrectionM
               rows={4}
               required
             />
+
+            <div className="flex flex-col gap-1.5">
+              <label className="text-body-md font-semibold" style={{ color: "var(--color-on-surface-variant)" }}>
+                Justificatif <span style={{ color: "var(--color-error)" }}>*</span>
+              </label>
+              <ZoneDepotFichiers
+                fichiers={fichiers}
+                onFichiersChange={(f) => setFichiers(f.slice(0, 1))}
+                accept="image/jpeg,image/png,application/pdf"
+                multiple={false}
+                titre="Cliquez pour joindre un justificatif, ou glissez-le ici"
+                sousTitre="Pièce d'identité, diplôme, attestation d'exercice... — JPEG, PNG ou PDF, 10 Mo max"
+              />
+              <p className="text-caption" style={{ color: "var(--color-on-surface-variant)" }}>
+                Obligatoire : sans lui, le Super Administrateur ne peut pas vérifier l'information avant de modifier votre compte.
+              </p>
+            </div>
 
             <div className="flex gap-3 pt-2">
               <Button variant="outline" fullWidth type="button" onClick={onClose} disabled={loading}>

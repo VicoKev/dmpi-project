@@ -19,6 +19,7 @@ import {
   getDemandesReinitialisationMotDePasse,
   marquerCorrectionTraitee,
   getSignalementsCorrection,
+  obtenirUrlJustificatifSignalement,
   ROLE_CONFIG,
   ROLE_LABELS,
   ROLES_SELECTABLE,
@@ -707,6 +708,22 @@ export default function SuperAdminUtilisateurs() {
   const [demandesMdpOublie, setDemandesMdpOublie] = useState<DemandeReinitialisationMotDePasse[]>([]);
   const [dismissingCorrectionId, setDismissingCorrectionId] = useState<number | null>(null);
   const [signalementsCorrection, setSignalementsCorrection] = useState<SignalementCorrectionAvecUtilisateur[]>([]);
+  const [loadingJustificatifId, setLoadingJustificatifId] = useState<number | null>(null);
+
+  const handleVoirJustificatif = async (s: SignalementCorrectionAvecUtilisateur) => {
+    setLoadingJustificatifId(s.id);
+    try {
+      const url = await obtenirUrlJustificatifSignalement(s.id);
+      window.open(url, "_blank");
+      // L'onglet ouvert garde sa propre référence au blob — révoquer tout de
+      // suite plutôt que de garder cette URL vivante indéfiniment.
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch (err) {
+      showToast((err as Error).message || "Impossible d'ouvrir le justificatif.", "error");
+    } finally {
+      setLoadingJustificatifId(null);
+    }
+  };
 
   const loadDemandesMdpOublie = useCallback(async () => {
     try {
@@ -1037,7 +1054,18 @@ export default function SuperAdminUtilisateurs() {
                       {s.motif}
                     </p>
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex flex-wrap gap-2">
+                    {s.document_nom_original && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        icon="description"
+                        loading={loadingJustificatifId === s.id}
+                        onClick={() => handleVoirJustificatif(s)}
+                      >
+                        Justificatif
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"

@@ -1,5 +1,5 @@
 import type { AuthLoginResponse, LoginCredentials, UserRole } from "../types/auth";
-import { apiFetch, storeToken, clearToken, getStoredToken } from "./api";
+import { apiFetch, apiUpload, apiFetchBlobUrl, storeToken, clearToken, getStoredToken } from "./api";
 export { AuthError } from "./api";
 
 const STORAGE_USER_KEY = "dmpi_user";
@@ -105,12 +105,20 @@ export async function changerMonMotDePasse(ancienMotDePasse: string, nouveauMotD
 
 /** Auto-service : signale une erreur sur ses propres informations (nom,
  * spécialité...) — non modifiables par l'utilisateur lui-même, seul le
- * super_admin le peut. */
-export async function signalerCorrectionCompte(motif: string): Promise<void> {
-  await apiFetch("/auth/moi/signaler-correction", {
-    method: "PATCH",
-    body: JSON.stringify({ motif }),
-  });
+ * super_admin le peut. Le justificatif est obligatoire : sans lui, le
+ * super_admin n'a aucun moyen de vérifier l'information avant de modifier
+ * le compte. */
+export async function signalerCorrectionCompte(motif: string, justificatif: File): Promise<void> {
+  const formData = new FormData();
+  formData.append("motif", motif);
+  formData.append("justificatif", justificatif);
+  await apiUpload("/auth/moi/signaler-correction", formData, "PATCH");
+}
+
+/** URL d'objet local (avec header Authorization porté par la requête sous-jacente)
+ * pour afficher/ouvrir le justificatif qu'on a soi-même déposé. */
+export function obtenirUrlMonJustificatif(signalementId: number): Promise<string> {
+  return apiFetchBlobUrl(`/auth/mes-signalements-correction/${signalementId}/document`);
 }
 
 export interface SignalementCorrection {
@@ -122,6 +130,7 @@ export interface SignalementCorrection {
   date_traitement: string | null;
   traite_par: string | null;
   vu: boolean;
+  document_nom_original: string | null;
 }
 
 /** Historique des signalements de correction de l'utilisateur connecté —

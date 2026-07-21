@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import Card, { CardHeader } from "../components/ui/Card";
 import Button from "../components/ui/Button";
 import Spinner from "../components/ui/Spinner";
-import { getMesSignalementsCorrection, type SignalementCorrection } from "../services/authService";
+import { getMesSignalementsCorrection, obtenirUrlMonJustificatif, type SignalementCorrection } from "../services/authService";
 
 const STATUT_CONFIG: Record<SignalementCorrection["statut"], { label: string; color: string; bg: string; icon: string }> = {
   en_attente: { label: "En attente", color: "var(--color-on-warning-container)", bg: "var(--color-warning-container)", icon: "hourglass_empty" },
@@ -16,6 +16,20 @@ export default function MesSignalements() {
   const [signalements, setSignalements] = useState<SignalementCorrection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [loadingJustificatifId, setLoadingJustificatifId] = useState<number | null>(null);
+
+  const handleVoirJustificatif = async (id: number) => {
+    setLoadingJustificatifId(id);
+    try {
+      const url = await obtenirUrlMonJustificatif(id);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
+    } catch {
+      // Échec silencieux — pas critique de laisser l'utilisateur revoir son propre justificatif.
+    } finally {
+      setLoadingJustificatifId(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +96,18 @@ export default function MesSignalements() {
                       <> · Traité le {new Date(s.date_traitement).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</>
                     )}
                   </p>
+                  {s.document_nom_original && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      icon="description"
+                      loading={loadingJustificatifId === s.id}
+                      onClick={() => handleVoirJustificatif(s.id)}
+                      className="self-start"
+                    >
+                      Voir mon justificatif
+                    </Button>
+                  )}
                 </li>
               );
             })}

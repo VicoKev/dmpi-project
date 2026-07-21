@@ -1,4 +1,4 @@
-import { apiFetch } from "./api";
+import { apiFetch, apiFetchBlobUrl } from "./api";
 
 export const DOMAINE_EMAIL_AUTORISE = "dmpi.bj";
 
@@ -143,6 +143,7 @@ export interface SignalementCorrectionAvecUtilisateur {
   date_traitement: string | null;
   traite_par: string | null;
   vu: boolean;
+  document_nom_original: string | null;
   utilisateur_email: string;
   utilisateur_nom: string;
   utilisateur_prenom: string;
@@ -151,6 +152,13 @@ export interface SignalementCorrectionAvecUtilisateur {
 /** Signalements de correction de compte, par défaut ceux encore en attente. */
 export async function getSignalementsCorrection(): Promise<SignalementCorrectionAvecUtilisateur[]> {
   return apiFetch<SignalementCorrectionAvecUtilisateur[]>("/admin/signalements-correction");
+}
+
+/** URL d'objet local pour afficher/ouvrir le justificatif joint à un
+ * signalement — seul moyen pour le super_admin de vérifier l'information
+ * avant de modifier le compte concerné. */
+export function obtenirUrlJustificatifSignalement(signalementId: number): Promise<string> {
+  return apiFetchBlobUrl(`/admin/signalements-correction/${signalementId}/document`);
 }
 
 /** Signaux "mot de passe oublié" en attente — réinitialiser le mot de passe
