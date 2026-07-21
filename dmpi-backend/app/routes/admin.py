@@ -1,5 +1,6 @@
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc, func
 from app.database_sql import get_sql_db
@@ -10,6 +11,7 @@ from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationOut
 from app.schemas.signalement_correction import SignalementCorrectionAvecUtilisateurOut
 from app.security import hash_password, require_role
 from app.audit import enregistrer_log
+from app.stockage_fichiers import chemin_absolu
 
 router = APIRouter(
     prefix="/admin",
@@ -353,10 +355,36 @@ async def lister_signalements_correction(
         SignalementCorrectionAvecUtilisateurOut(
             id=s.id, utilisateur_id=s.utilisateur_id, motif=s.motif, statut=s.statut,
             date_creation=s.date_creation, date_traitement=s.date_traitement, traite_par=s.traite_par, vu=s.vu,
+            document_nom_original=s.document_nom_original,
             utilisateur_email=email, utilisateur_nom=nom, utilisateur_prenom=prenom,
         )
         for s, email, nom, prenom in result.all()
     ]
+
+
+@router.get("/signalements-correction/{signalement_id}/document")
+async def telecharger_justificatif_signalement(
+    signalement_id: int,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(require_role("super_admin"))
+):
+    """Justificatif déposé à l'appui d'un signalement de correction — seul
+    moyen pour le super_admin de vérifier l'information avant de modifier
+    le compte concerné."""
+    result = await db.execute(
+        select(SignalementCorrectionCompte).where(SignalementCorrectionCompte.id == signalement_id)
+    )
+    signalement = result.scalar_one_or_none()
+    if not signalement:
+        raise HTTPException(status_code=404, detail="Signalement introuvable.")
+    if not signalement.document_chemin_stockage:
+        raise HTTPException(status_code=404, detail="Ce signalement n'a pas de justificatif joint.")
+
+    return FileResponse(
+        chemin_absolu(signalement.document_chemin_stockage),
+        media_type=signalement.document_type_mime,
+        filename=signalement.document_nom_original,
+    )
 
 
 @router.patch("/users/{user_id}/reinitialiser-mot-de-passe")

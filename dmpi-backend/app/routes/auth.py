@@ -1,14 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database_sql import get_sql_db
 from app.models_sql import User, DemandeReinitialisationMotDePasse, SignalementCorrectionCompte
 from app.schemas.user import UserLogin, TokenResponse, ChangerMotDePasseRequest
 from app.schemas.reinitialisation_mot_de_passe import DemandeReinitialisationCreate
-from app.schemas.signalement_correction import SignalerCorrectionRequest, SignalementCorrectionOut
+from app.schemas.signalement_correction import SignalementCorrectionOut
 from app.security import verify_password, hash_password, create_access_token, get_current_user
 from app.audit import enregistrer_log
 from app.rate_limit import limiter
+from app.stockage_fichiers import chemin_absolu, sauvegarder_fichier, supprimer_fichier
 
 router = APIRouter(
     prefix="/auth",
@@ -153,7 +155,8 @@ async def demander_reinitialisation_mot_de_passe(
 @limiter.limit("5/hour")
 async def signaler_correction_compte(
     request: Request,
-    payload: SignalerCorrectionRequest,
+    motif: str = Form(..., min_length=5, max_length=500),
+    justificatif: UploadFile = File(..., description="Preuve de l'information correcte (pièce d'identité, diplôme, attestation d'exercice...)."),
     db: AsyncSession = Depends(get_sql_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -162,7 +165,13 @@ async def signaler_correction_compte(
     frappe sur le nom, mauvaise spécialité...). Ces champs restent du
     ressort du super_admin — voir PATCH /admin/users/{id} — ce signal lui
     transmet juste de quoi corriger sans devoir être contacté hors application.
+
+    Le justificatif est obligatoire : sans lui, le super_admin n'a aucun
+    moyen de vérifier que l'information demandée est bien correcte avant
+    de modifier le compte, même pour une erreur en apparence évidente.
     """
+    document = await sauvegarder_fichier(justificatif)
+
     # Pas de doublon : inutile d'empiler plusieurs signalements identiques
     # tant que le précédent n'a pas été traité.
     deja_en_attente = await db.execute(
@@ -173,9 +182,20 @@ async def signaler_correction_compte(
     )
     existant = deja_en_attente.scalar_one_or_none()
     if existant:
-        existant.motif = payload.motif
+        if existant.document_chemin_stockage:
+            supprimer_fichier(existant.document_chemin_stockage)
+        existant.motif = motif
+        existant.document_nom_original = document["nom_original"]
+        existant.document_chemin_stockage = document["chemin_stockage"]
+        existant.document_type_mime = document["type_mime"]
     else:
-        db.add(SignalementCorrectionCompte(utilisateur_id=current_user.id, motif=payload.motif))
+        db.add(SignalementCorrectionCompte(
+            utilisateur_id=current_user.id,
+            motif=motif,
+            document_nom_original=document["nom_original"],
+            document_chemin_stockage=document["chemin_stockage"],
+            document_type_mime=document["type_mime"],
+        ))
     await db.commit()
 
     await enregistrer_log(
@@ -213,3 +233,29 @@ async def mes_signalements_correction(
         await db.commit()
 
     return signalements
+
+
+@router.get("/mes-signalements-correction/{signalement_id}/document")
+async def telecharger_mon_justificatif_signalement(
+    signalement_id: int,
+    db: AsyncSession = Depends(get_sql_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Relit le justificatif qu'on a soi-même déposé à l'appui d'un signalement."""
+    result = await db.execute(
+        select(SignalementCorrectionCompte).where(
+            SignalementCorrectionCompte.id == signalement_id,
+            SignalementCorrectionCompte.utilisateur_id == current_user.id,
+        )
+    )
+    signalement = result.scalar_one_or_none()
+    if not signalement:
+        raise HTTPException(status_code=404, detail="Signalement introuvable.")
+    if not signalement.document_chemin_stockage:
+        raise HTTPException(status_code=404, detail="Ce signalement n'a pas de justificatif joint.")
+
+    return FileResponse(
+        chemin_absolu(signalement.document_chemin_stockage),
+        media_type=signalement.document_type_mime,
+        filename=signalement.document_nom_original,
+    )

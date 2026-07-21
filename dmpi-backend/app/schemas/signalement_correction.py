@@ -1,12 +1,5 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from datetime import datetime
-
-
-class SignalerCorrectionRequest(BaseModel):
-    """Auto-service : l'utilisateur connecté signale une erreur sur ses
-    propres informations (faute de frappe, mauvaise spécialité...) —
-    lui-même ne peut pas les corriger, seul le super_admin le peut."""
-    motif: str = Field(..., min_length=5, max_length=500)
 
 
 class SignalementCorrectionOut(BaseModel):
@@ -18,6 +11,11 @@ class SignalementCorrectionOut(BaseModel):
     date_traitement: datetime | None = None
     traite_par: str | None = None
     vu: bool
+    # Nom du fichier déposé à l'appui du signalement — jamais le chemin de
+    # stockage, qui ne doit être connu que du backend (voir la route de
+    # téléchargement, seule à y avoir accès). None uniquement pour les
+    # signalements créés avant que le justificatif ne devienne obligatoire.
+    document_nom_original: str | None = None
 
     class Config:
         from_attributes = True

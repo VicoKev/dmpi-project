@@ -109,6 +109,11 @@ class SignalementCorrectionCompte(Base):
     # consulté après résolution) ; mis à faux au moment de la résolution,
     # remis à vrai quand l'auteur consulte "Mes signalements".
     vu = Column(Boolean, default=True, nullable=False)
+    # Justificatif obligatoire à la création (voir schemas/signalement_correction.py) —
+    # nullable ici pour ne pas invalider les signalements créés avant cette exigence.
+    document_nom_original = Column(String, nullable=True)
+    document_chemin_stockage = Column(String, nullable=True)
+    document_type_mime = Column(String, nullable=True)
 
 
 class Departement(Base):
